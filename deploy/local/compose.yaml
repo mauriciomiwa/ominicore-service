@@ -1,0 +1,38 @@
+# Ambiente LOCAL do OminiCore (podman compose). Só para desenvolvimento:
+# OpenBao em modo dev (token raiz fixo, em memória) e Keycloak start-dev.
+# Nada daqui vale para hml/prod — ver DOC/Infra/ (skill ambientes).
+name: ominicore
+
+services:
+  postgres:
+    image: docker.io/library/postgres:17-alpine
+    environment:
+      POSTGRES_DB: ominicore
+      POSTGRES_USER: ominicore
+      POSTGRES_PASSWORD: ominicore-local
+    ports: ["127.0.0.1:5432:5432"]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "ominicore"]
+      interval: 2s
+      retries: 30
+
+  redis:
+    image: docker.io/library/redis:7.4-alpine # mesma versão do aviva2.0
+    ports: ["127.0.0.1:6379:6379"]
+
+  openbao:
+    image: quay.io/openbao/openbao:2.6.3 # mesma versão do aviva2.0
+    command: ["server", "-dev", "-dev-root-token-id=dev-root", "-dev-listen-address=0.0.0.0:8200"]
+    cap_add: [IPC_LOCK]
+    ports: ["127.0.0.1:8200:8200"]
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.3 # mesma versão do aviva2.0
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin-local
+      KC_HOSTNAME: http://localhost:8081
+    volumes:
+      - ./keycloak/ominicore-local-realm.json:/opt/keycloak/data/import/ominicore-local-realm.json:ro,Z
+    ports: ["127.0.0.1:8081:8080"]

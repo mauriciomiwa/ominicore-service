@@ -1,0 +1,46 @@
+# Verificações de DOC/Padroes/stack-tecnologico.md ("Verificação automática").
+version: "2"
+
+linters:
+  enable:
+    - gosec
+    - funlen
+    - gocyclo
+    - gocognit
+    - dupl
+    - depguard
+  settings:
+    funlen:
+      lines: 60
+      statements: -1
+    gocyclo:
+      min-complexity: 15
+    gocognit:
+      min-complexity: 20
+    depguard:
+      rules:
+        # Fronteira hexagonal: o domínio não conhece infraestrutura nem as
+        # outras camadas; a aplicação só conhece domínio e portas.
+        dominio:
+          files: ["**/internal/dominio/**"]
+          allow: [$gostd]
+        aplicacao:
+          files: ["**/internal/aplicacao/**", "**/internal/portas/**"]
+          allow: [$gostd, ominicore/internal/dominio, ominicore/internal/portas]
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters: [funlen, dupl, gosec, gocognit, depguard]
+      - path: internal/adaptadores/saida/postgres/db/
+        linters: [dupl]
+
+formatters:
+  enable:
+    - gofumpt
+    - goimports
+  settings:
+    # módulo sem ponto no nome: sem isto gofumpt/goimports o tratam como stdlib
+    gofumpt:
+      module-path: ominicore
+    goimports:
+      local-prefixes: [ominicore]

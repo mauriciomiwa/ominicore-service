@@ -1,0 +1,62 @@
+# Auto-merge de PRs do Dependabot — padrão da casa.
+# Política: DOC/Infra/seguranca-dependencias.md
+#
+#   patch (qualquer dependência)             -> auto-merge com CI verde
+#   minor de dev-dependency ou security fix  -> auto-merge com CI verde
+#   minor de produção, major, resto          -> revisão humana
+#
+# FAIL-CLOSED: o merge só acontece se a branch tiver checks OBRIGATÓRIOS
+# (branch protection / ruleset) e todos passarem. Sem check obrigatório,
+# `gh pr checks --required` falha e o PR fica para humano — nunca entra sem CI.
+#
+# Pré-requisitos no repositório (uma vez):
+#   Settings > General > "Allow auto-merge" ligado
+#   Branch protection/ruleset na default branch com status checks obrigatórios
+#   Settings > Code security > Dependabot alerts + security updates ligados
+on: pull_request
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  dependabot:
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Metadados do Dependabot
+        id: meta
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Decide se é elegível
+        id: regra
+        env:
+          UPDATE_TYPE: ${{ steps.meta.outputs.update-type }}
+          DEP_TYPE: ${{ steps.meta.outputs.dependency-type }}
+          GHSA: ${{ steps.meta.outputs.ghsa-id }}
+        run: |
+          ok=false
+          if [ "$UPDATE_TYPE" = "version-update:semver-patch" ]; then ok=true; fi
+          if [ "$UPDATE_TYPE" = "version-update:semver-minor" ]; then
+            if [ "$DEP_TYPE" = "direct:development" ] || [ -n "$GHSA" ]; then ok=true; fi
+          fi
+          echo "elegivel=$ok" >> "$GITHUB_OUTPUT"
+          echo "update-type=$UPDATE_TYPE dependency-type=$DEP_TYPE ghsa=$GHSA -> elegivel=$ok"
+
+      - name: Exige checks obrigatórios verdes (fail-closed)
+        if: steps.regra.outputs.elegivel == 'true'
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          sleep 60   # dá tempo de os checks do CI se registrarem
+          gh pr checks "$PR_URL" --required --watch --fail-fast
+
+      - name: Auto-merge (squash)
+        if: steps.regra.outputs.elegivel == 'true'
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh pr merge --auto --squash "$PR_URL"

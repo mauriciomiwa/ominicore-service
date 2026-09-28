@@ -1,0 +1,35 @@
+name: go
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: latest
+      - name: sqlc diff (código gerado em dia)
+        run: go run github.com/sqlc-dev/sqlc/cmd/sqlc@v1.30.0 diff
+      - name: testes (unitários + integração com testcontainers)
+        run: go test -race ./...
+      - name: govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+  contrato:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: lint do OpenAPI
+        run: npx --yes @redocly/cli@latest lint api/openapi.yaml

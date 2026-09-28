@@ -1,0 +1,99 @@
+{
+ "gerado_em": "2026-09-28T17:44:12",
+ "raiz": "ominicore",
+ "stack": [
+  {
+   "manifesto": "go.mod",
+   "linguagem": "go",
+   "frameworks": [],
+   "dependencias": 0
+  }
+ ],
+ "modulos": {
+  "cmd": {
+   "arquivos": 2,
+   "importa": []
+  },
+  "internal": {
+   "arquivos": 29,
+   "importa": []
+  },
+  "migrations": {
+   "arquivos": 1,
+   "importa": []
+  }
+ },
+ "rotas": [],
+ "endpoints": [
+  {
+   "metodo": "POST",
+   "path": "/v1/notificacoes",
+   "arquivo": "api/openapi.yaml",
+   "linha": 0,
+   "tipo": "openapi"
+  },
+  {
+   "metodo": "GET",
+   "path": "/healthz",
+   "arquivo": "internal/adaptadores/entrada/http/servidor.go",
+   "linha": 33,
+   "tipo": "go"
+  },
+  {
+   "metodo": "POST",
+   "path": "/v1/notificacoes",
+   "arquivo": "internal/adaptadores/entrada/http/servidor.go",
+   "linha": 34,
+   "tipo": "go"
+  }
+ ],
+ "chamadas_http": [
+  {
+   "metodo": "POST",
+   "url": "/protocol/openid-connect/token",
+   "arquivo": "internal/adaptadores/saida/keycloak/token.go",
+   "linha": 17
+  },
+  {
+   "metodo": "POST",
+   "url": "/v3/mail/send",
+   "arquivo": "internal/adaptadores/saida/sendgrid/sendgrid.go",
+   "linha": 77
+  }
+ ],
+ "sockets": [],
+ "filas_consumidas": [],
+ "filas_publicadas": [],
+ "crons": [],
+ "env": {
+  "SENDGRID_API_KEY": [
+   "deploy/local/bootstrap.sh"
+  ],
+  "SENDGRID_REMETENTE": [
+   "deploy/local/bootstrap.sh"
+  ]
+ },
+ "env_declaradas": {},
+ "dados": {
+  "migrations": [
+   "migrations"
+  ],
+  "schemas": [],
+  "sql": 3
+ },
+ "infra": {
+  "docker": [],
+  "compose": [
+   "deploy/local/compose.yaml"
+  ],
+  "nomad": [],
+  "ci": [
+   ".github/workflows/dependabot-automerge.yml",
+   ".github/workflows/go.yml",
+   ".github/workflows/sdd-checks.yml"
+  ]
+ },
+ "contratos": [
+  "api/openapi.yaml"
+ ]
+}

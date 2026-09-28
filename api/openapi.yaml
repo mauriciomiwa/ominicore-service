@@ -1,0 +1,125 @@
+openapi: 3.1.0
+info:
+  title: OminiCore — API de envio
+  version: 1.0.0
+  description: |
+    Serviço interno de notificações multicanal. Só na rede interna (ADR 0003);
+    todo pedido exige token do Keycloak (realm `ominicore`, grant
+    `client_credentials`, público `ominicore`). Regras: DOC/Negocio/especificacao-negocio.md.
+  license:
+    name: Proprietária (uso interno)
+    identifier: LicenseRef-Proprietary
+servers:
+  - url: http://ominicore-api:8080
+    description: rede interna `aviva`
+security:
+  - keycloak: []
+paths:
+  /v1/notificacoes:
+    post:
+      operationId: pedirNotificacao
+      summary: Pedir uma Notificação por Template
+      description: |
+        Registra a Notificação (RN-1) e enfileira a primeira Tentativa no
+        primeiro Canal da Ordem de Canais do Template. A mesma
+        `Idempotency-Key` do mesmo Sistema de origem em até 24 h devolve a
+        Notificação já criada, sem novo envio (RN-7).
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: Chave de idempotência do Sistema de origem (1 a 255 caracteres).
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 255
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PedidoNotificacao"
+            example:
+              template_id: boas-vindas
+              destinatario:
+                email: ana@exemplo.com
+              dados:
+                nome: Ana
+      responses:
+        "202":
+          description: Notificação aceita (nova ou reutilizada pela chave).
+          headers:
+            Idempotent-Replayed:
+              description: "`true` quando a Notificação já existia para esta chave."
+              schema:
+                type: string
+                enum: ["true"]
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificacaoAceita"
+        "400":
+          $ref: "#/components/responses/Problema"
+        "401":
+          $ref: "#/components/responses/Problema"
+        "422":
+          $ref: "#/components/responses/Problema"
+        "500":
+          $ref: "#/components/responses/Problema"
+components:
+  securitySchemes:
+    keycloak:
+      type: oauth2
+      description: Token client_credentials do realm `ominicore`; o `azp` identifica o Sistema de origem.
+      flows:
+        clientCredentials:
+          tokenUrl: http://keycloak:8080/realms/ominicore/protocol/openid-connect/token
+          scopes: {}
+  responses:
+    Problema:
+      description: Erro no formato RFC 9457 (problem+json).
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problema"
+  schemas:
+    PedidoNotificacao:
+      type: object
+      additionalProperties: false
+      required: [template_id, destinatario, dados]
+      properties:
+        template_id:
+          type: string
+          description: Template cadastrado no OminiCore.
+        destinatario:
+          type: object
+          additionalProperties: false
+          properties:
+            email:
+              type: string
+              format: email
+        dados:
+          type: object
+          description: Valores das variáveis do Template (todas obrigatórias).
+          additionalProperties:
+            type: string
+    NotificacaoAceita:
+      type: object
+      required: [id, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pendente, enviada, falhou]
+    Problema:
+      type: object
+      required: [status, title]
+      properties:
+        status:
+          type: integer
+        title:
+          type: string
+        detail:
+          type: string

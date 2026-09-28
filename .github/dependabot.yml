@@ -1,0 +1,48 @@
+# Gerado por dependabot_config.py — padrao da casa.
+# Politica, SLA e regra de merge: DOC/Infra/seguranca-dependencias.md
+# Ecossistema/diretorio novo? Re-rode o script com --check.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/Sao_Paulo"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      minor-e-patch:
+        update-types: ["minor", "patch"]
+
+  # acrescentado por verifica-projeto.py --corrigir
+  - package-ecosystem: "docker-compose"
+    directory: "/deploy/local"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/Sao_Paulo"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      minor-e-patch:
+        update-types: ["minor", "patch"]
+
+  # acrescentado por verifica-projeto.py --corrigir
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/Sao_Paulo"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      minor-e-patch:
+        update-types: ["minor", "patch"]

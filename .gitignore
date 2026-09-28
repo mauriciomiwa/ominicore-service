@@ -1,0 +1,5 @@
+# estado local dos hooks SDD e cache do Python das ferramentas
+.sdd/
+__pycache__/
+# binários de build (make build)
+dist/
