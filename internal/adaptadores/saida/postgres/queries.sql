@@ -1,5 +1,5 @@
 -- name: BuscarTemplate :many
-SELECT t.id, t.ordem_canais, c.canal, c.assunto, c.corpo
+SELECT t.id, t.ordem_canais, c.canal, c.assunto, c.corpo, c.modelo_aprovado, c.idioma, c.parametros
 FROM templates t
 JOIN template_conteudos c ON c.template_id = t.id
 WHERE t.id = $1;

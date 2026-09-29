@@ -7,10 +7,16 @@ import (
 	"strings"
 )
 
-// ConteudoCanal é a versão do Template para um Canal.
+// ConteudoCanal é a versão do Template para um Canal. No WhatsApp o texto mora
+// na Meta: a versão referencia o Modelo aprovado (nome + idioma) e Parametros
+// lista, na ordem de {{1}}, {{2}}…, as variáveis do Template (REQ-11); depois
+// de Preencher, Parametros traz os valores.
 type ConteudoCanal struct {
-	Assunto string
-	Corpo   string
+	Assunto        string
+	Corpo          string
+	ModeloAprovado string
+	Idioma         string
+	Parametros     []string
 }
 
 // Template é o conteúdo cadastrado, com variáveis no formato {{nome}}, uma
@@ -31,6 +37,7 @@ func (t Template) Variaveis() []string {
 		for _, m := range reVariavel.FindAllStringSubmatch(c.Assunto+" "+c.Corpo, -1) {
 			nomes = append(nomes, m[1])
 		}
+		nomes = append(nomes, c.Parametros...)
 	}
 	slices.Sort(nomes)
 	return slices.Compact(nomes)
@@ -61,5 +68,12 @@ func (t Template) Preencher(c Canal, dados map[string]string) (ConteudoCanal, er
 			return dados[reVariavel.FindStringSubmatch(m)[1]]
 		})
 	}
-	return ConteudoCanal{Assunto: substituir(conteudo.Assunto), Corpo: substituir(conteudo.Corpo)}, nil
+	valores := make([]string, len(conteudo.Parametros))
+	for i, v := range conteudo.Parametros {
+		valores[i] = dados[v]
+	}
+	return ConteudoCanal{
+		Assunto: substituir(conteudo.Assunto), Corpo: substituir(conteudo.Corpo),
+		ModeloAprovado: conteudo.ModeloAprovado, Idioma: conteudo.Idioma, Parametros: valores,
+	}, nil
 }

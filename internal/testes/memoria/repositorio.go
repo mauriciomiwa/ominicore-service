@@ -34,14 +34,15 @@ func Novo() *Repositorio {
 	}
 }
 
-// BoasVindas espelha o seed das migrations 00002 e 00003.
+// BoasVindas espelha o seed das migrations 00002, 00003 e 00004.
 func BoasVindas() dominio.Template {
 	return dominio.Template{
 		ID:          "boas-vindas",
 		OrdemCanais: []dominio.Canal{dominio.CanalEmail, dominio.CanalSMS},
 		Conteudos: map[dominio.Canal]dominio.ConteudoCanal{
-			dominio.CanalEmail: {Assunto: "Bem-vindo, {{nome}}", Corpo: "Olá {{nome}}, sua conta está pronta."},
-			dominio.CanalSMS:   {Corpo: "Olá {{nome}}, sua conta está pronta."},
+			dominio.CanalEmail:    {Assunto: "Bem-vindo, {{nome}}", Corpo: "Olá {{nome}}, sua conta está pronta."},
+			dominio.CanalSMS:      {Corpo: "Olá {{nome}}, sua conta está pronta."},
+			dominio.CanalWhatsApp: {ModeloAprovado: "boas_vindas", Idioma: "pt_BR", Parametros: []string{"nome"}},
 		},
 	}
 }

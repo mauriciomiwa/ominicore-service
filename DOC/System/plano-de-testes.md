@@ -8,13 +8,13 @@ haver dois lugares a manter. Tipo: **Exemplo** (caso concreto) ou
 **Propriedade** (invariante). Status: pendente / escrito (não rodado) /
 passando.
 
-T-1 a T-14 vigentes desde 2026-09-29 (`openspec/specs/{autenticacao-origem,notificacoes,segredos}`).
+T-1 a T-27 vigentes desde 2026-09-29 (`openspec/specs/{autenticacao-origem,notificacoes,segredos}`).
 
 Nome do teste em Go cita o T-n: `func TestT7_ReenvioComAMesmaChaveNaoDuplica(t *testing.T)`.
 Unitários com fakes (`internal/testes/`: repositório em memória, realm JWT,
 SendGrid via `httptest`); integração em `internal/integracao/` com
 `testcontainers-go` (Postgres real) — pula sozinho sem runtime de containers;
-rode com `make itest` (Docker ou Podman). Última execução: 2026-09-29, 14/14 contra Postgres 17. Provedores reais nunca entram em teste.
+rode com `make itest` (Docker ou Podman). Última execução: 2026-09-29, 17/17 contra Postgres 17. Provedores reais nunca entram em teste.
 
 | Teste | Tipo | Onde (arquivo do teste) | Status |
 |---|---|---|---|
@@ -45,3 +45,9 @@ rode com `make itest` (Docker ou Podman). Última execução: 2026-09-29, 14/14 
 | T-25 | Exemplo | `internal/dominio/dominio_test.go` · `internal/integracao/integracao_test.go` (Postgres) | passando (domínio e Postgres) |
 | T-26 | Exemplo | `internal/dominio/dominio_test.go` · `internal/integracao/integracao_test.go` (Postgres) | passando (domínio e Postgres) |
 | T-27 | Exemplo | `internal/dominio/dominio_test.go` · `internal/integracao/integracao_test.go` (Postgres) | passando (domínio e Postgres) |
+| T-28 | Exemplo | `internal/adaptadores/entrada/worker/worker_test.go` · `internal/integracao/integracao_test.go` (Postgres) | passando (fake e Postgres) |
+| T-29 | Exemplo | `internal/adaptadores/saida/whatsapp/whatsapp_test.go` · `internal/adaptadores/entrada/worker/worker_test.go` · `internal/integracao/integracao_test.go` (Postgres) | passando (fake e Postgres) |
+| T-30 | Exemplo | `internal/adaptadores/saida/whatsapp/whatsapp_test.go` · `internal/adaptadores/entrada/worker/worker_test.go` | passando |
+| T-31 | Exemplo | `internal/adaptadores/saida/whatsapp/whatsapp_test.go` · `internal/adaptadores/entrada/worker/worker_test.go` | passando |
+| T-32 | Exemplo | `internal/aplicacao/aplicacao_test.go` | passando |
+| T-33 | Exemplo | `internal/aplicacao/aplicacao_test.go` | passando |

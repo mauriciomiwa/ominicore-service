@@ -50,6 +50,12 @@ Conteúdo cadastrado no OminiCore, com variáveis, em uma versão por Canal, e c
 a Ordem de Canais padrão.
 _Evitar_: modelo, layout
 
+**Modelo aprovado**:
+Template de mensagem aprovado pela Meta para o WhatsApp, referenciado pela
+versão WhatsApp de um Template; o texto mora na Meta, o OminiCore envia só os
+parâmetros.
+_Evitar_: template da Meta, HSM, message template
+
 ## Partes
 
 **Sistema de origem**:

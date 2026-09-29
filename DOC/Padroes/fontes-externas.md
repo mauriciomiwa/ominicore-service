@@ -16,6 +16,7 @@ API/comportamento, uma query precisa.
 | Keycloak | https://www.keycloak.org/documentation | service accounts / `client_credentials` |
 | PostgreSQL | https://www.postgresql.org/docs/current/ | `SKIP LOCKED`: seção SELECT, "The Locking Clause" |
 | SendGrid | https://www.twilio.com/docs/sendgrid | Event Webhook com assinatura ECDSA |
+| WhatsApp Cloud API (Meta) | https://developers.facebook.com/docs/whatsapp/cloud-api/reference/messages · erros: https://developers.facebook.com/docs/whatsapp/cloud-api/support/error-codes | versão fixada `v26.0` (conferida 2026-09-29; https://developers.facebook.com/docs/graph-api/changelog/versions) |
 | Twilio SMS | https://www.twilio.com/docs/messaging | validação `X-Twilio-Signature` |
 | testcontainers-go | https://golang.testcontainers.org | |
 | golangci-lint | https://golangci-lint.run | |

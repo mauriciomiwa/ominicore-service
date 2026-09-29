@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Configura o OpenBao do aviva2.0 para um ambiente do OminiCore (ADR 0002):
+# mount KV v2 "kv" (se faltar), auth jwt próprio do realm, policy só-leitura em
+# kv/<prefixo>/* e role presa ao azp ominicore-app. Depois pede os segredos
+# (DSN, SendGrid, Twilio, WhatsApp) sem ecoar e grava em kv/<prefixo>/*.
+# Quem roda: o dono, no host, como root. Pede um token de admin do OpenBao.
+# Uso: sudo ./configurar-openbao.sh hml|prod [--sem-segredos]
+set -euo pipefail
+cd "$(dirname "$0")"
+case "${1:-}" in hml|prod) ;; *) echo "uso: $0 hml|prod [--sem-segredos]" >&2; exit 2 ;; esac
+# shellcheck source=/dev/null
+. "../ambientes/$1.sh"
+read -r -s -p "token de admin do OpenBao: " BAO_TOKEN; echo
+export BAO_TOKEN
+BAO=(podman exec -i -e BAO_TOKEN -e BAO_ADDR=http://127.0.0.1:8200 openbao bao)
+
+"${BAO[@]}" secrets list -format=json | grep -q '"kv/"' || "${BAO[@]}" secrets enable -path=kv kv-v2
+"${BAO[@]}" auth list -format=json | grep -q "\"$AUTH_MOUNT/\"" || "${BAO[@]}" auth enable -path="$AUTH_MOUNT" jwt
+# JWKS pelo backchannel da rede aviva; o iss dos tokens é o host público.
+"${BAO[@]}" write "auth/$AUTH_MOUNT/config" \
+  jwks_url="http://keycloak:8080/realms/$REALM/protocol/openid-connect/certs" \
+  bound_issuer="https://auth.flipapi.com.br/realms/$REALM" >/dev/null
+printf 'path "kv/data/%s/*" { capabilities = ["read"] }\n' "$PREFIXO" | "${BAO[@]}" policy write "$ROLE" - >/dev/null
+"${BAO[@]}" write "auth/$AUTH_MOUNT/role/$ROLE" - >/dev/null <<JSON
+{"role_type": "jwt", "user_claim": "azp", "bound_claims": {"azp": "ominicore-app"},
+ "bound_audiences": ["openbao"], "token_policies": ["$ROLE"], "token_ttl": "1h"}
+JSON
+echo ">> auth $AUTH_MOUNT, policy e role $ROLE prontos"
+
+if [ "${2:-}" != "--sem-segredos" ]; then
+  ler() { local v; read -r -s -p "$1: " v; echo >&2; printf '%s' "$v"; }
+  DSN=$(ler "DSN do Postgres ($SCHEMA, com sslrootcert=/etc/ominicore/rds-ca.pem)")
+  "${BAO[@]}" kv put "kv/$PREFIXO/postgres" dsn=- >/dev/null <<<"$DSN"; unset DSN
+  SG_KEY=$(ler "SendGrid api_key"); read -r -p "SendGrid remetente (e-mail verificado): " SG_DE
+  "${BAO[@]}" kv put "kv/$PREFIXO/sendgrid" api_key=- remetente="$SG_DE" >/dev/null <<<"$SG_KEY"; unset SG_KEY
+  read -r -p "Twilio account_sid: " TW_AC; read -r -p "Twilio api_key_sid: " TW_SK
+  TW_SEC=$(ler "Twilio api_key_secret"); read -r -p "Twilio messaging_service_sid: " TW_MG
+  "${BAO[@]}" kv put "kv/$PREFIXO/twilio" account_sid="$TW_AC" api_key_sid="$TW_SK" \
+    api_key_secret=- messaging_service_sid="$TW_MG" >/dev/null <<<"$TW_SEC"; unset TW_SEC
+  WA_TOKEN=$(ler "WhatsApp token (System User)"); read -r -p "WhatsApp phone_number_id: " WA_ID
+  "${BAO[@]}" kv put "kv/$PREFIXO/whatsapp" token=- phone_number_id="$WA_ID" >/dev/null <<<"$WA_TOKEN"; unset WA_TOKEN
+  echo ">> segredos gravados em kv/$PREFIXO/{postgres,sendgrid,twilio,whatsapp}"
+fi
+unset BAO_TOKEN

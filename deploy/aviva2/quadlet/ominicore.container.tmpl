@@ -1,0 +1,30 @@
+# ominicore${SUFIXO}-${PAPEL} (${AMBIENTE}) — gerado por deploy/aviva2/publicar.sh.
+# Sem porta publicada: a API só é alcançada pela rede aviva (ADR 0003); os
+# webhooks públicos chegam pelo Traefik. O binário vem de fora da imagem
+# (distroless, só CA + tzdata), como no aviva-back.
+[Unit]
+Description=OminiCore ${PAPEL} (${AMBIENTE})
+After=network-online.target keycloak.service openbao.service redis.service
+Wants=network-online.target
+
+[Container]
+ContainerName=ominicore${SUFIXO}-${PAPEL}
+Image=gcr.io/distroless/static-debian12:nonroot
+Network=aviva.network
+Volume=/opt/ominicore${SUFIXO}/ominicore:/ominicore:ro,Z
+# CA da RDS para sslmode=verify-full (o DSN no OpenBao aponta para este caminho)
+Volume=/etc/keycloak/rds-global-bundle.pem:/etc/ominicore/rds-ca.pem:ro,Z
+EnvironmentFile=/etc/ominicore${SUFIXO}/ominicore.env
+Secret=ominicore${SUFIXO}-kc-secret,type=env,target=OMINICORE_KC_CLIENT_SECRET
+Secret=redis-password,type=env,target=OMINICORE_REDIS_PASSWORD
+Exec=/ominicore ${PAPEL}
+PodmanArgs=--memory=256m
+HealthCmd=/ominicore --version
+HealthInterval=60s
+
+[Service]
+Restart=always
+TimeoutStartSec=120
+
+[Install]
+WantedBy=multi-user.target

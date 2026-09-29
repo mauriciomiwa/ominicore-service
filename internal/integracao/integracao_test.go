@@ -25,10 +25,12 @@ import (
 	"ominicore/internal/adaptadores/saida/postgres"
 	"ominicore/internal/adaptadores/saida/sendgrid"
 	"ominicore/internal/adaptadores/saida/twilio"
+	"ominicore/internal/adaptadores/saida/whatsapp"
 	"ominicore/internal/aplicacao"
 	"ominicore/internal/dominio"
 	"ominicore/internal/portas"
 	"ominicore/internal/testes/emissor"
+	"ominicore/internal/testes/metafake"
 	"ominicore/internal/testes/sendgridfake"
 	"ominicore/internal/testes/twiliofake"
 
@@ -59,7 +61,7 @@ func banco(t *testing.T) *pgxpool.Pool {
 	if erroPG != nil {
 		t.Fatalf("subir postgres: %v", erroPG)
 	}
-	pool, err := postgres.Conectar(ctx, dsn)
+	pool, err := postgres.Conectar(ctx, dsn, postgres.SchemaPadrao)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,7 +69,7 @@ func banco(t *testing.T) *pgxpool.Pool {
 	if _, err := pool.Exec(ctx, `DROP SCHEMA IF EXISTS ominicore CASCADE; DROP TABLE IF EXISTS public.goose_db_version`); err != nil {
 		t.Fatal(err)
 	}
-	if err := postgres.Migrar(ctx, pool); err != nil {
+	if err := postgres.Migrar(ctx, pool, postgres.SchemaPadrao); err != nil {
 		t.Fatal(err)
 	}
 	return pool
@@ -162,6 +164,7 @@ type ponta struct {
 	pool  *pgxpool.Pool
 	sg    *sendgridfake.Fake
 	tw    *twiliofake.Fake
+	meta  *metafake.Fake
 	realm *emissor.Emissor
 	api   http.Handler
 }
@@ -170,7 +173,7 @@ func novaPonta(t *testing.T) ponta {
 	pool := banco(t)
 	repo := postgres.Repositorio{Pool: pool}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	p := ponta{pool: pool, sg: sendgridfake.Novo(t), tw: twiliofake.Novo(t), realm: emissor.Novo(t)}
+	p := ponta{pool: pool, sg: sendgridfake.Novo(t), tw: twiliofake.Novo(t), meta: metafake.Novo(t), realm: emissor.Novo(t)}
 	p.api = entradahttp.Servidor{
 		Auth: keycloak.Novo(p.realm.URL, "ominicore", &emissor.Cache{}), Enviar: aplicacao.SendMessageUseCase{Repo: repo}, Log: log,
 	}.Handler()
@@ -182,6 +185,7 @@ func novaPonta(t *testing.T) ponta {
 				AccountSID: twiliofake.AccountSID, APIKeySID: twiliofake.APIKeySID,
 				APIKeySecret: twiliofake.APIKeySecret, MessagingServiceSID: twiliofake.MessagingServiceSID,
 			}),
+			dominio.CanalWhatsApp: whatsapp.Novo(p.meta.URL, whatsapp.Credenciais{Token: metafake.Token, PhoneNumberID: metafake.PhoneNumberID}),
 		},
 	}
 	ctx, cancelar := context.WithCancel(context.Background())
@@ -432,6 +436,59 @@ func TestT27_SucessoNoEmailNaoCriaSMS(t *testing.T) {
 	esperarHistorico(t, p.pool, id, func(h []linhaTentativa) bool { return len(h) == 1 && h[0].Status == "enviada" })
 	time.Sleep(700 * time.Millisecond)
 	if h := historico(t, p.pool, id); len(h) != 1 || statusNotificacao(t, p.pool, id) != "enviada" || len(p.tw.Recebidos()) != 0 {
+		t.Fatalf("histórico = %+v", h)
+	}
+}
+
+func TestSchemasDeHmlEProdFicamIsolados(t *testing.T) {
+	banco(t) // garante o container e o schema de prod limpo
+	ctx := context.Background()
+	hml, err := postgres.Conectar(ctx, dsn, "ominicore_hml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer hml.Close()
+	if _, err := hml.Exec(ctx, `DROP SCHEMA IF EXISTS ominicore_hml CASCADE`); err != nil {
+		t.Fatal(err)
+	}
+	if err := postgres.Migrar(ctx, hml, "ominicore_hml"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := (postgres.Repositorio{Pool: hml}).RegistrarNotificacao(ctx, nova("sistema-a", "k-hml")); err != nil {
+		t.Fatal(err)
+	}
+	prod, err := postgres.Conectar(ctx, dsn, postgres.SchemaPadrao)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer prod.Close()
+	var nProd, nHml int
+	_ = prod.QueryRow(ctx, `SELECT count(*) FROM notificacoes`).Scan(&nProd)
+	_ = hml.QueryRow(ctx, `SELECT count(*) FROM notificacoes`).Scan(&nHml)
+	if nProd != 0 || nHml != 1 {
+		t.Fatalf("prod=%d hml=%d, quero 0 e 1", nProd, nHml)
+	}
+}
+
+const pedidoWhatsAppSMS = `{"template_id":"boas-vindas","destinatario":{"telefone":"+5511999998888"},"dados":{"nome":"Ana"},"canais":["whatsapp","sms"]}`
+
+func TestT28_WhatsAppPeloModeloAprovadoPontaAPonta(t *testing.T) {
+	p := novaPonta(t)
+	id, _ := p.pedirCorpo(t, "k-28", pedidoWhatsAppSMS)
+	h := esperarHistorico(t, p.pool, id, func(h []linhaTentativa) bool { return len(h) == 1 && h[0].Status == "enviada" })
+	m := p.meta.Recebidas()
+	if len(h) != 1 || h[0].Canal != "whatsapp" || len(m) != 1 || m[0].Modelo != "boas_vindas" || m[0].Idioma != "pt_BR" ||
+		len(m[0].Parametros) != 1 || m[0].Parametros[0] != "Ana" {
+		t.Fatalf("histórico = %+v, meta = %+v", h, m)
+	}
+}
+
+func TestT29_NumeroSemWhatsAppPassaAoSMSPontaAPonta(t *testing.T) {
+	p := novaPonta(t)
+	p.meta.Responder(http.StatusBadRequest, 131026)
+	id, _ := p.pedirCorpo(t, "k-29", pedidoWhatsAppSMS)
+	h := esperarHistorico(t, p.pool, id, func(h []linhaTentativa) bool { return len(h) == 2 && h[1].Status == "enviada" })
+	if len(h) != 2 || h[0].Canal != "whatsapp" || h[0].Status != "falhou" || h[1].Canal != "sms" || statusNotificacao(t, p.pool, id) != "enviada" {
 		t.Fatalf("histórico = %+v", h)
 	}
 }

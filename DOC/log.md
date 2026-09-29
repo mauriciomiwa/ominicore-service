@@ -3,6 +3,47 @@
 Registro cronológico de decisões e eventos, mais recente no topo. Decisão sem
 registro vira suposição de alguém daqui a seis meses.
 
+## 2026-09-29 — Fatia 6 (`06-whatsapp`) implementada: 13/13
+- Canal WhatsApp pela Cloud API da Meta (Graph `v26.0`, conferida na doc em
+  2026-09-29); migration 00004 (Modelo aprovado em `template_conteudos`);
+  `Variaveis()` inclui os parâmetros do Modelo aprovado; contato = telefone.
+- Códigos confirmados na doc da Meta: 131026/132001 definitiva, 130429/131000
+  temporária; 131049 (marketing por usuário, 24 h) cai na regra comum (4xx =
+  definitiva), porque 24 h não cabem na Retentativa.
+- Verde: `go test -race`, `make itest` 17/17, lint, `sqlc diff`, contrato,
+  `openspec validate --strict`, rastreabilidade. T-28 a T-33 passando.
+- Sentinel: aprovado com ressalvas — `to` vai em E.164 com `+` (aceito pela
+  Meta segundo a doc, não validado contra conta real); validação real depende
+  da conta Meta Business (to-do).
+
+## 2026-09-29 — Sabatina do WhatsApp fechada; RN-4 entra no MVP (fatia 06)
+- Decidido (recomendações aceitas): Cloud API da Meta direto (não Twilio);
+  só Modelo aprovado, sem texto livre (depende de RN-6); contato = telefone
+  E.164; 131026/132001 definitiva, 130429/131000 temporária; versão WhatsApp do
+  `boas-vindas`, ordem padrão inalterada (Email → SMS); versão da Graph API
+  fixada no adaptador; validação real depois da conta Meta (não bloqueia).
+- Glossário: **Modelo aprovado**. Backlog: fatia 06 com REQ-10/REQ-11; REQ
+  previstos das fatias 3–5 renumerados (REQ-12 a REQ-15).
+- Change `06-whatsapp` aberta (T-28 a T-33).
+
+## 2026-09-29 — Trilha de infraestrutura: artefatos do aviva2.0 preparados
+- `deploy/aviva2/`: quadlets (template api/worker), env sem segredo, rota do
+  Traefik só `/webhooks/*`, SQL do schema/role, scripts do realm (kcadm, sem
+  reiniciar o Keycloak) e do OpenBao (auth `jwt` por realm), `publicar.sh
+  hml|prod` (sem padrão; prod pede confirmação e árvore limpa; `--voltar`).
+- Lacunas de código achadas ao desenhar o deploy e corrigidas (config, sem
+  regra nova): `OMINICORE_DB_SCHEMA` (hml = `ominicore_hml`, validado contra
+  injeção), `OMINICORE_BAO_AUTH_MOUNT` (um mount `jwt` aceita um só emissor),
+  `OMINICORE_REDIS_PASSWORD` (Redis do aviva2.0 com `requirepass`). Testes:
+  isolamento de schemas no Postgres real, login no mount do ambiente.
+- Nada executado no host: as etapas com credencial de admin são do dono.
+
+## 2026-09-29 — Entrega: change `02-sms-e-fallback` arquivada
+- Arquivada em `openspec/changes/archive/2026-09-29-02-sms-e-fallback/`; spec
+  `notificacoes` sincronizada: REQ-2 modificado, REQ-7 (SMS), REQ-8
+  (Retentativa), REQ-9 (fallback). Cobre RN-2 e RN-3 por completo e RN-1
+  (ordem do pedido). T-15 a T-27 passando.
+
 ## 2026-09-29 — Fatia 2 (`02-sms-e-fallback`) implementada: 24/24
 - Router novo no domínio (Retentativa 5 s/30 s/2 min ±20%, sorteio injetado;
   fallback ao próximo Canal com contato); Retentativa e próximo Canal gravados

@@ -15,7 +15,11 @@ type Segredos struct {
 	SendGridAPIKey    string            // <mount>/<prefixo>/sendgrid: api_key
 	SendGridRemetente string            // <mount>/<prefixo>/sendgrid: remetente
 	Twilio            map[string]string // <mount>/<prefixo>/twilio: CamposTwilio
+	WhatsApp          map[string]string // <mount>/<prefixo>/whatsapp: CamposWhatsApp
 }
+
+// CamposWhatsApp são os campos exigidos em <mount>/<prefixo>/whatsapp (REQ-10).
+var CamposWhatsApp = []string{"token", "phone_number_id"}
 
 // CamposTwilio são os campos exigidos em <mount>/<prefixo>/twilio (REQ-7).
 var CamposTwilio = []string{"account_sid", "api_key_sid", "api_key_secret", "messaging_service_sid"}
@@ -29,6 +33,9 @@ type Config struct {
 	Token    string
 	JWT      string
 	Role     string
+	// AuthMount é o mount do auth jwt: um por realm, porque cada mount aceita um
+	// só emissor (prod "jwt-ominicore", hml "jwt-ominicore-hml"); padrão "jwt".
+	AuthMount string
 }
 
 // ErrOpenBao marca qualquer falha de acesso ao cofre: o processo não inicia.
@@ -60,7 +67,11 @@ func Carregar(ctx context.Context, cfg Config) (Segredos, error) {
 	if err != nil {
 		return Segredos{}, err
 	}
-	return Segredos{PostgresDSN: pg["dsn"], SendGridAPIKey: sg["api_key"], SendGridRemetente: sg["remetente"], Twilio: tw}, nil
+	wa, err := ler(ctx, cli, mount, prefixo+"/whatsapp", CamposWhatsApp...)
+	if err != nil {
+		return Segredos{}, err
+	}
+	return Segredos{PostgresDSN: pg["dsn"], SendGridAPIKey: sg["api_key"], SendGridRemetente: sg["remetente"], Twilio: tw, WhatsApp: wa}, nil
 }
 
 func entrar(ctx context.Context, cfg Config) (*bao.Client, error) {
@@ -77,7 +88,11 @@ func entrar(ctx context.Context, cfg Config) (*bao.Client, error) {
 	if cfg.JWT == "" || cfg.Role == "" {
 		return nil, errors.New("sem token nem jwt+role para entrar")
 	}
-	login, err := cli.Logical().WriteWithContext(ctx, "auth/jwt/login", map[string]any{"role": cfg.Role, "jwt": cfg.JWT})
+	mountAuth := cfg.AuthMount
+	if mountAuth == "" {
+		mountAuth = "jwt"
+	}
+	login, err := cli.Logical().WriteWithContext(ctx, "auth/"+mountAuth+"/login", map[string]any{"role": cfg.Role, "jwt": cfg.JWT})
 	if err != nil {
 		return nil, fmt.Errorf("login jwt: %w", err)
 	}

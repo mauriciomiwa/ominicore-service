@@ -45,9 +45,14 @@ TWILIO_MESSAGING_SERVICE_SID=...` antes do `./deploy/local/bootstrap.sh`.
 | `OMINICORE_KC_AUDIENCE` | `ominicore` | público exigido no token |
 | `OMINICORE_KC_CLIENT_ID` / `_SECRET` | `ominicore-app` / — | token do próprio OminiCore para o OpenBao |
 | `OMINICORE_REDIS_ADDR` | `redis:6379` | cache do JWKS |
+| `OMINICORE_REDIS_PASSWORD` | — | senha do Redis (podman secret `redis-password` no aviva2.0) |
+| `OMINICORE_DB_SCHEMA` | `ominicore` | schema do Postgres; hml = `ominicore_hml` |
+| `OMINICORE_BAO_AUTH_MOUNT` | `jwt` | mount do auth `jwt`; hml = `jwt-ominicore-hml`, prod = `jwt-ominicore` |
 | `OMINICORE_SENDGRID_URL` | `https://api.sendgrid.com` | trocar só em teste |
 | `OMINICORE_TWILIO_URL` | `https://api.twilio.com` | trocar só em teste |
+| `OMINICORE_WHATSAPP_URL` | `https://graph.facebook.com` | trocar só em teste (versão da Graph API fixada no adaptador) |
 
 Segredos no OpenBao: `kv/<prefixo>/postgres` (`dsn`), `kv/<prefixo>/sendgrid`
-(`api_key`, `remetente`) e `kv/<prefixo>/twilio` (`account_sid`, `api_key_sid`,
-`api_key_secret`, `messaging_service_sid`). Endereços de hml e prod: `DOC/Infra/AMBIENTES.md`.
+(`api_key`, `remetente`), `kv/<prefixo>/twilio` (`account_sid`, `api_key_sid`,
+`api_key_secret`, `messaging_service_sid`) e `kv/<prefixo>/whatsapp` (`token`,
+`phone_number_id`). Endereços de hml e prod: `DOC/Infra/AMBIENTES.md`.

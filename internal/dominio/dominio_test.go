@@ -140,3 +140,16 @@ func TestPrimeiroComContatoPulaCanalSemContato(t *testing.T) {
 		t.Fatal("além do fim da ordem não há Canal")
 	}
 }
+
+func TestPreencherWhatsAppDevolveValoresNaOrdemDosParametros(t *testing.T) {
+	tpl := Template{ID: "x", Conteudos: map[Canal]ConteudoCanal{
+		CanalWhatsApp: {ModeloAprovado: "m", Idioma: "pt_BR", Parametros: []string{"nome", "codigo"}},
+	}}
+	c, err := tpl.Preencher(CanalWhatsApp, map[string]string{"codigo": "42", "nome": "Ana"})
+	if err != nil || c.ModeloAprovado != "m" || c.Idioma != "pt_BR" || len(c.Parametros) != 2 || c.Parametros[0] != "Ana" || c.Parametros[1] != "42" {
+		t.Fatalf("conteúdo = %+v err=%v", c, err)
+	}
+	if got := tpl.Variaveis(); len(got) != 2 {
+		t.Fatalf("variáveis = %v", got)
+	}
+}

@@ -1,0 +1,16 @@
+# ${HOST_WEBHOOK} -> ominicore${SUFIXO}-api, SÓ /webhooks/* (ADR 0003). Público,
+# atrás da Cloudflare; a API de envio (/v1/*) não tem rota aqui. Cada webhook
+# valida a assinatura do Provedor antes de qualquer efeito (fatia 03).
+# Gerado por deploy/aviva2/publicar.sh (${AMBIENTE}).
+http:
+  routers:
+    ominicore${SUFIXO}-webhooks:
+      rule: Host(`${HOST_WEBHOOK}`) && PathPrefix(`/webhooks/`)
+      entryPoints: [websecure]
+      service: ominicore${SUFIXO}-api
+      tls: {}
+  services:
+    ominicore${SUFIXO}-api:
+      loadBalancer:
+        servers:
+          - url: http://ominicore${SUFIXO}-api:8080

@@ -27,30 +27,40 @@ Falha definitiva passa ao próximo Canal da Ordem de Canais.
 Cobre: RN-3 (REQ-7), RN-2 (REQ-8, REQ-9), RN-1/RN-2 (REQ-2 modificado)
 Depende de: Fatia 1
 Pronto quando: testes dos REQ-7 a REQ-9 passando e change arquivada.
+**Entregue em 2026-09-29** (`openspec/changes/archive/2026-09-29-02-sms-e-fallback/`).
 
 ### Fatia 3 — Status de entrega por webhook
 Change: `03-status-por-webhook`
 Valor: o status devolvido por SendGrid e Twilio aparece na Tentativa; aviso sem
 assinatura válida é recusado.
-Cobre: RN-5 (REQ-10, REQ-11)
+Cobre: RN-5 (REQ-12, REQ-13)
 Depende de: Fatia 2
-Pronto quando: testes dos REQ-10 e REQ-11 passando e change arquivada.
+Pronto quando: testes dos REQ-12 e REQ-13 passando e change arquivada.
 
 ### Fatia 4 — Opt-out por Canal
 Change: `04-opt-out`
 Valor: Destinatário com Opt-out de um Canal não recebe por ele; a Notificação
 segue pelos demais Canais da Ordem.
-Cobre: RN-8 (REQ-12)
+Cobre: RN-8 (REQ-14)
 Depende de: Fatia 2
-Pronto quando: testes do REQ-12 passando e change arquivada.
+Pronto quando: testes do REQ-14 passando e change arquivada.
 
 ### Fatia 5 — Retenção de 30 dias
 Change: `05-retencao`
 Valor: conteúdo e contato do Destinatário ficam ilegíveis após o prazo
 (padrão 30 dias, configurável).
-Cobre: RN-9 (REQ-13)
+Cobre: RN-9 (REQ-15)
 Depende de: Fatia 1
-Pronto quando: testes do REQ-13 passando e change arquivada.
+Pronto quando: testes do REQ-15 passando e change arquivada.
+
+### Fatia 6 — WhatsApp por Modelo aprovado
+Change: `06-whatsapp`
+Valor: Notificação sai pelo WhatsApp (Cloud API da Meta) quando o pedido inclui
+o Canal; número sem WhatsApp cai no próximo Canal da ordem.
+Cobre: RN-4 (REQ-10, REQ-11)
+Depende de: Fatia 2
+Pronto quando: T-28 a T-33 passando e change arquivada. Incluída no MVP em
+2026-09-29 (antes era "depois"); status de entrega do WhatsApp entra com a Fatia 3.
 
 ## Trilha de infraestrutura (não é fatia)
 
@@ -61,5 +71,5 @@ itens no `to-do.md`. Precisa estar pronta antes da Fatia 3 (webhooks exigem
 rota pública).
 
 ## Depois do MVP
-RN-4 WhatsApp · RN-6 respostas do Destinatário · RN-10 janela de horário e
+RN-6 respostas do Destinatário · RN-10 janela de horário e
 agendamento · consumo de pedidos por fila externa.

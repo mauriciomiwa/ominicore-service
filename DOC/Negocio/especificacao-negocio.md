@@ -27,11 +27,11 @@ Greenfield. Não há sistema a substituir nem dado a migrar; os Sistemas de
 origem passam a chamar o OminiCore à medida que forem integrados.
 
 ## Escopo / MVP
-- **Dentro:** envio por Template com dados; Canais Email (SendGrid) e SMS
-  (Twilio); ordem de Canais com retry e fallback; status de entrega por webhook;
+- **Dentro:** envio por Template com dados; Canais Email (SendGrid), SMS
+  (Twilio) e WhatsApp (Meta, só Modelo aprovado — incluído em 2026-09-29); ordem de Canais com retry e fallback; status de entrega por webhook;
   idempotência; Opt-out por Destinatário e Canal; retenção de 30 dias;
   credenciais só no OpenBao.
-- **Fora (próximas etapas):** WhatsApp (Meta); repasse das respostas do
+- **Fora (próximas etapas):** repasse das respostas do
   Destinatário ao Sistema de origem; janela de horário e agendamento; consumo de
   pedidos por fila externa (RabbitMQ/SQS).
 
@@ -42,7 +42,7 @@ origem passam a chamar o OminiCore à medida que forem integrados.
 | RN-1 | Um Sistema de origem autenticado pede uma Notificação informando o Template, o Destinatário e os dados das variáveis. | Pedido válido é aceito e recebe um identificador; pedido de quem não se autenticou, com Template inexistente ou com variável faltando é recusado com o motivo. | sim |
 | RN-2 | A Notificação percorre os Canais na ordem pedida (ou na ordem padrão do Template), pulando Canal sem contato do Destinatário. Falha temporária é retentada no mesmo Canal até 3 vezes (4 Tentativas no total), com espera crescente de 5 s, 30 s e 2 min; falha definitiva ou Retentativas esgotadas passam ao próximo Canal. | Com o 1º Canal falhando de forma definitiva, a Notificação sai pelo 2º; com falha temporária, há até 4 Tentativas no mesmo Canal antes de mudar; Canal sem contato é pulado; sem Canal restante, a Notificação termina `falhou`. | sim |
 | RN-3 | Canais disponíveis: Email (SendGrid) e SMS (Twilio). | Uma Notificação com Canal Email chega por e-mail; com Canal SMS chega por SMS. | sim |
-| RN-4 | Canal WhatsApp (Meta), com templates aprovados pela Meta. | Notificação com Canal WhatsApp chega pelo WhatsApp. | depois |
+| RN-4 | Canal WhatsApp pela Cloud API da Meta, só por Modelo aprovado (sem texto livre), com o telefone do Destinatário; número sem WhatsApp ou Modelo não aprovado é Falha definitiva. | Notificação com Canal WhatsApp chega pelo WhatsApp com os parâmetros do Modelo aprovado preenchidos; número sem WhatsApp passa ao próximo Canal da ordem. | sim (fatia 06) |
 | RN-5 | O status de entrega devolvido pelo provedor (entregue, falhou…) atualiza a Tentativa; aviso sem assinatura válida do provedor é descartado. | Status recebido do provedor aparece na Tentativa; aviso com assinatura inválida é recusado e nada muda. | sim |
 | RN-6 | Respostas do Destinatário (ex.: resposta no WhatsApp) são repassadas ao Sistema de origem. | Resposta do Destinatário chega ao Sistema de origem que enviou. | depois |
 | RN-7 | Todo pedido traz uma chave de idempotência; a mesma chave do mesmo Sistema de origem em até 24 h devolve a Notificação já criada e nada é reenviado. | Dois pedidos com a mesma chave em 24 h geram uma única Notificação e uma única sequência de Tentativas; pedido sem chave é recusado. | sim |

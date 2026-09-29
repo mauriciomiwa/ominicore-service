@@ -15,12 +15,14 @@ import (
 	"ominicore/internal/adaptadores/saida/keycloak"
 	"ominicore/internal/adaptadores/saida/sendgrid"
 	"ominicore/internal/adaptadores/saida/twilio"
+	"ominicore/internal/adaptadores/saida/whatsapp"
 	"ominicore/internal/aplicacao"
 	"ominicore/internal/dominio"
 	"ominicore/internal/logs"
 	"ominicore/internal/portas"
 	"ominicore/internal/testes/emissor"
 	"ominicore/internal/testes/memoria"
+	"ominicore/internal/testes/metafake"
 	"ominicore/internal/testes/sendgridfake"
 	"ominicore/internal/testes/twiliofake"
 
@@ -35,6 +37,7 @@ type fluxo struct {
 	repo  *memoria.Repositorio
 	sg    *sendgridfake.Fake
 	tw    *twiliofake.Fake
+	meta  *metafake.Fake
 	realm *emissor.Emissor
 	api   http.Handler
 	log   *bufferSeguro
@@ -58,7 +61,7 @@ func (s *bufferSeguro) String() string {
 }
 
 func novoFluxo(t *testing.T) *fluxo {
-	f := &fluxo{repo: memoria.Novo(), sg: sendgridfake.Novo(t), tw: twiliofake.Novo(t), realm: emissor.Novo(t), log: &bufferSeguro{}}
+	f := &fluxo{repo: memoria.Novo(), sg: sendgridfake.Novo(t), tw: twiliofake.Novo(t), meta: metafake.Novo(t), realm: emissor.Novo(t), log: &bufferSeguro{}}
 	log := logs.Novo(f.log, slog.LevelDebug)
 	f.api = entradahttp.Servidor{
 		Auth:   keycloak.Novo(f.realm.URL, "ominicore", &emissor.Cache{}),
@@ -73,6 +76,7 @@ func novoFluxo(t *testing.T) *fluxo {
 				AccountSID: twiliofake.AccountSID, APIKeySID: twiliofake.APIKeySID,
 				APIKeySecret: twiliofake.APIKeySecret, MessagingServiceSID: twiliofake.MessagingServiceSID,
 			}),
+			dominio.CanalWhatsApp: whatsapp.Novo(f.meta.URL, whatsapp.Credenciais{Token: metafake.Token, PhoneNumberID: metafake.PhoneNumberID}),
 		},
 		Log: log,
 	}
@@ -188,5 +192,66 @@ func TestFallbackEmailParaSMSPontaAPontaEmMemoria(t *testing.T) {
 	if len(h) != 2 || h[0].Canal != dominio.CanalEmail || h[0].Status != dominio.TentativaFalhou ||
 		h[1].Canal != dominio.CanalSMS || h[1].Status != dominio.TentativaEnviada {
 		t.Fatalf("histórico = %+v", h)
+	}
+}
+
+const pedidoWhatsApp = `{"template_id":"boas-vindas","destinatario":{"email":"ana@exemplo.com","telefone":"+5511999998888"},"dados":{"nome":"Ana Souza"},"canais":["whatsapp","sms"]}`
+
+func TestT28_TentativaDeWhatsAppEEnviadaPeloModeloAprovado(t *testing.T) {
+	f := novoFluxo(t)
+	f.pedir(t, pedidoWhatsApp)
+	m := f.meta.Esperar(t, 1, 3*time.Second)[0]
+	if m.Modelo != "boas_vindas" || m.Idioma != "pt_BR" || len(m.Parametros) != 1 || m.Parametros[0] != "Ana Souza" ||
+		m.Para != "+5511999998888" || !m.AuthOK {
+		t.Fatalf("mensagem = %+v", m)
+	}
+	f.esperarStatus(t, dominio.TentativaEnviada)
+	if len(f.tw.Recebidos()) != 0 {
+		t.Fatal("sucesso no WhatsApp não deveria chegar ao SMS")
+	}
+}
+
+func TestT29_NumeroSemWhatsAppPassaAoSMS(t *testing.T) {
+	f := novoFluxo(t)
+	f.meta.Responder(http.StatusBadRequest, 131026)
+	f.pedir(t, pedidoWhatsApp)
+	f.tw.Esperar(t, 1, 3*time.Second)
+	fim := time.Now().Add(3 * time.Second)
+	for time.Now().Before(fim) && f.repo.StatusTentativa(1) != dominio.TentativaEnviada {
+		time.Sleep(20 * time.Millisecond)
+	}
+	h := f.repo.Historico()
+	if len(h) != 2 || h[0].Canal != dominio.CanalWhatsApp || h[0].Status != dominio.TentativaFalhou ||
+		h[1].Canal != dominio.CanalSMS || h[1].Status != dominio.TentativaEnviada || len(f.meta.Recebidas()) != 1 {
+		t.Fatalf("histórico = %+v", h)
+	}
+}
+
+func TestT30_LimiteDeTaxaAgendaRetentativaNoWhatsApp(t *testing.T) {
+	f := novoFluxo(t)
+	f.meta.Responder(http.StatusBadRequest, 130429)
+	f.pedir(t, pedidoWhatsApp)
+	f.meta.Esperar(t, 1, 3*time.Second)
+	f.esperarStatus(t, dominio.TentativaFalhou)
+	fim := time.Now().Add(time.Second)
+	for time.Now().Before(fim) && len(f.repo.Historico()) < 2 {
+		time.Sleep(20 * time.Millisecond)
+	}
+	h := f.repo.Historico()
+	if len(h) != 2 || h[1].Canal != dominio.CanalWhatsApp || h[1].Numero != 2 || h[1].Status != dominio.TentativaPendente {
+		t.Fatalf("quero Retentativa pendente no WhatsApp: %+v", h)
+	}
+}
+
+func TestT31_ModeloNaoAprovadoEFalhaDefinitiva(t *testing.T) {
+	f := novoFluxo(t)
+	f.meta.Responder(http.StatusNotFound, 132001)
+	f.pedir(t, `{"template_id":"boas-vindas","destinatario":{"telefone":"+5511999998888"},"dados":{"nome":"Ana"},"canais":["whatsapp"]}`)
+	f.meta.Esperar(t, 1, 3*time.Second)
+	f.esperarStatus(t, dominio.TentativaFalhou)
+	time.Sleep(200 * time.Millisecond)
+	h := f.repo.Historico()
+	if len(h) != 1 || !strings.Contains(h[0].Motivo, "132001") || len(f.meta.Recebidas()) != 1 {
+		t.Fatalf("quero 1 Tentativa falhou com 132001, sem Retentativa: %+v", h)
 	}
 }

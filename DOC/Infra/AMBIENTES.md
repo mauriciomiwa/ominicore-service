@@ -43,7 +43,8 @@ Fonte do host/realm: `../flip/infra/aviva2.0/keycloak/keycloak.env`
 | Banco | Aurora `db-zillionvf-prod` / `new_aviva`, schema `ominicore_hml`, role próprio | Aurora `db-zillionvf-prod` / `new_aviva`, schema `ominicore`, role próprio |
 | Fila | tabela `tentativas` do schema (ADR 0001) | idem |
 | Host | aviva2.0 (EC2 arm64, us-east-1), quadlets `ominicore-api-hml` / `ominicore-worker-hml` | quadlets `ominicore-api` / `ominicore-worker` |
-| OpenBao | `kv/ominicore-hml/*`, policy `ominicore-hml` (só leitura) | `kv/ominicore/*`, policy `ominicore` (só leitura) |
+| OpenBao | `kv/ominicore-hml/*`, auth `jwt-ominicore-hml`, policy/role `ominicore-hml` (só leitura) | `kv/ominicore/*`, auth `jwt-ominicore`, policy/role `ominicore` (só leitura) |
+| Podman secrets | `ominicore-hml-kc-secret`, `redis-password` (compartilhado) | `ominicore-kc-secret`, `redis-password` (compartilhado) |
 | Imagem | binário em `distroless/static` (sem registry) | idem |
 | Observabilidade | `slog` JSON no journald | idem |
 
@@ -54,7 +55,8 @@ não enxerga o schema `ominicore`, e nenhum dos dois enxerga os schemas alheios.
 
 - **Fonte da verdade das chaves:** `deploy/local/README.md` (tabela "Variáveis").
 - **Onde ficam os valores:** OpenBao (`kv/<prefixo>/postgres`, `kv/<prefixo>/sendgrid`,
-  `kv/<prefixo>/twilio` — API Key + Messaging Service);
+  `kv/<prefixo>/twilio` — API Key + Messaging Service, `kv/<prefixo>/whatsapp` —
+  token de System User + `phone_number_id`);
   client secret do Keycloak (`ominicore-app`) como podman secret no host (ADR 0002).
 - **Quem pode ler/escrever valor de prod:** escrever — só o dono (Mauricio
   Miwa), com token de admin do OpenBao; ler — só o app, pela role `jwt` presa
@@ -68,7 +70,11 @@ não enxerga o schema `ominicore`, e nenhum dos dois enxerga os schemas alheios.
 | `OMINICORE_KC_ISSUER` | realm local | `…/ominicore-hml` | `…/ominicore` | identifica o ambiente |
 | `OMINICORE_BAO_PREFIXO` | `ominicore` | `ominicore-hml` | `ominicore` | isola hml de prod no mesmo cofre |
 | `OMINICORE_KC_URL` | vazio (usa o emissor) | `http://keycloak:8080` | `http://keycloak:8080` | host público tem allowlist por IP |
-| credenciais SendGrid/Twilio | inválidas/teste | sandbox | produção | hml nunca envia a pessoa real |
+| `OMINICORE_DB_SCHEMA` | `ominicore` | `ominicore_hml` | `ominicore` | isola hml de prod no mesmo Aurora |
+| `OMINICORE_BAO_AUTH_MOUNT` | `jwt` | `jwt-ominicore-hml` | `jwt-ominicore` | um mount `jwt` aceita um só emissor (realm) |
+| `OMINICORE_BAO_ROLE` | `ominicore` | `ominicore-hml` | `ominicore` | policy por ambiente |
+| `OMINICORE_REDIS_PASSWORD` | vazio | podman secret `redis-password` | idem | Redis do aviva2.0 com `requirepass` |
+| credenciais SendGrid/Twilio/WhatsApp | inválidas/teste | sandbox (WhatsApp: número de teste da Meta) | produção | hml nunca envia a pessoa real |
 
 ## 5. Dados de homologação
 
@@ -82,9 +88,10 @@ não enxerga o schema `ominicore`, e nenhum dos dois enxerga os schemas alheios.
 
 | | hml | prod |
 |---|---|---|
-| Artefato | binário `ominicore-linux-arm64` com o SHA do commit (`make build`) | **o mesmo binário** que rodou em hml, sem rebuild (não embute segredo) |
+| Artefato | binário arm64 com o SHA do commit (`deploy/aviva2/publicar.sh hml`) | **o mesmo commit** que rodou em hml (`publicar.sh prod` recusa árvore suja); o binário não embute segredo |
 | Quem aprova | dono | dono, a cada promoção, depois de ver o bloco de alvo |
 | Migration | `ominicore migrate` com o prefixo de hml | idem com o de prod, antes de trocar o binário; só aditiva |
 | Rollback | binário anterior em `/opt/ominicore/ominicore.anterior` + restart | idem (migration aditiva não precisa voltar) |
 
 Checklist: `.agents/skills/ambientes/references/checklist-promocao.md`.
+Runbook e scripts: `deploy/aviva2/README.md`.

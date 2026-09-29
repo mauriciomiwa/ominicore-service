@@ -49,7 +49,7 @@ paths:
                 telefone: "+5511999998888"
               dados:
                 nome: Ana
-              canais: [sms, email]
+              canais: [whatsapp, sms, email]
       responses:
         "202":
           description: Notificação aceita (nova ou reutilizada pela chave).
@@ -112,8 +112,9 @@ components:
           type: array
           description: |
             Ordem de Canais desta Notificação (sem repetição); ausente = a do
-            Template. Canal sem versão no Template (ex.: `whatsapp` hoje) é
-            recusado com 422. Canais do MVP: `email`, `sms`.
+            Template. Canal sem versão no Template é recusado com 422.
+            Canais do MVP: `email`, `sms`, `whatsapp` (só Modelo aprovado;
+            contato = `destinatario.telefone`).
           uniqueItems: true
           minItems: 1
           items:

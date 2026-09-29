@@ -7,9 +7,10 @@
 
 ## Para que serve
 Um Sistema de origem autenticado pede uma Notificação por Template; o worker a
-envia pelos Canais Email (SendGrid) e SMS (Twilio) na Ordem de Canais, com
+envia pelos Canais Email (SendGrid), SMS (Twilio) e WhatsApp (Meta, Modelo
+aprovado) na Ordem de Canais, com
 Retentativa de Falha temporária e fallback para o próximo Canal, sem duplicar
-em reenvio (RN-1, RN-2, RN-3, RN-7).
+em reenvio (RN-1, RN-2, RN-3, RN-4, RN-7).
 
 ## Telas / entradas
 | Rota | Tela | Arquivo |
@@ -41,6 +42,7 @@ sequenceDiagram
 |---|---|---|---|
 | POST | SendGrid `/v3/mail/send` | `internal/adaptadores/saida/sendgrid/sendgrid.go` | enviar a Tentativa de Email |
 | POST | Twilio `/2010-04-01/Accounts/{sid}/Messages.json` | `internal/adaptadores/saida/twilio/twilio.go` | enviar a Tentativa de SMS |
+| POST | Meta `/v26.0/{phone_number_id}/messages` | `internal/adaptadores/saida/whatsapp/whatsapp.go` | enviar a Tentativa de WhatsApp (Modelo aprovado) |
 | GET | Keycloak `<realm>/protocol/openid-connect/certs` | `internal/adaptadores/saida/keycloak/validador.go` | JWKS para validar o token |
 | POST | Keycloak `<realm>/protocol/openid-connect/token` | `internal/adaptadores/saida/keycloak/token.go:17` | token do próprio OminiCore para o OpenBao |
 | — | OpenBao `auth/jwt/login`, `kv/data/ominicore/*` | `internal/adaptadores/saida/openbao/segredos.go` | credenciais no boot (REQ-6) |
@@ -50,7 +52,7 @@ Tabelas (schema `ominicore`, `migrations/00001_notificacoes.sql`): `templates`,
 `template_conteudos`, `notificacoes`, `idempotencia` (chave por Sistema de
 origem, `expira_em` = 24 h), `tentativas` (a fila; Retentativa = nova linha
 com `disponivel_em` no futuro). Seed: Template `boas-vindas`, Email → SMS
-(`migrations/00002_*`, `00003_sms.sql`); `notificacoes.destinatario_telefone` (E.164).
+(`migrations/00002_*`, `00003_sms.sql`, `00004_whatsapp.sql` — versão WhatsApp com Modelo aprovado); `notificacoes.destinatario_telefone` (E.164).
 
 ## Regras de negócio encontradas (a confirmar)
 Nenhuma além das RN da especificação.
@@ -59,5 +61,5 @@ Nenhuma além das RN da especificação.
 
 ## Specs
 Specs vigentes `openspec/specs/autenticacao-origem/`, `notificacoes/` e
-`segredos/` (REQ-1 a REQ-6); change ativa `openspec/changes/02-sms-e-fallback/`
-(REQ-2 modificado, REQ-7 a REQ-9).
+`segredos/` (REQ-1 a REQ-9); histórico em `openspec/changes/archive/`
+(`2026-09-29-01-enviar-email`, `2026-09-29-02-sms-e-fallback`).

@@ -48,18 +48,21 @@ func (q *Queries) BuscarPorChave(ctx context.Context, arg BuscarPorChaveParams) 
 }
 
 const buscarTemplate = `-- name: BuscarTemplate :many
-SELECT t.id, t.ordem_canais, c.canal, c.assunto, c.corpo
+SELECT t.id, t.ordem_canais, c.canal, c.assunto, c.corpo, c.modelo_aprovado, c.idioma, c.parametros
 FROM templates t
 JOIN template_conteudos c ON c.template_id = t.id
 WHERE t.id = $1
 `
 
 type BuscarTemplateRow struct {
-	ID          string
-	OrdemCanais []string
-	Canal       string
-	Assunto     string
-	Corpo       string
+	ID             string
+	OrdemCanais    []string
+	Canal          string
+	Assunto        string
+	Corpo          string
+	ModeloAprovado string
+	Idioma         string
+	Parametros     []string
 }
 
 func (q *Queries) BuscarTemplate(ctx context.Context, id string) ([]BuscarTemplateRow, error) {
@@ -77,6 +80,9 @@ func (q *Queries) BuscarTemplate(ctx context.Context, id string) ([]BuscarTempla
 			&i.Canal,
 			&i.Assunto,
 			&i.Corpo,
+			&i.ModeloAprovado,
+			&i.Idioma,
+			&i.Parametros,
 		); err != nil {
 			return nil, err
 		}

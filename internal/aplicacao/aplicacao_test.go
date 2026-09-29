@@ -128,9 +128,9 @@ func TestT15_OrdemDoPedidoSubstituiADoTemplate(t *testing.T) {
 func TestT16_CanalPedidoSemVersaoNoTemplateERecusado(t *testing.T) {
 	repo := memoria.Novo()
 	p := pedido()
-	p.Canais = []dominio.Canal{dominio.CanalEmail, "whatsapp"}
+	p.Canais = []dominio.Canal{dominio.CanalEmail, "telegram"}
 	_, err := aplicacao.SendMessageUseCase{Repo: repo}.Pedir(context.Background(), p)
-	if !errors.Is(err, dominio.ErrCanalSemVersao) || !strings.Contains(err.Error(), "whatsapp") {
+	if !errors.Is(err, dominio.ErrCanalSemVersao) || !strings.Contains(err.Error(), "telegram") {
 		t.Fatalf("erro = %v", err)
 	}
 	if n, _ := repo.Contar(); n != 0 {
@@ -160,5 +160,39 @@ func TestPrimeiraTentativaPulaCanalSemContato(t *testing.T) {
 	}
 	if repo.Tentativas[0].Canal != dominio.CanalSMS {
 		t.Fatalf("1ª Tentativa = %s, quero sms", repo.Tentativas[0].Canal)
+	}
+}
+
+func TestT32_PedidoComWhatsAppNaOrdemEAceito(t *testing.T) {
+	repo := memoria.Novo()
+	p := pedido()
+	p.Destinatario.Telefone = "+5511999998888"
+	p.Canais = []dominio.Canal{dominio.CanalWhatsApp, dominio.CanalSMS}
+	if _, err := (aplicacao.SendMessageUseCase{Repo: repo}).Pedir(context.Background(), p); err != nil {
+		t.Fatal(err)
+	}
+	if repo.Tentativas[0].Canal != dominio.CanalWhatsApp {
+		t.Fatalf("1ª Tentativa = %s, quero whatsapp", repo.Tentativas[0].Canal)
+	}
+}
+
+func TestT33_ParametroDoModeloAprovadoEVariavelExigida(t *testing.T) {
+	repo := memoria.Novo()
+	// Template só com a versão WhatsApp: "nome" é exigido apenas por ser parâmetro 1
+	repo.Templates["so-whatsapp"] = dominio.Template{
+		ID: "so-whatsapp", OrdemCanais: []dominio.Canal{dominio.CanalWhatsApp},
+		Conteudos: map[dominio.Canal]dominio.ConteudoCanal{
+			dominio.CanalWhatsApp: {ModeloAprovado: "boas_vindas", Idioma: "pt_BR", Parametros: []string{"nome"}},
+		},
+	}
+	p := pedido()
+	p.TemplateID, p.Dados = "so-whatsapp", map[string]string{}
+	p.Destinatario.Telefone = "+5511999998888"
+	_, err := aplicacao.SendMessageUseCase{Repo: repo}.Pedir(context.Background(), p)
+	if !errors.Is(err, dominio.ErrVariavelFaltando) || !strings.Contains(err.Error(), "nome") {
+		t.Fatalf("erro = %v", err)
+	}
+	if n, _ := repo.Contar(); n != 0 {
+		t.Fatalf("registrou %d notificações", n)
 	}
 }

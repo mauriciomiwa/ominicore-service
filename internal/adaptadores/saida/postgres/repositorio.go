@@ -33,7 +33,10 @@ func (r Repositorio) BuscarTemplate(ctx context.Context, id string) (dominio.Tem
 	}
 	tpl := dominio.Template{ID: id, OrdemCanais: canais(linhas[0].OrdemCanais), Conteudos: map[dominio.Canal]dominio.ConteudoCanal{}}
 	for _, l := range linhas {
-		tpl.Conteudos[dominio.Canal(l.Canal)] = dominio.ConteudoCanal{Assunto: l.Assunto, Corpo: l.Corpo}
+		tpl.Conteudos[dominio.Canal(l.Canal)] = dominio.ConteudoCanal{
+			Assunto: l.Assunto, Corpo: l.Corpo,
+			ModeloAprovado: l.ModeloAprovado, Idioma: l.Idioma, Parametros: l.Parametros,
+		}
 	}
 	return tpl, nil
 }

@@ -16,17 +16,23 @@ ficam no `System/backlog-mvp.md` (cada uma é uma change do OpenSpec); furos de 
 - [ ] Decidir se envio duplicado na janela de queda (Provedor aceitou, commit falhou) é aceitável: hoje o despacho é "pelo menos uma vez".
 - [ ] Caminho do módulo Go (`ominicore` → `github.com/<org>/ominicore`) quando o repositório existir.
 
+## Fatia 06 — WhatsApp
+- [ ] Conta Meta Business + WhatsApp Business Account + número verificado; Modelo aprovado `boas_vindas` (`pt_BR`, 1 parâmetro = nome). Sem isso, só testes com Meta falsa.
+- [ ] Token permanente de System User e `phone_number_id` em `kv/<prefixo>/whatsapp` (dono).
+- [ ] Revisar a versão da Graph API fixada no adaptador antes da data de desativação da Meta.
+
 ## Repositório (GitHub)
 - [ ] Criar o repositório no GitHub (org/nome a definir) e fazer o primeiro push.
 - [ ] Ligar Dependabot alerts, security updates, grouped updates e allow auto-merge.
 - [ ] Marcar `sdd-checks` (job `checagens`) e o CI de Go como obrigatórios na branch `main`.
 - [ ] Preencher SLA e donos em `Infra/seguranca-dependencias.md`.
 
-## Infraestrutura (trilha — skill `ambientes`)
-- [ ] DNS + Cloudflare para `notify.flipapi.com.br` e `notify-hml.flipapi.com.br` (só `/webhooks/*`).
-- [ ] Aurora: schema/role `ominicore_hml` além de `ominicore`, sem acesso cruzado.
-- [ ] Realms `ominicore` e `ominicore-hml` no Keycloak; client `ominicore-app` (login no Bao) e um client por Sistema de origem.
-- [ ] OpenBao: auth `jwt` com o Keycloak como emissor, role presa ao `azp` `ominicore-app`, policies `ominicore` (`kv/ominicore/*`) e `ominicore-hml` (`kv/ominicore-hml/*`), só leitura; gravar credenciais SendGrid/Twilio.
-- [ ] Aurora `new_aviva`: schema e role `ominicore`.
-- [ ] Quadlets `ominicore-api` e `ominicore-worker` na rede `aviva`; rota pública só `/webhooks/*` no Traefik; `deploy/aviva2/publicar.sh`.
-- [ ] Contas SendGrid e Twilio (sandbox para hml).
+## Infraestrutura (trilha — skill `ambientes`; runbook `deploy/aviva2/README.md`)
+Artefatos prontos no repositório (2026-09-29); **nada executado no host ainda**. Ordem, hml primeiro:
+- [ ] 1. DNS + Cloudflare `notify-hml.flipapi.com.br` (dono).
+- [ ] 2. Aurora: `deploy/aviva2/aurora/criar-schema.sql`, bloco hml (dono, DBeaver).
+- [ ] 3. Keycloak: `sudo deploy/aviva2/keycloak/criar-realm.sh hml` (dono, no host).
+- [ ] 4. OpenBao: `sudo deploy/aviva2/openbao/configurar-openbao.sh hml` (dono, no host; contas SendGrid/Twilio de sandbox).
+- [ ] 5. `./deploy/aviva2/publicar.sh hml` (bloco de alvo antes).
+- [ ] 6. Sistema de origem de teste em hml (`keycloak/criar-sistema-origem.sh hml <id>`) e um pedido de ponta a ponta.
+- [ ] Depois, prod: mesmos passos com `prod`, só com a promoção aprovada (`AMBIENTES.md` §6).

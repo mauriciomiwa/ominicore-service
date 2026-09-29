@@ -34,10 +34,13 @@ type Template struct {
 }
 
 type TemplateConteudo struct {
-	TemplateID string
-	Canal      string
-	Assunto    string
-	Corpo      string
+	TemplateID     string
+	Canal          string
+	Assunto        string
+	Corpo          string
+	ModeloAprovado string
+	Idioma         string
+	Parametros     []string
 }
 
 type Tentativa struct {

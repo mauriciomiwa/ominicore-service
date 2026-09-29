@@ -1,5 +1,5 @@
 {
- "gerado_em": "2026-09-29T13:44:22",
+ "gerado_em": "2026-09-29T16:30:01",
  "raiz": "ominicore",
  "stack": [
   {
@@ -15,7 +15,7 @@
    "importa": []
   },
   "internal": {
-   "arquivos": 34,
+   "arquivos": 38,
    "importa": []
   },
   "migrations": {
@@ -69,11 +69,21 @@
   "COMPOSE": [
    "deploy/local/bootstrap.sh"
   ],
+  "HOST": [
+   "deploy/aviva2/publicar.sh"
+  ],
+  "KEY": [
+   "deploy/aviva2/publicar.sh"
+  ],
   "SENDGRID_API_KEY": [
    "deploy/local/bootstrap.sh"
   ],
   "SENDGRID_REMETENTE": [
    "deploy/local/bootstrap.sh"
+  ],
+  "SUFIXO": [
+   "deploy/aviva2/keycloak/criar-realm.sh",
+   "deploy/aviva2/publicar.sh"
   ],
   "TWILIO_ACCOUNT_SID": [
    "deploy/local/bootstrap.sh"
@@ -86,6 +96,12 @@
   ],
   "TWILIO_MESSAGING_SERVICE_SID": [
    "deploy/local/bootstrap.sh"
+  ],
+  "WHATSAPP_PHONE_NUMBER_ID": [
+   "deploy/local/bootstrap.sh"
+  ],
+  "WHATSAPP_TOKEN": [
+   "deploy/local/bootstrap.sh"
   ]
  },
  "env_declaradas": {},
@@ -94,7 +110,7 @@
    "migrations"
   ],
   "schemas": [],
-  "sql": 4
+  "sql": 6
  },
  "infra": {
   "docker": [],

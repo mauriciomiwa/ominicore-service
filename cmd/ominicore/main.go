@@ -26,6 +26,7 @@ import (
 	"ominicore/internal/adaptadores/saida/redis"
 	"ominicore/internal/adaptadores/saida/sendgrid"
 	"ominicore/internal/adaptadores/saida/twilio"
+	"ominicore/internal/adaptadores/saida/whatsapp"
 	"ominicore/internal/aplicacao"
 	"ominicore/internal/dominio"
 	"ominicore/internal/logs"
@@ -60,7 +61,7 @@ func run(ctx context.Context, args []string, env func(string) string, saida io.W
 	if err != nil {
 		return err
 	}
-	pool, err := postgres.Conectar(ctx, seg.PostgresDSN)
+	pool, err := postgres.Conectar(ctx, seg.PostgresDSN, cfg.Schema)
 	if err != nil {
 		return err
 	}
@@ -68,7 +69,7 @@ func run(ctx context.Context, args []string, env func(string) string, saida io.W
 	repo := postgres.Repositorio{Pool: pool}
 	switch args[0] {
 	case "migrate":
-		return postgres.Migrar(ctx, pool)
+		return postgres.Migrar(ctx, pool, cfg.Schema)
 	case "api":
 		return rodarAPI(ctx, cfg, repo, log)
 	case "worker":
@@ -87,8 +88,11 @@ type config struct {
 	KCSecret      string
 	Bao           openbao.Config
 	RedisEndereco string
+	RedisSenha    string // podman secret redis-password no aviva2.0; vazio no local
 	SendGridURL   string
 	TwilioURL     string
+	WhatsAppURL   string
+	Schema        string // search_path no Postgres: ominicore (prod) ou ominicore_hml
 }
 
 func lerConfig(env func(string) string) config {
@@ -106,15 +110,19 @@ func lerConfig(env func(string) string) config {
 		KCClientID: padrao("OMINICORE_KC_CLIENT_ID", "ominicore-app"),
 		KCSecret:   env("OMINICORE_KC_CLIENT_SECRET"),
 		Bao: openbao.Config{
-			Endereco: env("OMINICORE_BAO_ADDR"),
-			Mount:    padrao("OMINICORE_BAO_MOUNT", "kv"),
-			Prefixo:  padrao("OMINICORE_BAO_PREFIXO", "ominicore"),
-			Token:    env("OMINICORE_BAO_TOKEN"),
-			Role:     padrao("OMINICORE_BAO_ROLE", "ominicore"),
+			Endereco:  env("OMINICORE_BAO_ADDR"),
+			Mount:     padrao("OMINICORE_BAO_MOUNT", "kv"),
+			Prefixo:   padrao("OMINICORE_BAO_PREFIXO", "ominicore"),
+			Token:     env("OMINICORE_BAO_TOKEN"),
+			Role:      padrao("OMINICORE_BAO_ROLE", "ominicore"),
+			AuthMount: padrao("OMINICORE_BAO_AUTH_MOUNT", "jwt"),
 		},
 		RedisEndereco: padrao("OMINICORE_REDIS_ADDR", "redis:6379"),
+		RedisSenha:    env("OMINICORE_REDIS_PASSWORD"),
 		SendGridURL:   env("OMINICORE_SENDGRID_URL"),
 		TwilioURL:     env("OMINICORE_TWILIO_URL"),
+		WhatsAppURL:   env("OMINICORE_WHATSAPP_URL"),
+		Schema:        padrao("OMINICORE_DB_SCHEMA", postgres.SchemaPadrao),
 	}
 }
 
@@ -154,7 +162,7 @@ func rodarAPI(ctx context.Context, cfg config, repo postgres.Repositorio, log *s
 	if cfg.KCEmissor == "" {
 		return errors.New("OMINICORE_KC_ISSUER vazio")
 	}
-	rdb := goredis.NewClient(&goredis.Options{Addr: cfg.RedisEndereco})
+	rdb := goredis.NewClient(&goredis.Options{Addr: cfg.RedisEndereco, Password: cfg.RedisSenha})
 	defer func() { _ = rdb.Close() }()
 	srv := &http.Server{
 		Addr: cfg.Endereco,
@@ -190,6 +198,9 @@ func rodarWorker(ctx context.Context, cfg config, seg openbao.Segredos, repo pos
 			dominio.CanalSMS: twilio.Novo(cfg.TwilioURL, twilio.Credenciais{
 				AccountSID: seg.Twilio["account_sid"], APIKeySID: seg.Twilio["api_key_sid"],
 				APIKeySecret: seg.Twilio["api_key_secret"], MessagingServiceSID: seg.Twilio["messaging_service_sid"],
+			}),
+			dominio.CanalWhatsApp: whatsapp.Novo(cfg.WhatsAppURL, whatsapp.Credenciais{
+				Token: seg.WhatsApp["token"], PhoneNumberID: seg.WhatsApp["phone_number_id"],
 			}),
 		},
 		Log: log,

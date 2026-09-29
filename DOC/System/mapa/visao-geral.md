@@ -20,6 +20,7 @@ graph LR
   APP & DESP --> PG[(Postgres ominicore)]
   DESP --> SG[SendGrid]
   DESP --> TW[Twilio]
+  DESP --> WA[Meta WhatsApp]
   API --> KC[Keycloak JWKS]
   API --> RD[(Redis: cache JWKS)]
   API & W --> BAO[OpenBao: segredos no boot]
@@ -32,7 +33,7 @@ Camadas: `internal/dominio` (sem dependência externa) · `internal/aplicacao` e
 ## Áreas
 | Área | O que faz | Entradas (rotas/endpoints) | Depende de |
 |---|---|---|---|
-| [Envio](envio.md) | pedido de Notificação por Template e despacho por Email e SMS, com Retentativa e fallback | `POST /v1/notificacoes`, worker | Keycloak, OpenBao, Postgres, Redis, SendGrid, Twilio |
+| [Envio](envio.md) | pedido de Notificação por Template e despacho por Email, SMS e WhatsApp, com Retentativa e fallback | `POST /v1/notificacoes`, worker | Keycloak, OpenBao, Postgres, Redis, SendGrid, Twilio, Meta |
 
 ## Integrações externas
 | Sistema | Como é chamado | Onde |
@@ -41,6 +42,7 @@ Camadas: `internal/dominio` (sem dependência externa) · `internal/aplicacao` e
 | OpenBao | login `jwt` (ou token local) + KV v2 | `internal/adaptadores/saida/openbao/segredos.go` |
 | SendGrid | `POST /v3/mail/send` | `internal/adaptadores/saida/sendgrid/sendgrid.go` |
 | Twilio | `POST .../Messages.json` (API Key) | `internal/adaptadores/saida/twilio/twilio.go` |
+| Meta (WhatsApp) | `POST /v26.0/{phone_number_id}/messages` (Bearer) | `internal/adaptadores/saida/whatsapp/whatsapp.go` |
 | Postgres | pgx + sqlc | `internal/adaptadores/saida/postgres/` |
 | Redis | cache do JWKS | `internal/adaptadores/saida/redis/cache.go` |
 

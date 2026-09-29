@@ -11,8 +11,9 @@ import (
 type Canal string
 
 const (
-	CanalEmail Canal = "email"
-	CanalSMS   Canal = "sms"
+	CanalEmail    Canal = "email"
+	CanalSMS      Canal = "sms"
+	CanalWhatsApp Canal = "whatsapp"
 )
 
 // StatusNotificacao é o estado da Notificação como um todo.
@@ -44,7 +45,7 @@ func (d Destinatario) Contato(c Canal) string {
 	switch c {
 	case CanalEmail:
 		return d.Email
-	case CanalSMS:
+	case CanalSMS, CanalWhatsApp:
 		return d.Telefone
 	}
 	return ""

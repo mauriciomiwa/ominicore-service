@@ -128,7 +128,7 @@ func TestCanaisRepetidosSaoRecusados(t *testing.T) {
 
 func TestCanalSemVersaoVira422(t *testing.T) {
 	a := novo(t)
-	corpo := `{"template_id":"boas-vindas","destinatario":{"email":"ana@exemplo.com"},"dados":{"nome":"Ana"},"canais":["whatsapp"]}`
+	corpo := `{"template_id":"boas-vindas","destinatario":{"email":"ana@exemplo.com"},"dados":{"nome":"Ana"},"canais":["telegram"]}`
 	if rec := a.pedir(a.realm.Valido(t, "sistema-a"), "k-1", corpo); rec.Code != http.StatusUnprocessableEntity {
 		t.Fatalf("status = %d", rec.Code)
 	}
