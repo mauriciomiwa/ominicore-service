@@ -3,6 +3,13 @@
 Registro cronológico de decisões e eventos, mais recente no topo. Decisão sem
 registro vira suposição de alguém daqui a seis meses.
 
+## 2026-09-29 — Entrega: change `01-enviar-email` arquivada
+- Arquivada em `openspec/changes/archive/2026-09-29-01-enviar-email/`; specs
+  vigentes criadas: `autenticacao-origem` (REQ-1), `notificacoes` (REQ-2 a
+  REQ-5), `segredos` (REQ-6). Cobre RN-1, RN-3 (Email), RN-7 e RN-9
+  (credenciais); RN-2 parcial (falha encerra; retry/fallback na fatia 02).
+- T-1 a T-14 passando (`System/plano-de-testes.md`).
+
 ## 2026-09-29 — Fatia 1 verificada contra serviços reais (30/30)
 - Docker ligado: `make itest` 7/7 contra Postgres 17 (T-4, T-7 com 10 reenvios
   concorrentes, T-9, T-10, T-11 ~0,65 s, T-12, janela de 24 h).

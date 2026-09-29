@@ -18,6 +18,7 @@ chega por e-mail, sem duplicar em reenvio; esqueleto hexagonal, contrato,
 Cobre: RN-1 (REQ-1, REQ-2), RN-7 (REQ-3), RN-3 (REQ-4, REQ-5), RN-9 (REQ-6)
 Depende de: —
 Pronto quando: T-1 a T-14 passando e change arquivada.
+**Entregue em 2026-09-29** (`openspec/changes/archive/2026-09-29-01-enviar-email/`).
 
 ### Fatia 2 — SMS e fallback entre Canais
 Change: `02-sms-e-fallback`

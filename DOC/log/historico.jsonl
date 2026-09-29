@@ -89,3 +89,5 @@
 {"data": "2026-09-29T11:47:00", "script": "mapeia_projeto", "rc": 0, "faltas": 0, "alertas": 0, "erro": false, "detalhe": "execucoes/2026-09-29_114700_mapeia_projeto.json", "modulos": 3, "rotas": 0, "endpoints": 3, "chamadas_http": 2, "env": 3}
 {"data": "2026-09-29T11:47:02", "script": "mapeia_projeto-check", "rc": 0, "faltas": 0, "alertas": 0, "erro": false, "detalhe": "execucoes/2026-09-29_114702_mapeia_projeto-check.json", "surgiu": 0, "sumiu": 0}
 {"data": "2026-09-29T11:47:02", "script": "checa_projeto-local", "rc": 0, "faltas": 0, "alertas": 0, "erro": false, "detalhe": "execucoes/2026-09-29_114702_checa_projeto-local.json", "furos": 0}
+{"data": "2026-09-29T12:56:52", "script": "mapeia_projeto-check", "rc": 0, "faltas": 0, "alertas": 0, "erro": false, "detalhe": "execucoes/2026-09-29_125652_mapeia_projeto-check.json", "surgiu": 0, "sumiu": 0}
+{"data": "2026-09-29T12:56:53", "script": "checa_projeto-local", "rc": 0, "faltas": 0, "alertas": 0, "erro": false, "detalhe": "execucoes/2026-09-29_125653_checa_projeto-local.json", "furos": 0}

@@ -55,5 +55,6 @@ Nenhuma além das RN da especificação.
   escrito como critério; confirmar.
 
 ## Specs
-Change ativa `openspec/changes/01-enviar-email/` — capacidades
-`autenticacao-origem`, `notificacoes`, `segredos` (REQ-1 a REQ-6).
+Specs vigentes `openspec/specs/autenticacao-origem/`, `notificacoes/` e
+`segredos/` (REQ-1 a REQ-6); histórico em
+`openspec/changes/archive/2026-09-29-01-enviar-email/`.

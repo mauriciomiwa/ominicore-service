@@ -11,7 +11,6 @@ ficam no `System/backlog-mvp.md` (cada uma é uma change do OpenSpec); furos de 
 
 ## Fatia 1 — pendências de verificação
 - [ ] VM `podman-machine-default` segue quebrada (sem identidade SSH); hoje o local roda no Docker. Recriar a VM só se o Podman for o runtime local desejado — decisão do dono.
-- [ ] Arquivar a change: `/opsx:archive 01-enviar-email` (30/30 tarefas).
 - [ ] hml/prod: client `ominicore-app` com audience mapper `openbao` e role `jwt` com `bound_audiences=openbao` (espelhar `deploy/local/`).
 - [ ] Fatia 5 (retenção): anonimizar também `tentativas.motivo` — a mensagem do Provedor pode citar o contato do Destinatário.
 - [ ] Decidir se envio duplicado na janela de queda (Provedor aceitou, commit falhou) é aceitável: hoje o despacho é "pelo menos uma vez".

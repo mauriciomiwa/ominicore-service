@@ -6,12 +6,12 @@ Retrato de onde o trabalho parou, reescrito a cada fim de sessão (skill
 `passagem`, no máximo 40 linhas). É o que o próximo chat lê primeiro.
 
 ## Em curso
-- Change `01-enviar-email`: **30/30 tarefas**, verificada contra Postgres,
-  Keycloak, OpenBao e Redis reais (Docker). Pronta para `/opsx:archive`.
-- Commit `e70f224` na branch `fatia/01-enviar-email`; o que veio depois
-  (contrato de ambientes, backchannel/prefixo, verificação) **ainda sem commit**.
-- Próximo passo: commit, `/opsx:archive 01-enviar-email`, abrir a fatia 02
-  (`02-sms-e-fallback`) com a sabatina.
+- Fatia 1 **entregue e arquivada** (`openspec/changes/archive/2026-09-29-01-enviar-email/`);
+  specs vigentes `autenticacao-origem`, `notificacoes`, `segredos` (REQ-1 a REQ-6,
+  T-1 a T-14 passando). Nenhuma change ativa.
+- Branch `fatia/01-enviar-email` (commits até `df297b2`; o arquivamento ainda sem commit).
+- Próximo passo: sabatina da fatia 02 (`02-sms-e-fallback`: SMS/Twilio, retry
+  3× e fallback pela Ordem de Canais — RN-2, RN-3), depois `/opsx:propose`.
 
 ## Decisões recentes
 - hml e prod no mesmo host aviva2.0, separados por realm (`ominicore-hml`),
@@ -21,14 +21,11 @@ Retrato de onde o trabalho parou, reescrito a cada fim de sessão (skill
 
 ## Bloqueios e pendências
 - VM do Podman quebrada; o local roda no Docker (`COMPOSE="docker compose"`).
-- No diff sem commit há arquivos alterados por ferramentas SDD
-  (`mapa.html`, `mapa_html.py`, `log/historico.jsonl`, `.skills-sync.json`):
-  conferir antes de commitar.
 - Decisões em aberto no `to-do.md` (cadastro de Templates, consulta de status,
   chave repetida com pedido diferente, entrega "pelo menos uma vez").
 
 ## Arquivos que importam agora
-- `../openspec/changes/01-enviar-email/` — change a arquivar
+- `../openspec/specs/` — comportamento vigente (REQ-1 a REQ-6)
 - `System/plano-de-testes.md` — status de cada T-n
 - `Infra/AMBIENTES.md` — contrato de hml/prod
 - `../deploy/local/bootstrap.sh` — cofre local com auth `jwt` igual a hml/prod
