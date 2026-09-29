@@ -20,6 +20,11 @@ echo ">> segredos em kv/ominicore/*"
   dsn="postgres://ominicore:ominicore-local@127.0.0.1:5432/ominicore?sslmode=disable" >/dev/null
 "${BAO[@]}" kv put kv/ominicore/sendgrid \
   api_key="${SENDGRID_API_KEY:-SG.local-invalida}" remetente="${SENDGRID_REMETENTE:-no-reply@localhost}" >/dev/null
+# Twilio: API Key + Messaging Service (fatia 2). Valores inválidos por padrão.
+"${BAO[@]}" kv put kv/ominicore/twilio \
+  account_sid="${TWILIO_ACCOUNT_SID:-AClocal}" api_key_sid="${TWILIO_API_KEY_SID:-SKlocal}" \
+  api_key_secret="${TWILIO_API_KEY_SECRET:-local-invalida}" \
+  messaging_service_sid="${TWILIO_MESSAGING_SERVICE_SID:-MGlocal}" >/dev/null
 
 echo ">> auth jwt com o Keycloak local (ADR 0002 — o mesmo desenho de hml/prod)"
 "${BAO[@]}" auth enable jwt >/dev/null 2>&1 || true

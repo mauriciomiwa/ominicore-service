@@ -4,13 +4,14 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"ominicore/internal/dominio"
 	"ominicore/internal/portas"
 )
 
 // DespacharUseCase envia a próxima Tentativa da fila e grava a decisão do
-// NotificationRouter (REQ-4, REQ-5).
+// NotificationRouter (REQ-4, REQ-5, REQ-7 a REQ-9).
 type DespacharUseCase struct {
 	Repo       portas.MessageRepositoryPort
 	Remetentes map[dominio.Canal]portas.MessageSenderPort
@@ -25,7 +26,7 @@ func (uc DespacharUseCase) ProcessarProxima(ctx context.Context) (bool, error) {
 		return false, err
 	}
 	resultado := uc.enviar(ctx, res)
-	decisao := uc.Router.Decidir(resultado)
+	decisao := uc.Router.Decidir(res.Tentativa, res.Notificacao, resultado)
 	if err := res.Concluir(ctx, decisao, resultado); err != nil {
 		return true, fmt.Errorf("concluir tentativa %d: %w", res.Tentativa.ID, err)
 	}
@@ -33,7 +34,9 @@ func (uc DespacharUseCase) ProcessarProxima(ctx context.Context) (bool, error) {
 		"notificacao_id", res.Notificacao.ID,
 		"tentativa_id", res.Tentativa.ID,
 		"canal", res.Tentativa.Canal,
-		"status", decisao.Tentativa) // motivo fica só no banco: pode citar o contato (REQ-6)
+		"status", decisao.Tentativa, // motivo fica só no banco: pode citar o contato (REQ-6)
+		"notificacao_status", decisao.Notificacao,
+		"proxima", descreverProxima(decisao.Proxima))
 	return true, nil
 }
 
@@ -52,4 +55,11 @@ func (uc DespacharUseCase) enviar(ctx context.Context, res portas.TentativaReser
 		return dominio.ResultadoEnvio{Tipo: dominio.FalhaDefinitiva, Motivo: err.Error()}
 	}
 	return remetente.Enviar(ctx, n.Destinatario.Contato(canal), conteudo)
+}
+
+func descreverProxima(p *dominio.ProximaTentativa) string {
+	if p == nil {
+		return ""
+	}
+	return fmt.Sprintf("%s#%d em %s", p.Canal, p.Numero, p.Espera.Round(time.Second))
 }

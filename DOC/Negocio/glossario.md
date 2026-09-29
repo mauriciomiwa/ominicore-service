@@ -31,6 +31,10 @@ Sequência de Canais que a Notificação percorre no fallback; vem do pedido ou,
 na falta, do Template.
 _Evitar_: prioridade, cascata
 
+**Retentativa**:
+Nova Tentativa no mesmo Canal depois de uma Falha temporária, após uma espera.
+_Evitar_: retry, reenvio, nova tentativa
+
 **Falha temporária**:
 Falha de uma Tentativa que pode dar certo se repetida no mesmo Canal (provedor
 fora do ar, limite de taxa).

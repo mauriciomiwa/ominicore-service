@@ -33,6 +33,9 @@ linters:
         linters: [funlen, dupl, gosec, gocognit, depguard]
       - path: internal/adaptadores/saida/postgres/db/
         linters: [dupl]
+      # apoio de teste (fakes com credenciais inventadas), nunca código de produção
+      - path: internal/testes/
+        linters: [gosec]
 
 formatters:
   enable:

@@ -14,6 +14,7 @@ import (
 	"ominicore/internal/adaptadores/entrada/worker"
 	"ominicore/internal/adaptadores/saida/keycloak"
 	"ominicore/internal/adaptadores/saida/sendgrid"
+	"ominicore/internal/adaptadores/saida/twilio"
 	"ominicore/internal/aplicacao"
 	"ominicore/internal/dominio"
 	"ominicore/internal/logs"
@@ -21,6 +22,7 @@ import (
 	"ominicore/internal/testes/emissor"
 	"ominicore/internal/testes/memoria"
 	"ominicore/internal/testes/sendgridfake"
+	"ominicore/internal/testes/twiliofake"
 
 	entradahttp "ominicore/internal/adaptadores/entrada/http"
 )
@@ -32,6 +34,7 @@ const apiKey = "SG.chave-secreta-do-teste"
 type fluxo struct {
 	repo  *memoria.Repositorio
 	sg    *sendgridfake.Fake
+	tw    *twiliofake.Fake
 	realm *emissor.Emissor
 	api   http.Handler
 	log   *bufferSeguro
@@ -55,7 +58,7 @@ func (s *bufferSeguro) String() string {
 }
 
 func novoFluxo(t *testing.T) *fluxo {
-	f := &fluxo{repo: memoria.Novo(), sg: sendgridfake.Novo(t), realm: emissor.Novo(t), log: &bufferSeguro{}}
+	f := &fluxo{repo: memoria.Novo(), sg: sendgridfake.Novo(t), tw: twiliofake.Novo(t), realm: emissor.Novo(t), log: &bufferSeguro{}}
 	log := logs.Novo(f.log, slog.LevelDebug)
 	f.api = entradahttp.Servidor{
 		Auth:   keycloak.Novo(f.realm.URL, "ominicore", &emissor.Cache{}),
@@ -63,9 +66,15 @@ func novoFluxo(t *testing.T) *fluxo {
 		Log:    log,
 	}.Handler()
 	uc := aplicacao.DespacharUseCase{
-		Repo:       f.repo,
-		Remetentes: map[dominio.Canal]portas.MessageSenderPort{dominio.CanalEmail: sendgrid.Novo(f.sg.URL, apiKey, "no-reply@exemplo.com")},
-		Log:        log,
+		Repo: f.repo,
+		Remetentes: map[dominio.Canal]portas.MessageSenderPort{
+			dominio.CanalEmail: sendgrid.Novo(f.sg.URL, apiKey, "no-reply@exemplo.com"),
+			dominio.CanalSMS: twilio.Novo(f.tw.URL, twilio.Credenciais{
+				AccountSID: twiliofake.AccountSID, APIKeySID: twiliofake.APIKeySID,
+				APIKeySecret: twiliofake.APIKeySecret, MessagingServiceSID: twiliofake.MessagingServiceSID,
+			}),
+		},
+		Log: log,
 	}
 	ctx, cancelar := context.WithCancel(context.Background())
 	t.Cleanup(cancelar)
@@ -134,5 +143,50 @@ func TestLoggerRedigeCamposSensiveis(t *testing.T) {
 	logs.Novo(&b, slog.LevelInfo).Info("x", "email", "ana@exemplo.com", "api_key", apiKey, "canal", "email")
 	if strings.Contains(b.String(), "ana@exemplo.com") || strings.Contains(b.String(), apiKey) || !strings.Contains(b.String(), `"canal":"email"`) {
 		t.Fatalf("log = %s", b.String())
+	}
+}
+
+const pedidoSMS = `{"template_id":"boas-vindas","destinatario":{"telefone":"+5511999998888"},"dados":{"nome":"Ana Souza"},"canais":["sms"]}`
+
+func TestT19_TentativaDeSMSEEnviada(t *testing.T) {
+	f := novoFluxo(t)
+	f.pedir(t, pedidoSMS)
+	sms := f.tw.Esperar(t, 1, 3*time.Second)[0]
+	if sms.Para != "+5511999998888" || sms.Corpo != "Olá Ana Souza, sua conta está pronta." ||
+		sms.MessagingService != twiliofake.MessagingServiceSID || !sms.AuthOK {
+		t.Fatalf("sms = %+v", sms)
+	}
+	f.esperarStatus(t, dominio.TentativaEnviada)
+}
+
+func TestT20_NumeroInvalidoEFalhaDefinitiva(t *testing.T) {
+	f := novoFluxo(t)
+	f.tw.Responder(http.StatusBadRequest, 21211)
+	f.pedir(t, pedidoSMS)
+	f.tw.Esperar(t, 1, 3*time.Second)
+	f.esperarStatus(t, dominio.TentativaFalhou)
+	time.Sleep(200 * time.Millisecond) // o worker teria tempo de pegar uma Retentativa imediata
+	h := f.repo.Historico()
+	if len(h) != 1 || !strings.Contains(h[0].Motivo, "21211") {
+		t.Fatalf("quero 1 Tentativa falhou com 21211, sem Retentativa: %+v", h)
+	}
+	if len(f.tw.Recebidos()) != 1 {
+		t.Fatalf("o Twilio recebeu %d envios", len(f.tw.Recebidos()))
+	}
+}
+
+func TestFallbackEmailParaSMSPontaAPontaEmMemoria(t *testing.T) {
+	f := novoFluxo(t)
+	f.sg.Responder(http.StatusBadRequest)
+	f.pedir(t, `{"template_id":"boas-vindas","destinatario":{"email":"ana@exemplo.com","telefone":"+5511999998888"},"dados":{"nome":"Ana"}}`)
+	f.tw.Esperar(t, 1, 3*time.Second)
+	fim := time.Now().Add(3 * time.Second)
+	for time.Now().Before(fim) && f.repo.StatusTentativa(1) != dominio.TentativaEnviada {
+		time.Sleep(20 * time.Millisecond)
+	}
+	h := f.repo.Historico()
+	if len(h) != 2 || h[0].Canal != dominio.CanalEmail || h[0].Status != dominio.TentativaFalhou ||
+		h[1].Canal != dominio.CanalSMS || h[1].Status != dominio.TentativaEnviada {
+		t.Fatalf("histórico = %+v", h)
 	}
 }

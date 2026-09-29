@@ -16,15 +16,16 @@ type Idempotencium struct {
 }
 
 type Notificaco struct {
-	ID                string
-	SistemaOrigem     string
-	TemplateID        string
-	DestinatarioEmail string
-	Dados             []byte
-	OrdemCanais       []string
-	Status            string
-	CriadaEm          pgtype.Timestamptz
-	AtualizadaEm      pgtype.Timestamptz
+	ID                   string
+	SistemaOrigem        string
+	TemplateID           string
+	DestinatarioEmail    string
+	Dados                []byte
+	OrdemCanais          []string
+	Status               string
+	CriadaEm             pgtype.Timestamptz
+	AtualizadaEm         pgtype.Timestamptz
+	DestinatarioTelefone string
 }
 
 type Template struct {

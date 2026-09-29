@@ -7,7 +7,9 @@
 
 ## Para que serve
 Um Sistema de origem autenticado pede uma Notificação por Template; o worker a
-envia pelo Canal Email (SendGrid), sem duplicar em reenvio (RN-1, RN-3, RN-7).
+envia pelos Canais Email (SendGrid) e SMS (Twilio) na Ordem de Canais, com
+Retentativa de Falha temporária e fallback para o próximo Canal, sem duplicar
+em reenvio (RN-1, RN-2, RN-3, RN-7).
 
 ## Telas / entradas
 | Rota | Tela | Arquivo |
@@ -30,14 +32,15 @@ sequenceDiagram
   A->>P: ReivindicarChave + InserirNotificacao + InserirTentativa (1 transação)
   A-->>S: 202 {id, status}
   W->>P: ReservarTentativa (FOR UPDATE SKIP LOCKED)
-  W->>G: POST /v3/mail/send
-  W->>P: ConcluirTentativa + AtualizarStatusNotificacao (commit)
+  W->>G: POST /v3/mail/send (ou Twilio, Canal SMS)
+  W->>P: ConcluirTentativa + próxima Tentativa (Retentativa ou próximo Canal) + status (commit)
 ```
 
 ## Chamadas ao back
 | Método | Endpoint | Chamado em | Para quê |
 |---|---|---|---|
-| POST | SendGrid `/v3/mail/send` | `internal/adaptadores/saida/sendgrid/sendgrid.go:77` | enviar a Tentativa de Email |
+| POST | SendGrid `/v3/mail/send` | `internal/adaptadores/saida/sendgrid/sendgrid.go` | enviar a Tentativa de Email |
+| POST | Twilio `/2010-04-01/Accounts/{sid}/Messages.json` | `internal/adaptadores/saida/twilio/twilio.go` | enviar a Tentativa de SMS |
 | GET | Keycloak `<realm>/protocol/openid-connect/certs` | `internal/adaptadores/saida/keycloak/validador.go` | JWKS para validar o token |
 | POST | Keycloak `<realm>/protocol/openid-connect/token` | `internal/adaptadores/saida/keycloak/token.go:17` | token do próprio OminiCore para o OpenBao |
 | — | OpenBao `auth/jwt/login`, `kv/data/ominicore/*` | `internal/adaptadores/saida/openbao/segredos.go` | credenciais no boot (REQ-6) |
@@ -45,16 +48,16 @@ sequenceDiagram
 ## Estado e dados
 Tabelas (schema `ominicore`, `migrations/00001_notificacoes.sql`): `templates`,
 `template_conteudos`, `notificacoes`, `idempotencia` (chave por Sistema de
-origem, `expira_em` = 24 h), `tentativas` (a fila). Seed: Template
-`boas-vindas` (`migrations/00002_seed_template_boas_vindas.sql`).
+origem, `expira_em` = 24 h), `tentativas` (a fila; Retentativa = nova linha
+com `disponivel_em` no futuro). Seed: Template `boas-vindas`, Email → SMS
+(`migrations/00002_*`, `00003_sms.sql`); `notificacoes.destinatario_telefone` (E.164).
 
 ## Regras de negócio encontradas (a confirmar)
 Nenhuma além das RN da especificação.
-- (deduzido) Pedido cujo Destinatário não tem contato para o 1º Canal é
-  recusado com 422 (`aplicacao/enviar.go`) — decorre de RN-1, mas não está
-  escrito como critério; confirmar.
+- (deduzido) `canais` repetido no pedido é recusado com 400
+  (`entrada/http/servidor.go`, `validarFormato`) — formato, não regra; confirmar.
 
 ## Specs
 Specs vigentes `openspec/specs/autenticacao-origem/`, `notificacoes/` e
-`segredos/` (REQ-1 a REQ-6); histórico em
-`openspec/changes/archive/2026-09-29-01-enviar-email/`.
+`segredos/` (REQ-1 a REQ-6); change ativa `openspec/changes/02-sms-e-fallback/`
+(REQ-2 modificado, REQ-7 a REQ-9).

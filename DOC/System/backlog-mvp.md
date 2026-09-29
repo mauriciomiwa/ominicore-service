@@ -24,7 +24,7 @@ Pronto quando: T-1 a T-14 passando e change arquivada.
 Change: `02-sms-e-fallback`
 Valor: Notificação sai por SMS; Falha temporária é retentada até 3 vezes e
 Falha definitiva passa ao próximo Canal da Ordem de Canais.
-Cobre: RN-3 (REQ-7), RN-2 (REQ-8, REQ-9)
+Cobre: RN-3 (REQ-7), RN-2 (REQ-8, REQ-9), RN-1/RN-2 (REQ-2 modificado)
 Depende de: Fatia 1
 Pronto quando: testes dos REQ-7 a REQ-9 passando e change arquivada.
 

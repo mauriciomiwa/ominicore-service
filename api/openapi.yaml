@@ -21,7 +21,10 @@ paths:
       summary: Pedir uma Notificação por Template
       description: |
         Registra a Notificação (RN-1) e enfileira a primeira Tentativa no
-        primeiro Canal da Ordem de Canais do Template. A mesma
+        primeiro Canal da Ordem de Canais (a do pedido ou, sem ela, a do
+        Template) para o qual o Destinatário tem contato; Canal sem contato é
+        pulado, e Falha temporária é retentada até 3 vezes antes de passar ao
+        próximo Canal (RN-2). A mesma
         `Idempotency-Key` do mesmo Sistema de origem em até 24 h devolve a
         Notificação já criada, sem novo envio (RN-7).
       parameters:
@@ -43,8 +46,10 @@ paths:
               template_id: boas-vindas
               destinatario:
                 email: ana@exemplo.com
+                telefone: "+5511999998888"
               dados:
                 nome: Ana
+              canais: [sms, email]
       responses:
         "202":
           description: Notificação aceita (nova ou reutilizada pela chave).
@@ -98,6 +103,21 @@ components:
             email:
               type: string
               format: email
+            telefone:
+              type: string
+              description: Formato E.164.
+              pattern: '^\+[1-9]\d{7,14}$'
+              example: "+5511999998888"
+        canais:
+          type: array
+          description: |
+            Ordem de Canais desta Notificação (sem repetição); ausente = a do
+            Template. Canal sem versão no Template (ex.: `whatsapp` hoje) é
+            recusado com 422. Canais do MVP: `email`, `sms`.
+          uniqueItems: true
+          minItems: 1
+          items:
+            type: string
         dados:
           type: object
           description: Valores das variáveis do Template (todas obrigatórias).

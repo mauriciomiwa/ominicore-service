@@ -53,7 +53,8 @@ não enxerga o schema `ominicore`, e nenhum dos dois enxerga os schemas alheios.
 ## 4. Configuração
 
 - **Fonte da verdade das chaves:** `deploy/local/README.md` (tabela "Variáveis").
-- **Onde ficam os valores:** OpenBao (`kv/<prefixo>/postgres`, `kv/<prefixo>/sendgrid`);
+- **Onde ficam os valores:** OpenBao (`kv/<prefixo>/postgres`, `kv/<prefixo>/sendgrid`,
+  `kv/<prefixo>/twilio` — API Key + Messaging Service);
   client secret do Keycloak (`ominicore-app`) como podman secret no host (ADR 0002).
 - **Quem pode ler/escrever valor de prod:** escrever — só o dono (Mauricio
   Miwa), com token de admin do OpenBao; ler — só o app, pela role `jwt` presa

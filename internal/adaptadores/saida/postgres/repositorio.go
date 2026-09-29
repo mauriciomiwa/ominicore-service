@@ -59,12 +59,13 @@ func (r Repositorio) RegistrarNotificacao(ctx context.Context, n portas.NovaNoti
 		}
 		if err := q.InserirNotificacao(ctx, db.InserirNotificacaoParams{
 			ID: id, SistemaOrigem: n.SistemaOrigem, TemplateID: n.TemplateID,
-			DestinatarioEmail: n.Destinatario.Email, Dados: dados, OrdemCanais: textos(n.OrdemCanais),
+			DestinatarioEmail: n.Destinatario.Email, DestinatarioTelefone: n.Destinatario.Telefone,
+			Dados: dados, OrdemCanais: textos(n.OrdemCanais),
 		}); err != nil {
 			return err
 		}
 		reg = portas.Registro{ID: id, Status: dominio.NotificacaoPendente}
-		return q.InserirTentativa(ctx, db.InserirTentativaParams{NotificacaoID: id, Canal: string(n.OrdemCanais[0]), Numero: 1})
+		return q.InserirTentativa(ctx, db.InserirTentativaParams{NotificacaoID: id, Canal: string(n.PrimeiroCanal), Numero: 1})
 	})
 	if err != nil {
 		return portas.Registro{}, fmt.Errorf("registrar notificação: %w", err)
@@ -110,6 +111,14 @@ func concluir(ctx context.Context, tx pgx.Tx, t dominio.Tentativa, d dominio.Dec
 	if err := q.ConcluirTentativa(ctx, db.ConcluirTentativaParams{ID: t.ID, Status: string(d.Tentativa), Motivo: d.Motivo, IDProvedor: res.IDProvedor}); err != nil {
 		return err
 	}
+	if p := d.Proxima; p != nil { // Retentativa (REQ-8) ou próximo Canal (REQ-9), na mesma transação
+		if err := q.InserirTentativa(ctx, db.InserirTentativaParams{
+			NotificacaoID: t.NotificacaoID, Canal: string(p.Canal), Numero: int32(p.Numero), //nolint:gosec // Numero ≤ 4
+			EsperaMs: p.Espera.Milliseconds(),
+		}); err != nil {
+			return err
+		}
+	}
 	if err := q.AtualizarStatusNotificacao(ctx, db.AtualizarStatusNotificacaoParams{ID: t.NotificacaoID, Status: string(d.Notificacao)}); err != nil {
 		return err
 	}
@@ -123,7 +132,7 @@ func notificacaoDe(l db.ReservarTentativaRow) (dominio.Notificacao, error) {
 	}
 	return dominio.Notificacao{
 		ID: l.NotificacaoID, SistemaOrigem: l.SistemaOrigem, TemplateID: l.TemplateID,
-		Destinatario: dominio.Destinatario{Email: l.DestinatarioEmail}, Dados: dados,
+		Destinatario: dominio.Destinatario{Email: l.DestinatarioEmail, Telefone: l.DestinatarioTelefone}, Dados: dados,
 		OrdemCanais: canais(l.OrdemCanais), Status: dominio.NotificacaoPendente,
 	}, nil
 }

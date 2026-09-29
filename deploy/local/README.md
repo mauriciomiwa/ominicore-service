@@ -24,8 +24,11 @@ curl -i -X POST http://localhost:8080/v1/notificacoes \
   -d '{"template_id":"boas-vindas","destinatario":{"email":"voce@exemplo.com"},"dados":{"nome":"Você"}}'
 ```
 
-Sem chave SendGrid real, a Tentativa termina `falhou` com `sendgrid 401`.
-Para enviar de verdade: `SENDGRID_API_KEY=... SENDGRID_REMETENTE=... ./deploy/local/bootstrap.sh`.
+Sem chave SendGrid real, a Tentativa termina `falhou` com `sendgrid 401` e o
+fallback tenta o SMS (se o Destinatário tiver `telefone`), que falha com
+`twilio 401`. Para enviar de verdade: `SENDGRID_API_KEY=... SENDGRID_REMETENTE=...`
+e/ou `TWILIO_ACCOUNT_SID=... TWILIO_API_KEY_SID=... TWILIO_API_KEY_SECRET=...
+TWILIO_MESSAGING_SERVICE_SID=...` antes do `./deploy/local/bootstrap.sh`.
 
 ## Variáveis
 
@@ -43,6 +46,8 @@ Para enviar de verdade: `SENDGRID_API_KEY=... SENDGRID_REMETENTE=... ./deploy/lo
 | `OMINICORE_KC_CLIENT_ID` / `_SECRET` | `ominicore-app` / — | token do próprio OminiCore para o OpenBao |
 | `OMINICORE_REDIS_ADDR` | `redis:6379` | cache do JWKS |
 | `OMINICORE_SENDGRID_URL` | `https://api.sendgrid.com` | trocar só em teste |
+| `OMINICORE_TWILIO_URL` | `https://api.twilio.com` | trocar só em teste |
 
-Segredos no OpenBao: `kv/<prefixo>/postgres` (`dsn`) e `kv/<prefixo>/sendgrid`
-(`api_key`, `remetente`). Endereços de hml e prod: `DOC/Infra/AMBIENTES.md`.
+Segredos no OpenBao: `kv/<prefixo>/postgres` (`dsn`), `kv/<prefixo>/sendgrid`
+(`api_key`, `remetente`) e `kv/<prefixo>/twilio` (`account_sid`, `api_key_sid`,
+`api_key_secret`, `messaging_service_sid`). Endereços de hml e prod: `DOC/Infra/AMBIENTES.md`.

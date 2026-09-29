@@ -112,17 +112,18 @@ func (q *Queries) ConcluirTentativa(ctx context.Context, arg ConcluirTentativaPa
 }
 
 const inserirNotificacao = `-- name: InserirNotificacao :exec
-INSERT INTO notificacoes (id, sistema_origem, template_id, destinatario_email, dados, ordem_canais, status)
-VALUES ($1, $2, $3, $4, $5, $6, 'pendente')
+INSERT INTO notificacoes (id, sistema_origem, template_id, destinatario_email, destinatario_telefone, dados, ordem_canais, status)
+VALUES ($1, $2, $3, $4, $5, $6, $7, 'pendente')
 `
 
 type InserirNotificacaoParams struct {
-	ID                string
-	SistemaOrigem     string
-	TemplateID        string
-	DestinatarioEmail string
-	Dados             []byte
-	OrdemCanais       []string
+	ID                   string
+	SistemaOrigem        string
+	TemplateID           string
+	DestinatarioEmail    string
+	DestinatarioTelefone string
+	Dados                []byte
+	OrdemCanais          []string
 }
 
 func (q *Queries) InserirNotificacao(ctx context.Context, arg InserirNotificacaoParams) error {
@@ -131,6 +132,7 @@ func (q *Queries) InserirNotificacao(ctx context.Context, arg InserirNotificacao
 		arg.SistemaOrigem,
 		arg.TemplateID,
 		arg.DestinatarioEmail,
+		arg.DestinatarioTelefone,
 		arg.Dados,
 		arg.OrdemCanais,
 	)
@@ -138,18 +140,25 @@ func (q *Queries) InserirNotificacao(ctx context.Context, arg InserirNotificacao
 }
 
 const inserirTentativa = `-- name: InserirTentativa :exec
-INSERT INTO tentativas (notificacao_id, canal, numero, status)
-VALUES ($1, $2, $3, 'pendente')
+INSERT INTO tentativas (notificacao_id, canal, numero, status, disponivel_em)
+VALUES ($1, $2, $3, 'pendente', now() + ($4::bigint * interval '1 millisecond'))
 `
 
 type InserirTentativaParams struct {
 	NotificacaoID string
 	Canal         string
 	Numero        int32
+	EsperaMs      int64
 }
 
+// espera_ms conta a partir do relógio do banco, o mesmo que a fila compara.
 func (q *Queries) InserirTentativa(ctx context.Context, arg InserirTentativaParams) error {
-	_, err := q.db.Exec(ctx, inserirTentativa, arg.NotificacaoID, arg.Canal, arg.Numero)
+	_, err := q.db.Exec(ctx, inserirTentativa,
+		arg.NotificacaoID,
+		arg.Canal,
+		arg.Numero,
+		arg.EsperaMs,
+	)
 	return err
 }
 
@@ -178,7 +187,7 @@ func (q *Queries) ReivindicarChave(ctx context.Context, arg ReivindicarChavePara
 
 const reservarTentativa = `-- name: ReservarTentativa :one
 SELECT t.id, t.notificacao_id, t.canal, t.numero,
-       n.sistema_origem, n.template_id, n.destinatario_email, n.dados, n.ordem_canais
+       n.sistema_origem, n.template_id, n.destinatario_email, n.destinatario_telefone, n.dados, n.ordem_canais
 FROM tentativas t
 JOIN notificacoes n ON n.id = t.notificacao_id
 WHERE t.status = 'pendente' AND t.disponivel_em <= now()
@@ -188,15 +197,16 @@ FOR UPDATE OF t SKIP LOCKED
 `
 
 type ReservarTentativaRow struct {
-	ID                int64
-	NotificacaoID     string
-	Canal             string
-	Numero            int32
-	SistemaOrigem     string
-	TemplateID        string
-	DestinatarioEmail string
-	Dados             []byte
-	OrdemCanais       []string
+	ID                   int64
+	NotificacaoID        string
+	Canal                string
+	Numero               int32
+	SistemaOrigem        string
+	TemplateID           string
+	DestinatarioEmail    string
+	DestinatarioTelefone string
+	Dados                []byte
+	OrdemCanais          []string
 }
 
 func (q *Queries) ReservarTentativa(ctx context.Context) (ReservarTentativaRow, error) {
@@ -210,6 +220,7 @@ func (q *Queries) ReservarTentativa(ctx context.Context) (ReservarTentativaRow, 
 		&i.SistemaOrigem,
 		&i.TemplateID,
 		&i.DestinatarioEmail,
+		&i.DestinatarioTelefone,
 		&i.Dados,
 		&i.OrdemCanais,
 	)

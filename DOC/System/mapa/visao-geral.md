@@ -19,6 +19,7 @@ graph LR
   DESP --> DOM
   APP & DESP --> PG[(Postgres ominicore)]
   DESP --> SG[SendGrid]
+  DESP --> TW[Twilio]
   API --> KC[Keycloak JWKS]
   API --> RD[(Redis: cache JWKS)]
   API & W --> BAO[OpenBao: segredos no boot]
@@ -31,7 +32,7 @@ Camadas: `internal/dominio` (sem dependência externa) · `internal/aplicacao` e
 ## Áreas
 | Área | O que faz | Entradas (rotas/endpoints) | Depende de |
 |---|---|---|---|
-| [Envio](envio.md) | pedido de Notificação por Template e despacho pelo Canal Email | `POST /v1/notificacoes`, worker | Keycloak, OpenBao, Postgres, Redis, SendGrid |
+| [Envio](envio.md) | pedido de Notificação por Template e despacho por Email e SMS, com Retentativa e fallback | `POST /v1/notificacoes`, worker | Keycloak, OpenBao, Postgres, Redis, SendGrid, Twilio |
 
 ## Integrações externas
 | Sistema | Como é chamado | Onde |
@@ -39,6 +40,7 @@ Camadas: `internal/dominio` (sem dependência externa) · `internal/aplicacao` e
 | Keycloak | JWKS + token client_credentials | `internal/adaptadores/saida/keycloak/` |
 | OpenBao | login `jwt` (ou token local) + KV v2 | `internal/adaptadores/saida/openbao/segredos.go` |
 | SendGrid | `POST /v3/mail/send` | `internal/adaptadores/saida/sendgrid/sendgrid.go` |
+| Twilio | `POST .../Messages.json` (API Key) | `internal/adaptadores/saida/twilio/twilio.go` |
 | Postgres | pgx + sqlc | `internal/adaptadores/saida/postgres/` |
 | Redis | cache do JWKS | `internal/adaptadores/saida/redis/cache.go` |
 
@@ -53,5 +55,5 @@ para o `Infra/AMBIENTES.md` no primeiro deploy.
 - `ReservarTentativa` segura a transação durante a chamada ao SendGrid (até
   10 s): simples e seguro contra queda, mas cada worker ocupa uma conexão por
   envio — revisar se o volume crescer (ADR 0001).
-- O `NotificationRouter` desta fatia encerra a Notificação em qualquer falha;
-  retry e fallback chegam na fatia 02.
+- Rajada de Retentativas depois de uma queda longa do Provedor: o jitter
+  espalha, mas não há rate limit por Provedor ainda (previsto na stack, sem REQ).

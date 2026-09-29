@@ -420,10 +420,9 @@ TEMPLATE_HTML = r"""<meta charset="utf-8">
         O <code>checa_projeto.py</code> avisa quando o código muda e esta lista fica para trás.</p>
         <h3>Módulos e quem importa quem</h3>
         <div class="diagram"><pre class="mermaid">{{MODULOS}}</pre></div>
-        <details><summary>Rotas ({{N_ROTAS}})</summary>
-          <div class="table-wrap"><table><thead><tr><th>Rota</th><th>Título</th><th>Componente</th></tr></thead><tbody>{{ROTAS}}</tbody></table></div>
-        </details>
-        <details><summary>Chamadas ao back ({{N_HTTP}})</summary>
+        {{DETALHE_ROTAS}}
+        {{DETALHE_ENDPOINTS}}
+        <details><summary>Chamadas a outros sistemas ({{N_HTTP}})</summary>
           <div class="table-wrap"><table><thead><tr><th>Método</th><th>URL</th><th>Onde</th></tr></thead><tbody>{{HTTP}}</tbody></table></div>
         </details>
       </div>
@@ -500,8 +499,14 @@ for nome, grupo in AREAS:
                   "busca": re.sub(r"\s+", " ", texto.lower())})
 
 n_rn = sum(a["rn"] for a in areas)
-stats = [("áreas", len(areas)), ("rotas", len(inv["rotas"])), ("chamadas ao back", len(inv["chamadas_http"])),
-         ("regras candidatas", n_rn), ("módulos", len(inv["modulos"]))]
+# Números do topo: só o que o projeto tem (serviço de back-end não tem tela; front não expõe endpoint).
+ENDPOINTS = inv.get("endpoints", [])
+_contagens = [("telas (rotas do front)", len(inv["rotas"])), ("endpoints expostos", len(ENDPOINTS)),
+              ("chamadas a outros sistemas", len(inv["chamadas_http"])),
+              ("filas", len(inv.get("filas_consumidas", [])) + len(inv.get("filas_publicadas", []))),
+              ("crons", len(inv.get("crons", [])))]
+stats = [("áreas", len(areas))] + [c for c in _contagens if c[1]] + \
+        [("regras candidatas", n_rn), ("módulos", len(inv["modulos"]))]
 
 # ------------------------------------------------------------ situação do projeto
 # Onde o projeto está, lido dos arquivos que o fluxo SDD já mantém: estado.md (onde
@@ -568,6 +573,8 @@ ESTADO_F = DOC_DIR / "estado.md"
 estado_html = ""
 if ESTADO_F.is_file():
     _, est = sem_titulo(ESTADO_F.read_text(encoding="utf-8", errors="replace"))
+    est = re.sub(r"<!--.*?-->", "", est, flags=re.S)
+    est = re.sub(r"^Retrato de onde o trabalho parou.*?(?:\n\s*\n|\Z)", "", est, flags=re.M | re.S)  # texto do modelo
     estado_html = render(est.strip())
 n_ok = sum(f["status"] == "concluida" for f in FATIAS)
 fatias_rows = "".join(
@@ -630,13 +637,24 @@ http_rows = "".join(
     f'<tr><td>{c["metodo"]}</td><td><code>{html.escape(c["url"])}</code></td><td><code>{html.escape(c["arquivo"])}:{c["linha"]}</code></td></tr>'
     for c in sorted(inv["chamadas_http"], key=lambda c: (c["url"], c["metodo"])))
 
+endpoints_rows = "".join(
+    f'<tr><td>{html.escape(e["metodo"])}</td><td><code>{html.escape(e["path"])}</code></td>'
+    f'<td><code>{html.escape(e["arquivo"])}{(":" + str(e["linha"])) if e.get("linha") else ""}</code></td></tr>'
+    for e in sorted(ENDPOINTS, key=lambda e: (e["path"], e["metodo"])))
+DETALHE_ROTAS = (f'<details><summary>Telas — rotas do front ({len(inv["rotas"])})</summary><div class="table-wrap"><table>'
+                 f'<thead><tr><th>Rota</th><th>Título</th><th>Componente</th></tr></thead><tbody>{rotas_rows}</tbody></table></div></details>'
+                 if inv["rotas"] else "")
+DETALHE_ENDPOINTS = (f'<details><summary>Endpoints expostos ({len(ENDPOINTS)})</summary><div class="table-wrap"><table>'
+                     f'<thead><tr><th>Método</th><th>Caminho</th><th>Onde</th></tr></thead><tbody>{endpoints_rows}</tbody></table></div></details>'
+                     if ENDPOINTS else "")
 stats_html = "".join(f'<span><b>{v}</b> {k}</span>' for k, v in stats)
 TEMPLATE = TEMPLATE_HTML
 out = (TEMPLATE.replace("{{NAV}}", "".join(nav)).replace("{{CARDS}}", cards)
        .replace("{{VISAO}}", render(visao_corpo)).replace("{{SECOES}}", secoes).replace("{{SITUACAO}}", SITUACAO)
        .replace("{{STATS}}", stats_html).replace("{{DATA}}", inv["gerado_em"][:10])
        .replace("{{MODULOS}}", html.escape(modulos_mermaid))
-       .replace("{{ROTAS}}", rotas_rows).replace("{{HTTP}}", http_rows)
+       .replace("{{DETALHE_ROTAS}}", DETALHE_ROTAS).replace("{{DETALHE_ENDPOINTS}}", DETALHE_ENDPOINTS)
+       .replace("{{HTTP}}", http_rows)
        .replace("{{N_HTTP}}", str(len(inv["chamadas_http"]))).replace("{{N_ROTAS}}", str(len(inv["rotas"])))
        .replace("{{PROJETO}}", html.escape(inv.get("raiz", "projeto"))).replace("{{GRUPOS_CSS}}", grupos_css))
 SAIDA.write_text(out, encoding="utf-8")

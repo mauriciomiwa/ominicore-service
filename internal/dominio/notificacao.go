@@ -12,6 +12,7 @@ type Canal string
 
 const (
 	CanalEmail Canal = "email"
+	CanalSMS   Canal = "sms"
 )
 
 // StatusNotificacao é o estado da Notificação como um todo.
@@ -34,15 +35,30 @@ const (
 
 // Destinatario é a pessoa que recebe a Notificação, pelo contato de cada Canal.
 type Destinatario struct {
-	Email string
+	Email    string
+	Telefone string // E.164
 }
 
 // Contato devolve o contato do Destinatário no Canal, ou "" se não houver.
 func (d Destinatario) Contato(c Canal) string {
-	if c == CanalEmail {
+	switch c {
+	case CanalEmail:
 		return d.Email
+	case CanalSMS:
+		return d.Telefone
 	}
 	return ""
+}
+
+// PrimeiroComContato devolve o primeiro Canal da ordem, a partir de inicio,
+// para o qual o Destinatário tem contato (RN-2: Canal sem contato é pulado).
+func (d Destinatario) PrimeiroComContato(ordem []Canal, inicio int) (Canal, bool) {
+	for _, c := range ordem[min(inicio, len(ordem)):] {
+		if d.Contato(c) != "" {
+			return c, true
+		}
+	}
+	return "", false
 }
 
 // Notificacao é o pedido de um Sistema de origem para avisar um Destinatário.
@@ -71,5 +87,6 @@ type Tentativa struct {
 var (
 	ErrTemplateInexistente = errors.New("template inexistente")
 	ErrVariavelFaltando    = errors.New("variável faltando")
-	ErrSemContato          = errors.New("destinatário sem contato para o canal")
+	ErrSemContato          = errors.New("destinatário sem contato para os canais")
+	ErrCanalSemVersao      = errors.New("canal sem versão no template")
 )

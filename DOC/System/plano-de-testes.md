@@ -14,7 +14,7 @@ Nome do teste em Go cita o T-n: `func TestT7_ReenvioComAMesmaChaveNaoDuplica(t *
 Unitários com fakes (`internal/testes/`: repositório em memória, realm JWT,
 SendGrid via `httptest`); integração em `internal/integracao/` com
 `testcontainers-go` (Postgres real) — pula sozinho sem runtime de containers;
-rode com `make itest` (Docker ou Podman). Última execução: 2026-09-29, 7/7 contra Postgres 17. Provedores reais nunca entram em teste.
+rode com `make itest` (Docker ou Podman). Última execução: 2026-09-29, 14/14 contra Postgres 17. Provedores reais nunca entram em teste.
 
 | Teste | Tipo | Onde (arquivo do teste) | Status |
 |---|---|---|---|
@@ -32,3 +32,16 @@ rode com `make itest` (Docker ou Podman). Última execução: 2026-09-29, 7/7 co
 | T-12 | Exemplo | `internal/dominio/dominio_test.go` · `internal/integracao/integracao_test.go` (Postgres) | passando (domínio e Postgres) |
 | T-13 | Exemplo | `cmd/ominicore/main_test.go` | passando |
 | T-14 | Propriedade | `internal/adaptadores/entrada/worker/worker_test.go` | passando |
+| T-15 | Exemplo | `internal/aplicacao/aplicacao_test.go` · `internal/integracao/integracao_test.go` (Postgres) | passando (fake e Postgres) |
+| T-16 | Exemplo | `internal/aplicacao/aplicacao_test.go` | passando |
+| T-17 | Exemplo | `internal/aplicacao/aplicacao_test.go` | passando |
+| T-18 | Exemplo | `internal/adaptadores/entrada/http/servidor_test.go` | passando |
+| T-19 | Exemplo | `internal/adaptadores/entrada/worker/worker_test.go` | passando |
+| T-20 | Exemplo | `internal/adaptadores/entrada/worker/worker_test.go` · `internal/adaptadores/saida/twilio/twilio_test.go` | passando |
+| T-21 | Exemplo | `internal/dominio/dominio_test.go` · `internal/integracao/integracao_test.go` (Postgres) | passando (domínio e Postgres) |
+| T-22 | Propriedade | `internal/dominio/dominio_test.go` | passando |
+| T-23 | Exemplo | `internal/dominio/dominio_test.go` · `internal/integracao/integracao_test.go` (Postgres, relógio adiantado) | passando (domínio e Postgres) |
+| T-24 | Exemplo | `internal/dominio/dominio_test.go` · `internal/integracao/integracao_test.go` (Postgres) | passando (domínio e Postgres) |
+| T-25 | Exemplo | `internal/dominio/dominio_test.go` · `internal/integracao/integracao_test.go` (Postgres) | passando (domínio e Postgres) |
+| T-26 | Exemplo | `internal/dominio/dominio_test.go` · `internal/integracao/integracao_test.go` (Postgres) | passando (domínio e Postgres) |
+| T-27 | Exemplo | `internal/dominio/dominio_test.go` · `internal/integracao/integracao_test.go` (Postgres) | passando (domínio e Postgres) |

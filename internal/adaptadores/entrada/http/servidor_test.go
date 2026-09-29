@@ -98,3 +98,46 @@ func TestErrosDeValidacaoViram422(t *testing.T) {
 		t.Errorf("json inválido: status = %d", rec.Code)
 	}
 }
+
+func TestT18_TelefoneForaDoE164ERecusado(t *testing.T) {
+	a := novo(t)
+	tok := a.realm.Valido(t, "sistema-a")
+	for _, tel := range []string{"11 99999-8888", "5511999998888", "+0511999998888", "+55"} {
+		corpo := `{"template_id":"boas-vindas","destinatario":{"telefone":"` + tel + `"},"dados":{"nome":"Ana"}}`
+		rec := a.pedir(tok, "k-"+tel, corpo)
+		if rec.Code != http.StatusBadRequest || !bytes.Contains(rec.Body.Bytes(), []byte("E.164")) {
+			t.Errorf("%q: status = %d: %s", tel, rec.Code, rec.Body)
+		}
+	}
+	if n, _ := a.repo.Contar(); n != 0 {
+		t.Fatalf("registrou %d notificações", n)
+	}
+	ok := `{"template_id":"boas-vindas","destinatario":{"telefone":"+5511999998888"},"dados":{"nome":"Ana"}}`
+	if rec := a.pedir(tok, "k-valido", ok); rec.Code != http.StatusAccepted {
+		t.Fatalf("telefone válido recusado: %d %s", rec.Code, rec.Body)
+	}
+}
+
+func TestCanaisRepetidosSaoRecusados(t *testing.T) {
+	a := novo(t)
+	corpo := `{"template_id":"boas-vindas","destinatario":{"email":"ana@exemplo.com"},"dados":{"nome":"Ana"},"canais":["email","email"]}`
+	if rec := a.pedir(a.realm.Valido(t, "sistema-a"), "k-1", corpo); rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d", rec.Code)
+	}
+}
+
+func TestCanalSemVersaoVira422(t *testing.T) {
+	a := novo(t)
+	corpo := `{"template_id":"boas-vindas","destinatario":{"email":"ana@exemplo.com"},"dados":{"nome":"Ana"},"canais":["whatsapp"]}`
+	if rec := a.pedir(a.realm.Valido(t, "sistema-a"), "k-1", corpo); rec.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("status = %d", rec.Code)
+	}
+}
+
+func TestCanaisVazioERecusado(t *testing.T) {
+	a := novo(t)
+	corpo := `{"template_id":"boas-vindas","destinatario":{"email":"ana@exemplo.com"},"dados":{"nome":"Ana"},"canais":[]}`
+	if rec := a.pedir(a.realm.Valido(t, "sistema-a"), "k-1", corpo); rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d", rec.Code)
+	}
+}

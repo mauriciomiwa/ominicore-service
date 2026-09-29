@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"ominicore/internal/dominio"
 	"ominicore/internal/portas"
@@ -18,12 +19,13 @@ type Repositorio struct {
 	Templates    map[string]dominio.Template
 	Notificacoes map[string]dominio.Notificacao
 	Tentativas   []dominio.Tentativa
+	disponivel   []time.Time // disponivel_em de cada Tentativa (a fila respeita)
 	chaves       map[string]string
 }
 
 var _ portas.MessageRepositoryPort = (*Repositorio)(nil)
 
-// Novo cria o repositório com o Template boas-vindas da migration 00002.
+// Novo cria o repositório com o Template boas-vindas das migrations 00002/00003.
 func Novo() *Repositorio {
 	return &Repositorio{
 		Templates:    map[string]dominio.Template{"boas-vindas": BoasVindas()},
@@ -32,13 +34,14 @@ func Novo() *Repositorio {
 	}
 }
 
-// BoasVindas espelha o seed da migration 00002.
+// BoasVindas espelha o seed das migrations 00002 e 00003.
 func BoasVindas() dominio.Template {
 	return dominio.Template{
 		ID:          "boas-vindas",
-		OrdemCanais: []dominio.Canal{dominio.CanalEmail},
+		OrdemCanais: []dominio.Canal{dominio.CanalEmail, dominio.CanalSMS},
 		Conteudos: map[dominio.Canal]dominio.ConteudoCanal{
 			dominio.CanalEmail: {Assunto: "Bem-vindo, {{nome}}", Corpo: "Olá {{nome}}, sua conta está pronta."},
+			dominio.CanalSMS:   {Corpo: "Olá {{nome}}, sua conta está pronta."},
 		},
 	}
 }
@@ -66,17 +69,23 @@ func (r *Repositorio) RegistrarNotificacao(_ context.Context, n portas.NovaNotif
 		ID: id, SistemaOrigem: n.SistemaOrigem, TemplateID: n.TemplateID, Destinatario: n.Destinatario,
 		Dados: n.Dados, OrdemCanais: n.OrdemCanais, Status: dominio.NotificacaoPendente,
 	}
-	r.Tentativas = append(r.Tentativas, dominio.Tentativa{
-		ID: int64(len(r.Tentativas) + 1), NotificacaoID: id, Canal: n.OrdemCanais[0], Numero: 1, Status: dominio.TentativaPendente,
-	})
+	r.enfileirar(id, n.PrimeiroCanal, 1, 0)
 	return portas.Registro{ID: id, Status: dominio.NotificacaoPendente}, nil
+}
+
+// enfileirar exige r.mu travado.
+func (r *Repositorio) enfileirar(notificacao string, c dominio.Canal, numero int, espera time.Duration) {
+	r.Tentativas = append(r.Tentativas, dominio.Tentativa{
+		ID: int64(len(r.Tentativas) + 1), NotificacaoID: notificacao, Canal: c, Numero: numero, Status: dominio.TentativaPendente,
+	})
+	r.disponivel = append(r.disponivel, time.Now().Add(espera))
 }
 
 func (r *Repositorio) ReservarTentativa(_ context.Context) (portas.TentativaReservada, bool, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	for i, t := range r.Tentativas {
-		if t.Status != dominio.TentativaPendente {
+		if t.Status != dominio.TentativaPendente || time.Now().Before(r.disponivel[i]) {
 			continue
 		}
 		i := i
@@ -87,6 +96,9 @@ func (r *Repositorio) ReservarTentativa(_ context.Context) (portas.TentativaRese
 				r.mu.Lock()
 				defer r.mu.Unlock()
 				r.Tentativas[i].Status, r.Tentativas[i].Motivo = d.Tentativa, d.Motivo
+				if p := d.Proxima; p != nil {
+					r.enfileirar(t.NotificacaoID, p.Canal, p.Numero, p.Espera)
+				}
 				n := r.Notificacoes[t.NotificacaoID]
 				n.Status = d.Notificacao
 				r.Notificacoes[t.NotificacaoID] = n
@@ -112,4 +124,18 @@ func (r *Repositorio) StatusTentativa(i int) dominio.StatusTentativa {
 		return ""
 	}
 	return r.Tentativas[i].Status
+}
+
+// Historico devolve uma cópia das Tentativas, na ordem de criação.
+func (r *Repositorio) Historico() []dominio.Tentativa {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return append([]dominio.Tentativa(nil), r.Tentativas...)
+}
+
+// StatusNotificacao devolve o status da Notificação.
+func (r *Repositorio) StatusNotificacao(id string) dominio.StatusNotificacao {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.Notificacoes[id].Status
 }

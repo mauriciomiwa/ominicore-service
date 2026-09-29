@@ -109,3 +109,56 @@ func TestDespacharGravaDecisaoDoRouter(t *testing.T) {
 		t.Fatalf("tentativa = %+v", repo.Tentativas[0])
 	}
 }
+
+func TestT15_OrdemDoPedidoSubstituiADoTemplate(t *testing.T) {
+	repo := memoria.Novo()
+	p := pedido()
+	p.Destinatario.Telefone = "+5511999998888"
+	p.Canais = []dominio.Canal{dominio.CanalSMS, dominio.CanalEmail}
+	reg, err := aplicacao.SendMessageUseCase{Repo: repo}.Pedir(context.Background(), p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	n := repo.Notificacoes[reg.ID]
+	if len(n.OrdemCanais) != 2 || n.OrdemCanais[0] != dominio.CanalSMS || repo.Tentativas[0].Canal != dominio.CanalSMS {
+		t.Fatalf("ordem = %v, 1ª Tentativa = %s", n.OrdemCanais, repo.Tentativas[0].Canal)
+	}
+}
+
+func TestT16_CanalPedidoSemVersaoNoTemplateERecusado(t *testing.T) {
+	repo := memoria.Novo()
+	p := pedido()
+	p.Canais = []dominio.Canal{dominio.CanalEmail, "whatsapp"}
+	_, err := aplicacao.SendMessageUseCase{Repo: repo}.Pedir(context.Background(), p)
+	if !errors.Is(err, dominio.ErrCanalSemVersao) || !strings.Contains(err.Error(), "whatsapp") {
+		t.Fatalf("erro = %v", err)
+	}
+	if n, _ := repo.Contar(); n != 0 {
+		t.Fatalf("registrou %d notificações", n)
+	}
+}
+
+func TestT17_DestinatarioSemContatoParaNenhumCanalERecusado(t *testing.T) {
+	repo := memoria.Novo()
+	p := pedido() // só e-mail
+	p.Canais = []dominio.Canal{dominio.CanalSMS}
+	_, err := aplicacao.SendMessageUseCase{Repo: repo}.Pedir(context.Background(), p)
+	if !errors.Is(err, dominio.ErrSemContato) || err.Error() != "destinatário sem contato para os canais" {
+		t.Fatalf("erro = %v", err)
+	}
+	if n, _ := repo.Contar(); n != 0 {
+		t.Fatalf("registrou %d notificações", n)
+	}
+}
+
+func TestPrimeiraTentativaPulaCanalSemContato(t *testing.T) {
+	repo := memoria.Novo()
+	p := pedido()
+	p.Destinatario = dominio.Destinatario{Telefone: "+5511999998888"} // ordem do Template: Email → SMS
+	if _, err := (aplicacao.SendMessageUseCase{Repo: repo}).Pedir(context.Background(), p); err != nil {
+		t.Fatal(err)
+	}
+	if repo.Tentativas[0].Canal != dominio.CanalSMS {
+		t.Fatalf("1ª Tentativa = %s, quero sms", repo.Tentativas[0].Canal)
+	}
+}

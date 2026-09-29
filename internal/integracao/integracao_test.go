@@ -24,11 +24,13 @@ import (
 	"ominicore/internal/adaptadores/saida/keycloak"
 	"ominicore/internal/adaptadores/saida/postgres"
 	"ominicore/internal/adaptadores/saida/sendgrid"
+	"ominicore/internal/adaptadores/saida/twilio"
 	"ominicore/internal/aplicacao"
 	"ominicore/internal/dominio"
 	"ominicore/internal/portas"
 	"ominicore/internal/testes/emissor"
 	"ominicore/internal/testes/sendgridfake"
+	"ominicore/internal/testes/twiliofake"
 
 	entradahttp "ominicore/internal/adaptadores/entrada/http"
 )
@@ -159,6 +161,7 @@ func TestChaveVencidaApos24hGeraNovaNotificacao(t *testing.T) {
 type ponta struct {
 	pool  *pgxpool.Pool
 	sg    *sendgridfake.Fake
+	tw    *twiliofake.Fake
 	realm *emissor.Emissor
 	api   http.Handler
 }
@@ -167,13 +170,19 @@ func novaPonta(t *testing.T) ponta {
 	pool := banco(t)
 	repo := postgres.Repositorio{Pool: pool}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	p := ponta{pool: pool, sg: sendgridfake.Novo(t), realm: emissor.Novo(t)}
+	p := ponta{pool: pool, sg: sendgridfake.Novo(t), tw: twiliofake.Novo(t), realm: emissor.Novo(t)}
 	p.api = entradahttp.Servidor{
 		Auth: keycloak.Novo(p.realm.URL, "ominicore", &emissor.Cache{}), Enviar: aplicacao.SendMessageUseCase{Repo: repo}, Log: log,
 	}.Handler()
 	uc := aplicacao.DespacharUseCase{
 		Repo: repo, Log: log,
-		Remetentes: map[dominio.Canal]portas.MessageSenderPort{dominio.CanalEmail: sendgrid.Novo(p.sg.URL, "SG.teste", "no-reply@exemplo.com")},
+		Remetentes: map[dominio.Canal]portas.MessageSenderPort{
+			dominio.CanalEmail: sendgrid.Novo(p.sg.URL, "SG.teste", "no-reply@exemplo.com"),
+			dominio.CanalSMS: twilio.Novo(p.tw.URL, twilio.Credenciais{
+				AccountSID: twiliofake.AccountSID, APIKeySID: twiliofake.APIKeySID,
+				APIKeySecret: twiliofake.APIKeySecret, MessagingServiceSID: twiliofake.MessagingServiceSID,
+			}),
+		},
 	}
 	ctx, cancelar := context.WithCancel(context.Background())
 	t.Cleanup(cancelar)
@@ -183,8 +192,12 @@ func novaPonta(t *testing.T) ponta {
 
 func (p ponta) pedir(t *testing.T, chave string) (id string, respondidoEm time.Time) {
 	t.Helper()
-	req := httptest.NewRequest(http.MethodPost, "/v1/notificacoes",
-		strings.NewReader(`{"template_id":"boas-vindas","destinatario":{"email":"ana@exemplo.com"},"dados":{"nome":"Ana"}}`))
+	return p.pedirCorpo(t, chave, `{"template_id":"boas-vindas","destinatario":{"email":"ana@exemplo.com"},"dados":{"nome":"Ana"}}`)
+}
+
+func (p ponta) pedirCorpo(t *testing.T, chave, corpoJSON string) (id string, respondidoEm time.Time) {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPost, "/v1/notificacoes", strings.NewReader(corpoJSON))
 	req.Header.Set("Authorization", "Bearer "+p.realm.Valido(t, "sistema-a"))
 	req.Header.Set("Idempotency-Key", chave)
 	rec := httptest.NewRecorder()
@@ -265,5 +278,160 @@ func TestT12_RecusaDoProvedorEncerraSemOutroCanalPontaAPonta(t *testing.T) {
 	tentativa, motivo := p.esperar(t, id, dominio.NotificacaoFalhou)
 	if tentativa != "falhou" || !strings.Contains(motivo, "sendgrid 400") {
 		t.Fatalf("tentativa=%s motivo=%q", tentativa, motivo)
+	}
+}
+
+// linhaTentativa é uma Tentativa como está no banco.
+type linhaTentativa struct {
+	Canal, Status string
+	Numero        int
+	Espera        time.Duration // disponivel_em - criada_em
+}
+
+func historico(t *testing.T, pool *pgxpool.Pool, id string) []linhaTentativa {
+	t.Helper()
+	rows, err := pool.Query(context.Background(),
+		`SELECT canal, status, numero, extract(epoch FROM disponivel_em - criada_em) FROM tentativas WHERE notificacao_id = $1 ORDER BY id`, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	var out []linhaTentativa
+	for rows.Next() {
+		var l linhaTentativa
+		var seg float64
+		if err := rows.Scan(&l.Canal, &l.Status, &l.Numero, &seg); err != nil {
+			t.Fatal(err)
+		}
+		l.Espera = time.Duration(seg * float64(time.Second))
+		out = append(out, l)
+	}
+	return out
+}
+
+// esperarHistorico aguarda até o histórico satisfazer ok (5 s).
+func esperarHistorico(t *testing.T, pool *pgxpool.Pool, id string, ok func([]linhaTentativa) bool) []linhaTentativa {
+	t.Helper()
+	fim := time.Now().Add(5 * time.Second)
+	for {
+		h := historico(t, pool, id)
+		if ok(h) || time.Now().After(fim) {
+			return h
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+}
+
+func statusNotificacao(t *testing.T, pool *pgxpool.Pool, id string) string {
+	t.Helper()
+	var s string
+	if err := pool.QueryRow(context.Background(), `SELECT status FROM notificacoes WHERE id = $1`, id).Scan(&s); err != nil {
+		t.Fatal(err)
+	}
+	return s
+}
+
+const comTelefone = `{"template_id":"boas-vindas","destinatario":{"email":"ana@exemplo.com","telefone":"+5511999998888"},"dados":{"nome":"Ana"}}`
+
+func TestT15_OrdemDoPedidoGravadaEPrimeiraTentativaNoSMS(t *testing.T) {
+	p := novaPonta(t)
+	id, _ := p.pedirCorpo(t, "k-15", `{"template_id":"boas-vindas","destinatario":{"email":"ana@exemplo.com","telefone":"+5511999998888"},"dados":{"nome":"Ana"},"canais":["sms","email"]}`)
+	var ordem []string
+	if err := p.pool.QueryRow(context.Background(), `SELECT ordem_canais FROM notificacoes WHERE id = $1`, id).Scan(&ordem); err != nil {
+		t.Fatal(err)
+	}
+	h := esperarHistorico(t, p.pool, id, func(h []linhaTentativa) bool { return len(h) > 0 && h[0].Status == "enviada" })
+	if len(ordem) != 2 || ordem[0] != "sms" || h[0].Canal != "sms" {
+		t.Fatalf("ordem = %v, histórico = %+v", ordem, h)
+	}
+}
+
+func TestT21_RetentativaAgendadaEntre4e6Segundos(t *testing.T) {
+	p := novaPonta(t)
+	p.sg.Responder(http.StatusServiceUnavailable)
+	id, _ := p.pedirCorpo(t, "k-21", comTelefone)
+	h := esperarHistorico(t, p.pool, id, func(h []linhaTentativa) bool { return len(h) >= 2 })
+	if len(h) != 2 || h[0].Status != "falhou" || h[1].Canal != "email" || h[1].Numero != 2 || h[1].Status != "pendente" {
+		t.Fatalf("histórico = %+v", h)
+	}
+	// a espera conta do commit da conclusão; a criada_em da Retentativa é o mesmo instante
+	if h[1].Espera < 4*time.Second || h[1].Espera > 6*time.Second {
+		t.Fatalf("Retentativa disponível após %s, quero entre 4 s e 6 s", h[1].Espera)
+	}
+	if s := statusNotificacao(t, p.pool, id); s != "pendente" {
+		t.Fatalf("notificação = %s, quero pendente", s)
+	}
+}
+
+func TestT23_QuatroFalhasTemporariasPassamAoSMS(t *testing.T) {
+	p := novaPonta(t)
+	p.sg.Responder(http.StatusServiceUnavailable)
+	id, _ := p.pedirCorpo(t, "k-23", comTelefone)
+	// adianta o relógio das Retentativas para o teste não esperar 2min35s
+	ctx, parar := context.WithCancel(context.Background())
+	defer parar()
+	go func() {
+		for ctx.Err() == nil {
+			_, _ = p.pool.Exec(ctx, `UPDATE tentativas SET disponivel_em = now() WHERE notificacao_id = $1 AND status = 'pendente'`, id)
+			time.Sleep(100 * time.Millisecond)
+		}
+	}()
+	h := esperarHistorico(t, p.pool, id, func(h []linhaTentativa) bool { return len(h) == 5 && h[4].Status == "enviada" })
+	parar()
+	for i := range 4 {
+		if h[i].Canal != "email" || h[i].Numero != i+1 || h[i].Status != "falhou" {
+			t.Fatalf("Tentativa %d = %+v (histórico %+v)", i+1, h[i], h)
+		}
+	}
+	if len(h) != 5 || h[4].Canal != "sms" || h[4].Numero != 1 {
+		t.Fatalf("depois de 4 Tentativas no Email quero o SMS: %+v", h)
+	}
+	if len(p.sg.Emails()) != 4 {
+		t.Fatalf("SendGrid recebeu %d envios, quero 4", len(p.sg.Emails()))
+	}
+}
+
+func TestT24_FalhaDefinitivaNoEmailPassaAoSMSPontaAPonta(t *testing.T) {
+	p := novaPonta(t)
+	p.sg.Responder(http.StatusBadRequest)
+	id, _ := p.pedirCorpo(t, "k-24", comTelefone)
+	h := esperarHistorico(t, p.pool, id, func(h []linhaTentativa) bool { return len(h) == 2 && h[1].Status == "enviada" })
+	if len(h) != 2 || h[0].Canal != "email" || h[0].Status != "falhou" || h[1].Canal != "sms" {
+		t.Fatalf("histórico = %+v", h)
+	}
+	if s := statusNotificacao(t, p.pool, id); s != "enviada" {
+		t.Fatalf("notificação = %s", s)
+	}
+}
+
+func TestT25_SemTelefoneOSMSEPuladoPontaAPonta(t *testing.T) {
+	p := novaPonta(t)
+	p.sg.Responder(http.StatusBadRequest)
+	id, _ := p.pedir(t, "k-25") // só e-mail; ordem do Template Email → SMS
+	esperarHistorico(t, p.pool, id, func(h []linhaTentativa) bool { return len(h) == 1 && h[0].Status == "falhou" })
+	time.Sleep(700 * time.Millisecond) // mais que um ciclo do worker
+	if h := historico(t, p.pool, id); len(h) != 1 || statusNotificacao(t, p.pool, id) != "falhou" || len(p.tw.Recebidos()) != 0 {
+		t.Fatalf("histórico = %+v, SMS = %d", h, len(p.tw.Recebidos()))
+	}
+}
+
+func TestT26_TodosOsCanaisFalhamPontaAPonta(t *testing.T) {
+	p := novaPonta(t)
+	p.sg.Responder(http.StatusBadRequest)
+	p.tw.Responder(http.StatusBadRequest, 21211)
+	id, _ := p.pedirCorpo(t, "k-26", comTelefone)
+	h := esperarHistorico(t, p.pool, id, func(h []linhaTentativa) bool { return len(h) == 2 && h[1].Status == "falhou" })
+	if len(h) != 2 || h[0].Status != "falhou" || statusNotificacao(t, p.pool, id) != "falhou" {
+		t.Fatalf("histórico = %+v", h)
+	}
+}
+
+func TestT27_SucessoNoEmailNaoCriaSMS(t *testing.T) {
+	p := novaPonta(t)
+	id, _ := p.pedirCorpo(t, "k-27", comTelefone)
+	esperarHistorico(t, p.pool, id, func(h []linhaTentativa) bool { return len(h) == 1 && h[0].Status == "enviada" })
+	time.Sleep(700 * time.Millisecond)
+	if h := historico(t, p.pool, id); len(h) != 1 || statusNotificacao(t, p.pool, id) != "enviada" || len(p.tw.Recebidos()) != 0 {
+		t.Fatalf("histórico = %+v", h)
 	}
 }

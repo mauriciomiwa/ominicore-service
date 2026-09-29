@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"time"
 
+	"ominicore/internal/adaptadores/saida/provedor"
 	"ominicore/internal/dominio"
 	"ominicore/internal/portas"
 )
@@ -67,8 +68,8 @@ func montar(de, para string, c dominio.ConteudoCanal) corpoEnvio {
 	return b
 }
 
-// Enviar classifica a resposta: 2xx aceito; 429, 5xx e erro de rede são Falha
-// temporária; demais 4xx são Falha definitiva.
+// Enviar classifica a resposta pela regra comum (provedor.Classificar); erro
+// de rede é Falha temporária.
 func (r Remetente) Enviar(ctx context.Context, para string, c dominio.ConteudoCanal) dominio.ResultadoEnvio {
 	corpo, err := json.Marshal(montar(r.De, para, c))
 	if err != nil {
@@ -82,21 +83,18 @@ func (r Remetente) Enviar(ctx context.Context, para string, c dominio.ConteudoCa
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := r.HTTP.Do(req)
 	if err != nil {
-		return dominio.ResultadoEnvio{Tipo: dominio.FalhaTemporaria, Motivo: "sendgrid inacessível"}
+		return provedor.Inacessivel("sendgrid")
 	}
 	defer func() { _ = resp.Body.Close() }()
 	return classificar(resp)
 }
 
 func classificar(resp *http.Response) dominio.ResultadoEnvio {
-	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		return dominio.ResultadoEnvio{Tipo: dominio.Aceito, IDProvedor: resp.Header.Get("X-Message-Id")}
+	motivo := ""
+	if resp.StatusCode >= 300 {
+		motivo = fmt.Sprintf("sendgrid %d: %s", resp.StatusCode, mensagemDeErro(resp.Body))
 	}
-	motivo := fmt.Sprintf("sendgrid %d: %s", resp.StatusCode, mensagemDeErro(resp.Body))
-	if resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500 {
-		return dominio.ResultadoEnvio{Tipo: dominio.FalhaTemporaria, Motivo: motivo}
-	}
-	return dominio.ResultadoEnvio{Tipo: dominio.FalhaDefinitiva, Motivo: motivo}
+	return provedor.Classificar(resp.StatusCode, motivo, resp.Header.Get("X-Message-Id"))
 }
 
 // mensagemDeErro extrai errors[0].message do corpo de erro do SendGrid.

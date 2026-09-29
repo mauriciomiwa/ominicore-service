@@ -1,5 +1,5 @@
 {
- "gerado_em": "2026-09-29T11:47:00",
+ "gerado_em": "2026-09-29T13:44:22",
  "raiz": "ominicore",
  "stack": [
   {
@@ -15,7 +15,7 @@
    "importa": []
   },
   "internal": {
-   "arquivos": 30,
+   "arquivos": 34,
    "importa": []
   },
   "migrations": {
@@ -36,14 +36,14 @@
    "metodo": "GET",
    "path": "/healthz",
    "arquivo": "internal/adaptadores/entrada/http/servidor.go",
-   "linha": 33,
+   "linha": 34,
    "tipo": "go"
   },
   {
    "metodo": "POST",
    "path": "/v1/notificacoes",
    "arquivo": "internal/adaptadores/entrada/http/servidor.go",
-   "linha": 34,
+   "linha": 35,
    "tipo": "go"
   }
  ],
@@ -58,7 +58,7 @@
    "metodo": "POST",
    "url": "/v3/mail/send",
    "arquivo": "internal/adaptadores/saida/sendgrid/sendgrid.go",
-   "linha": 77
+   "linha": 78
   }
  ],
  "sockets": [],
@@ -74,6 +74,18 @@
   ],
   "SENDGRID_REMETENTE": [
    "deploy/local/bootstrap.sh"
+  ],
+  "TWILIO_ACCOUNT_SID": [
+   "deploy/local/bootstrap.sh"
+  ],
+  "TWILIO_API_KEY_SECRET": [
+   "deploy/local/bootstrap.sh"
+  ],
+  "TWILIO_API_KEY_SID": [
+   "deploy/local/bootstrap.sh"
+  ],
+  "TWILIO_MESSAGING_SERVICE_SID": [
+   "deploy/local/bootstrap.sh"
   ]
  },
  "env_declaradas": {},
@@ -82,7 +94,7 @@
    "migrations"
   ],
   "schemas": [],
-  "sql": 3
+  "sql": 4
  },
  "infra": {
   "docker": [],

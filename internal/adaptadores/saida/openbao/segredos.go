@@ -11,10 +11,14 @@ import (
 
 // Segredos reunidos no boot. Nenhum deles sai daqui para log.
 type Segredos struct {
-	PostgresDSN       string // <mount>/<prefixo>/postgres: dsn
-	SendGridAPIKey    string // <mount>/<prefixo>/sendgrid: api_key
-	SendGridRemetente string // <mount>/<prefixo>/sendgrid: remetente
+	PostgresDSN       string            // <mount>/<prefixo>/postgres: dsn
+	SendGridAPIKey    string            // <mount>/<prefixo>/sendgrid: api_key
+	SendGridRemetente string            // <mount>/<prefixo>/sendgrid: remetente
+	Twilio            map[string]string // <mount>/<prefixo>/twilio: CamposTwilio
 }
+
+// CamposTwilio são os campos exigidos em <mount>/<prefixo>/twilio (REQ-7).
+var CamposTwilio = []string{"account_sid", "api_key_sid", "api_key_secret", "messaging_service_sid"}
 
 // Config diz como chegar e entrar no OpenBao. Token é só para o ambiente local
 // (bao em modo dev); hml e prod usam JWT + Role (ADR 0002).
@@ -52,7 +56,11 @@ func Carregar(ctx context.Context, cfg Config) (Segredos, error) {
 	if err != nil {
 		return Segredos{}, err
 	}
-	return Segredos{PostgresDSN: pg["dsn"], SendGridAPIKey: sg["api_key"], SendGridRemetente: sg["remetente"]}, nil
+	tw, err := ler(ctx, cli, mount, prefixo+"/twilio", CamposTwilio...)
+	if err != nil {
+		return Segredos{}, err
+	}
+	return Segredos{PostgresDSN: pg["dsn"], SendGridAPIKey: sg["api_key"], SendGridRemetente: sg["remetente"], Twilio: tw}, nil
 }
 
 func entrar(ctx context.Context, cfg Config) (*bao.Client, error) {

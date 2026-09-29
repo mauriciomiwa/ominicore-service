@@ -21,7 +21,7 @@ decisão ou chute. "Sabatina" = confirmado pelo usuário no kickoff de 2026-09-2
 | Segredos | OpenBao, KV v2 em `kv/ominicore/*`; login pelo método `jwt` com o Keycloak (ADR 0002); client `github.com/openbao/openbao/api/v2` | sabatina (P13) + `flip/infra/aviva2.0/openbao/config.hcl` |
 | Validação de JWT | `github.com/golang-jwt/jwt/v5` (mesma do aviva-back); JWKS lido e guardado no Redis pelo próprio adaptador | `go.mod` + `../flip/aviva-back/go.mod` |
 | Autenticação | Keycloak, realm `ominicore` / `ominicore-hml`; Sistema de origem = client confidencial com `client_credentials`; JWT validado pelo JWKS (`iss`, `aud ∋ ominicore`, `exp`); Sistema de origem = `azp` | sabatina (P10) + `flip/infra/aviva2.0/keycloak/gerar-realms.py` |
-| Provedores | SendGrid (Email), Twilio (SMS); WhatsApp/Meta depois | sabatina (P6) |
+| Provedores | SendGrid (Email), Twilio (SMS: API Key + Messaging Service, API de Messages form-encoded); regra comum de classificação em `internal/adaptadores/saida/provedor`; WhatsApp/Meta depois | sabatina (P6) + sabatina da fatia 02 (P4) |
 | Logs / métricas | `log/slog` JSON no stdout; `/metrics` Prometheus | sabatina (P15) |
 | Testes | `testing` + `testcontainers-go` (Postgres, Redis, OpenBao) na integração | sabatina (P14) |
 | Execução | um binário, dois subcomandos: `ominicore api` e `ominicore worker` | sabatina (P12) |

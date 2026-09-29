@@ -16,6 +16,7 @@ type PedidoNotificacao struct {
 	TemplateID        string
 	Destinatario      dominio.Destinatario
 	Dados             map[string]string
+	Canais            []dominio.Canal // Ordem de Canais do pedido; vazia = a do Template
 }
 
 // SendMessageUseCase aceita pedidos de Notificação (REQ-2, REQ-3).
@@ -24,7 +25,8 @@ type SendMessageUseCase struct {
 }
 
 // Pedir valida o pedido contra o Template e registra a Notificação com a
-// primeira Tentativa no primeiro Canal da Ordem de Canais do Template.
+// primeira Tentativa no primeiro Canal da Ordem de Canais com contato do
+// Destinatário. A ordem é a do pedido ou, sem ela, a do Template.
 func (uc SendMessageUseCase) Pedir(ctx context.Context, p PedidoNotificacao) (portas.Registro, error) {
 	tpl, err := uc.Repo.BuscarTemplate(ctx, p.TemplateID)
 	if err != nil {
@@ -33,9 +35,18 @@ func (uc SendMessageUseCase) Pedir(ctx context.Context, p PedidoNotificacao) (po
 	if err := tpl.ValidarDados(p.Dados); err != nil {
 		return portas.Registro{}, err
 	}
-	primeiro := tpl.OrdemCanais[0]
-	if p.Destinatario.Contato(primeiro) == "" {
-		return portas.Registro{}, fmt.Errorf("%w %s", dominio.ErrSemContato, primeiro)
+	ordem := tpl.OrdemCanais
+	if len(p.Canais) > 0 {
+		ordem = p.Canais
+	}
+	for _, c := range ordem {
+		if _, ok := tpl.Conteudos[c]; !ok {
+			return portas.Registro{}, fmt.Errorf("%w: %s", dominio.ErrCanalSemVersao, c)
+		}
+	}
+	primeiro, ok := p.Destinatario.PrimeiroComContato(ordem, 0)
+	if !ok {
+		return portas.Registro{}, dominio.ErrSemContato
 	}
 	return uc.Repo.RegistrarNotificacao(ctx, portas.NovaNotificacao{
 		SistemaOrigem:     p.SistemaOrigem,
@@ -43,6 +54,7 @@ func (uc SendMessageUseCase) Pedir(ctx context.Context, p PedidoNotificacao) (po
 		TemplateID:        tpl.ID,
 		Destinatario:      p.Destinatario,
 		Dados:             p.Dados,
-		OrdemCanais:       tpl.OrdemCanais,
+		OrdemCanais:       ordem,
+		PrimeiroCanal:     primeiro,
 	})
 }

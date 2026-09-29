@@ -1,5 +1,11 @@
 package dominio
 
+import (
+	"math/rand/v2"
+	"slices"
+	"time"
+)
+
 // TipoResultado classifica o que o Provedor respondeu a uma Tentativa.
 type TipoResultado int
 
@@ -16,22 +22,65 @@ type ResultadoEnvio struct {
 	IDProvedor string
 }
 
-// Decisao é o que fazer com a Tentativa e a Notificação depois do envio.
+// ProximaTentativa é a Tentativa que a decisão manda criar: Retentativa no
+// mesmo Canal (Numero > 1) ou a primeira no próximo Canal da ordem.
+type ProximaTentativa struct {
+	Canal  Canal
+	Numero int
+	Espera time.Duration
+}
+
+// Decisao é o que fazer depois do envio: o status da Tentativa atual, o da
+// Notificação e, se houver, a próxima Tentativa.
 type Decisao struct {
 	Tentativa   StatusTentativa
 	Notificacao StatusNotificacao
 	Motivo      string
+	Proxima     *ProximaTentativa
 }
 
-// NotificationRouter decide o destino da Notificação a partir do resultado de
-// cada Tentativa. Nesta fatia (01) toda falha encerra a Notificação; retry de
-// Falha temporária e fallback para o próximo Canal chegam na fatia 02 (RN-2).
-type NotificationRouter struct{}
+// esperas antes de cada Retentativa (RN-2): a 1ª após 5 s, a 2ª após 30 s, a
+// 3ª após 2 min. Esgotadas, o Canal é tratado como falho.
+var esperas = []time.Duration{5 * time.Second, 30 * time.Second, 2 * time.Minute}
 
-// Decidir aplica REQ-4 (aceito → enviada) e REQ-5 (falha → falhou).
-func (NotificationRouter) Decidir(r ResultadoEnvio) Decisao {
-	if r.Tipo == Aceito {
+// Jitter é a variação aplicada a cada espera, para cima ou para baixo.
+const Jitter = 0.2
+
+// NotificationRouter decide o destino da Notificação a partir do resultado de
+// cada Tentativa (REQ-8, REQ-9). Sorteio devolve um valor em [0, 1); vazio,
+// usa math/rand — os testes injetam um valor fixo.
+type NotificationRouter struct {
+	Sorteio func() float64
+}
+
+// Decidir aplica: aceito → enviada (REQ-4, REQ-7); Falha temporária com
+// Retentativa sobrando → mesmo Canal após a espera (REQ-8); senão, próximo
+// Canal da ordem com contato (REQ-9); sem Canal restante → falhou (REQ-5).
+func (r NotificationRouter) Decidir(t Tentativa, n Notificacao, res ResultadoEnvio) Decisao {
+	if res.Tipo == Aceito {
 		return Decisao{Tentativa: TentativaEnviada, Notificacao: NotificacaoEnviada}
 	}
-	return Decisao{Tentativa: TentativaFalhou, Notificacao: NotificacaoFalhou, Motivo: r.Motivo}
+	d := Decisao{Tentativa: TentativaFalhou, Notificacao: NotificacaoPendente, Motivo: res.Motivo}
+	if res.Tipo == FalhaTemporaria && t.Numero <= len(esperas) {
+		d.Proxima = &ProximaTentativa{Canal: t.Canal, Numero: t.Numero + 1, Espera: r.espera(t.Numero)}
+		return d
+	}
+	atual := slices.Index(n.OrdemCanais, t.Canal)
+	if proximo, ok := n.Destinatario.PrimeiroComContato(n.OrdemCanais, atual+1); ok && atual >= 0 {
+		d.Proxima = &ProximaTentativa{Canal: proximo, Numero: 1}
+		return d
+	}
+	d.Notificacao = NotificacaoFalhou
+	return d
+}
+
+// espera devolve a espera antes da Retentativa que segue a Tentativa numero,
+// com jitter de ±Jitter.
+func (r NotificationRouter) espera(numero int) time.Duration {
+	sorteio := r.Sorteio
+	if sorteio == nil {
+		sorteio = rand.Float64 //nolint:gosec // jitter não é segurança
+	}
+	fator := 1 - Jitter + 2*Jitter*sorteio()
+	return time.Duration(float64(esperas[numero-1]) * fator)
 }

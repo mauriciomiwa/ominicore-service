@@ -25,6 +25,7 @@ import (
 	"ominicore/internal/adaptadores/saida/postgres"
 	"ominicore/internal/adaptadores/saida/redis"
 	"ominicore/internal/adaptadores/saida/sendgrid"
+	"ominicore/internal/adaptadores/saida/twilio"
 	"ominicore/internal/aplicacao"
 	"ominicore/internal/dominio"
 	"ominicore/internal/logs"
@@ -87,6 +88,7 @@ type config struct {
 	Bao           openbao.Config
 	RedisEndereco string
 	SendGridURL   string
+	TwilioURL     string
 }
 
 func lerConfig(env func(string) string) config {
@@ -112,6 +114,7 @@ func lerConfig(env func(string) string) config {
 		},
 		RedisEndereco: padrao("OMINICORE_REDIS_ADDR", "redis:6379"),
 		SendGridURL:   env("OMINICORE_SENDGRID_URL"),
+		TwilioURL:     env("OMINICORE_TWILIO_URL"),
 	}
 }
 
@@ -184,6 +187,10 @@ func rodarWorker(ctx context.Context, cfg config, seg openbao.Segredos, repo pos
 		Repo: repo,
 		Remetentes: map[dominio.Canal]portas.MessageSenderPort{
 			dominio.CanalEmail: sendgrid.Novo(cfg.SendGridURL, seg.SendGridAPIKey, seg.SendGridRemetente),
+			dominio.CanalSMS: twilio.Novo(cfg.TwilioURL, twilio.Credenciais{
+				AccountSID: seg.Twilio["account_sid"], APIKeySID: seg.Twilio["api_key_sid"],
+				APIKeySecret: seg.Twilio["api_key_secret"], MessagingServiceSID: seg.Twilio["messaging_service_sid"],
+			}),
 		},
 		Log: log,
 	}

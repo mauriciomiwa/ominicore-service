@@ -16,6 +16,7 @@ type NovaNotificacao struct {
 	Destinatario      dominio.Destinatario
 	Dados             map[string]string
 	OrdemCanais       []dominio.Canal
+	PrimeiroCanal     dominio.Canal // 1º Canal da ordem com contato (REQ-2)
 }
 
 // Registro é o resultado de registrar uma Notificação: Reutilizada indica que a
@@ -27,8 +28,9 @@ type Registro struct {
 }
 
 // TentativaReservada é uma Tentativa tirada da fila, com o necessário para o
-// envio. Concluir grava a decisão e libera a reserva; se Concluir falhar, a
-// Tentativa volta para a fila.
+// envio. Concluir grava a decisão — inclusive a próxima Tentativa, na mesma
+// transação — e libera a reserva; se Concluir falhar, a Tentativa volta para a
+// fila.
 type TentativaReservada struct {
 	Tentativa   dominio.Tentativa
 	Notificacao dominio.Notificacao

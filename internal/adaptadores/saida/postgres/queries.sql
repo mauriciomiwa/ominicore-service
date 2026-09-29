@@ -21,16 +21,17 @@ JOIN notificacoes n ON n.id = i.notificacao_id
 WHERE i.sistema_origem = $1 AND i.chave = $2;
 
 -- name: InserirNotificacao :exec
-INSERT INTO notificacoes (id, sistema_origem, template_id, destinatario_email, dados, ordem_canais, status)
-VALUES ($1, $2, $3, $4, $5, $6, 'pendente');
+INSERT INTO notificacoes (id, sistema_origem, template_id, destinatario_email, destinatario_telefone, dados, ordem_canais, status)
+VALUES ($1, $2, $3, $4, $5, $6, $7, 'pendente');
 
+-- espera_ms conta a partir do relógio do banco, o mesmo que a fila compara.
 -- name: InserirTentativa :exec
-INSERT INTO tentativas (notificacao_id, canal, numero, status)
-VALUES ($1, $2, $3, 'pendente');
+INSERT INTO tentativas (notificacao_id, canal, numero, status, disponivel_em)
+VALUES (sqlc.arg(notificacao_id), sqlc.arg(canal), sqlc.arg(numero), 'pendente', now() + (sqlc.arg(espera_ms)::bigint * interval '1 millisecond'));
 
 -- name: ReservarTentativa :one
 SELECT t.id, t.notificacao_id, t.canal, t.numero,
-       n.sistema_origem, n.template_id, n.destinatario_email, n.dados, n.ordem_canais
+       n.sistema_origem, n.template_id, n.destinatario_email, n.destinatario_telefone, n.dados, n.ordem_canais
 FROM tentativas t
 JOIN notificacoes n ON n.id = t.notificacao_id
 WHERE t.status = 'pendente' AND t.disponivel_em <= now()
