@@ -233,10 +233,16 @@ def render(md_texto: str) -> str:
     return h
 
 
-def sem_titulo(md_texto: str):
+def sem_titulo(md_texto: str, padrao: str = ""):
+    """(título, corpo). O título é o primeiro "# " — pode vir depois de linhas de
+    citação ("> Revisado por: …", gravada pelo Aprovar) ou em branco, que ficam no corpo."""
     linhas = md_texto.splitlines()
-    titulo = linhas[0].lstrip("# ").strip() if linhas and linhas[0].startswith("# ") else ""
-    return titulo, "\n".join(linhas[1:])
+    for i, ln in enumerate(linhas):
+        if ln.startswith("# "):
+            return ln[2:].strip(), "\n".join(linhas[:i] + linhas[i + 1:])
+        if ln.strip() and not ln.lstrip().startswith(">"):
+            break
+    return padrao, md_texto
 
 
 def conta_rn(md_texto: str) -> int:
@@ -334,7 +340,14 @@ TEMPLATE_HTML = r"""<meta charset="utf-8">
   .area { border-top: 3px solid var(--g); padding-top: 18px; }
   .area-h { display: grid; gap: 4px; }
   .area-h .eyebrow { color: var(--g); }
-  .area-h h2, #visao-geral > h2, #fatos > h2 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.015em; }
+  #situacao h3 { font-size: 1rem; font-weight: 700; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  .prog { font-size: 0.8rem; font-weight: 500; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .st { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; border-radius: 999px; padding: 1px 8px; border: 1px solid var(--line); white-space: nowrap; }
+  .st-concluida .st { color: var(--g-2); border-color: var(--g-2); }
+  .st-em-curso .st { color: var(--g-1); border-color: var(--g-1); }
+  .st-a-fazer .st { color: var(--ink-3); }
+  .estado { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; }
+  .area-h h2, #situacao > h2, #visao-geral > h2, #fatos > h2 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.015em; }
 
   .md { display: grid; gap: 12px; min-width: 0; color: var(--ink); }
   .md > * { margin: 0; }
@@ -381,6 +394,7 @@ TEMPLATE_HTML = r"""<meta charset="utf-8">
     <label class="eyebrow" for="filtro">Filtrar áreas</label>
     <input class="filtro" id="filtro" type="search" placeholder="ex.: rota, tela, integração" autocomplete="off">
     <ul class="nav-top">
+      <li><a href="#situacao">Situação do projeto</a></li>
       <li><a href="#visao-geral">Visão geral</a></li>
       <li><a href="#fatos">Fatos do inventário</a></li>
     </ul>
@@ -389,6 +403,8 @@ TEMPLATE_HTML = r"""<meta charset="utf-8">
   </nav>
 
   <main>
+    {{SITUACAO}}
+
     <section id="visao-geral">
       <h2>Visão geral</h2>
       <div class="cards">{{CARDS}}</div>
@@ -477,7 +493,7 @@ AREAS = [(n, GRUPO_DE.get(n, "areas")) for n in ordem] or \
 areas = []
 for nome, grupo in AREAS:
     texto = (MAPA / f"{nome}.md").read_text(encoding="utf-8")
-    titulo, corpo = sem_titulo(texto)
+    titulo, corpo = sem_titulo(texto, nome.replace("-", " ").capitalize())
     corpo = re.sub(r"^\s*>.*\n(>.*\n)*", "", corpo.lstrip("\n"))
     areas.append({"id": nome, "grupo": grupo, "titulo": titulo, "html": render(corpo),
                   "rn": conta_rn(texto), "resumo": resumo(texto),
@@ -486,6 +502,100 @@ for nome, grupo in AREAS:
 n_rn = sum(a["rn"] for a in areas)
 stats = [("áreas", len(areas)), ("rotas", len(inv["rotas"])), ("chamadas ao back", len(inv["chamadas_http"])),
          ("regras candidatas", n_rn), ("módulos", len(inv["modulos"]))]
+
+# ------------------------------------------------------------ situação do projeto
+# Onde o projeto está, lido dos arquivos que o fluxo SDD já mantém: estado.md (onde
+# parou), backlog + openspec/changes (o que foi concluído, está em curso, falta) e
+# to-do.md (aonde é preciso voltar). Nada disso é escrito à mão aqui.
+DOC_DIR = MAPA.resolve().parent.parent
+RAIZ = next((c for c in [DOC_DIR, *DOC_DIR.parents] if (c / "openspec").is_dir() or (c / ".git").exists()), DOC_DIR.parent)
+CHANGES = RAIZ / "openspec" / "changes"
+
+
+def progresso_tasks(pasta: Path):
+    f = pasta / "tasks.md"
+    if not f.is_file():
+        return 0, 0
+    t = f.read_text(encoding="utf-8", errors="replace")
+    return len(re.findall(r"^\s*- \[[xX]\]", t, re.M)), len(re.findall(r"^\s*- \[[ xX]\]", t, re.M))
+
+
+def fatias_do_backlog():
+    f = DOC_DIR / "System" / "backlog-mvp.md"
+    if not f.is_file():
+        return []
+    txt = f.read_text(encoding="utf-8", errors="replace")
+    arquivadas = [p.name for p in (CHANGES / "archive").glob("*")] if (CHANGES / "archive").is_dir() else []
+    specs = RAIZ / "openspec" / "specs"
+    vigentes = set(re.findall(r"^###\s+Requirement:\s*(REQ-[\d.]+)",
+                              "\n".join(f.read_text(encoding="utf-8", errors="replace") for f in specs.glob("*/spec.md")),
+                              re.M)) if specs.is_dir() else set()
+    out = []
+    for m in re.finditer(r"^###\s+(Fatia\s+[\w.]+)\s*[—-]\s*(.+?)\s*$(.*?)(?=^###\s|\Z)", txt, re.M | re.S):
+        nome, titulo, corpo = m.group(1), m.group(2), m.group(3)
+        ch = re.search(r"^Change:\s*`([^`]+)`", corpo, re.M)
+        change = ch.group(1) if ch else ""
+        if change and any(a.endswith(change) for a in arquivadas):
+            status, prog = "concluida", ""
+        elif change and (CHANGES / change).is_dir():
+            feitas, total = progresso_tasks(CHANGES / change)
+            status, prog = "em-curso", (f"{feitas}/{total} tarefas" if total else "")
+        elif change:
+            status, prog = "a-fazer", ""
+        else:
+            reqs = set(re.findall(r"\bREQ-[\d.]+\b", corpo))
+            if reqs and reqs <= vigentes:  # entregue antes do OpenSpec: REQ já vigentes
+                status, prog = "concluida", "REQ vigentes"
+            else:
+                status, prog = "sem-change", "sem change no OpenSpec"
+        out.append({"nome": nome, "titulo": titulo, "change": change, "status": status, "prog": prog})
+    return out
+
+
+def pendencias_todo(limite=15):
+    f = DOC_DIR / "to-do.md"
+    if not f.is_file():
+        return [], 0
+    abertas = [re.sub(r"^\s*- \[ \]\s*", "", l).strip()
+               for l in f.read_text(encoding="utf-8", errors="replace").splitlines() if re.match(r"^\s*- \[ \]", l)]
+    return abertas[:limite], len(abertas)
+
+
+ROTULO = {"concluida": "Concluída", "em-curso": "Em curso", "a-fazer": "A fazer", "sem-change": "—"}
+FATIAS = fatias_do_backlog()
+TODO, N_TODO = pendencias_todo()
+ESTADO_F = DOC_DIR / "estado.md"
+estado_html = ""
+if ESTADO_F.is_file():
+    _, est = sem_titulo(ESTADO_F.read_text(encoding="utf-8", errors="replace"))
+    estado_html = render(est.strip())
+n_ok = sum(f["status"] == "concluida" for f in FATIAS)
+fatias_rows = "".join(
+    f'<tr class="st-{f["status"]}"><td>{html.escape(f["nome"])}</td><td>{html.escape(f["titulo"])}</td>'
+    f'<td>{("<code>" + html.escape(f["change"]) + "</code>") if f["change"] else "—"}</td>'
+    f'<td><span class="st">{ROTULO[f["status"]]}</span> <span class="prog">{html.escape(f["prog"])}</span></td></tr>'
+    for f in FATIAS)
+todo_html = "".join(f"<li>{render(t)[3:-4] if render(t).startswith('<p>') else html.escape(t)}</li>" for t in TODO)
+situacao = ['<section id="situacao"><h2>Situação do projeto</h2>',
+            '<p class="sub">Lida de <code>estado.md</code>, <code>System/backlog-mvp.md</code>, '
+            '<code>openspec/changes/</code> e <code>to-do.md</code> na hora em que esta vista foi gerada.</p>']
+if estado_html:
+    situacao.append(f'<h3>Onde parou</h3><div class="md estado">{estado_html}</div>')
+else:
+    situacao.append('<p class="vazio">Sem <code>estado.md</code>: ao encerrar uma sessão, faça a passagem de bastão (skill passagem).</p>')
+if FATIAS:
+    situacao.append(f'<h3>Fatias do backlog <span class="prog">{n_ok} de {len(FATIAS)} concluídas</span></h3>'
+                    '<div class="table-wrap"><table><thead><tr><th>Fatia</th><th>O quê</th><th>Change</th><th>Situação</th></tr></thead>'
+                    f'<tbody>{fatias_rows}</tbody></table></div>')
+if TODO:
+    mais = f" (mostrando {len(TODO)} de {N_TODO})" if N_TODO > len(TODO) else ""
+    situacao.append(f'<h3>Aonde voltar <span class="prog">{N_TODO} pendência(s) no to-do.md{mais}</span></h3>'
+                    f'<div class="md"><ul>{todo_html}</ul></div>')
+situacao.append('</section>')
+SITUACAO = "".join(situacao)
+if FATIAS:
+    stats.insert(0, ("fatias concluídas", f"{n_ok}/{len(FATIAS)}"))
+
 
 # ------------------------------------------------------------ HTML
 def badge(n):
@@ -523,7 +633,7 @@ http_rows = "".join(
 stats_html = "".join(f'<span><b>{v}</b> {k}</span>' for k, v in stats)
 TEMPLATE = TEMPLATE_HTML
 out = (TEMPLATE.replace("{{NAV}}", "".join(nav)).replace("{{CARDS}}", cards)
-       .replace("{{VISAO}}", render(visao_corpo)).replace("{{SECOES}}", secoes)
+       .replace("{{VISAO}}", render(visao_corpo)).replace("{{SECOES}}", secoes).replace("{{SITUACAO}}", SITUACAO)
        .replace("{{STATS}}", stats_html).replace("{{DATA}}", inv["gerado_em"][:10])
        .replace("{{MODULOS}}", html.escape(modulos_mermaid))
        .replace("{{ROTAS}}", rotas_rows).replace("{{HTTP}}", http_rows)
