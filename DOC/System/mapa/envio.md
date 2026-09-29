@@ -61,5 +61,5 @@ Nenhuma além das RN da especificação.
 
 ## Specs
 Specs vigentes `openspec/specs/autenticacao-origem/`, `notificacoes/` e
-`segredos/` (REQ-1 a REQ-9); histórico em `openspec/changes/archive/`
-(`2026-09-29-01-enviar-email`, `2026-09-29-02-sms-e-fallback`).
+`segredos/` (REQ-1 a REQ-11); histórico em `openspec/changes/archive/`
+(`2026-09-29-01-enviar-email`, `2026-09-29-02-sms-e-fallback`, `2026-09-29-06-whatsapp`).

@@ -3,6 +3,12 @@
 Registro cronológico de decisões e eventos, mais recente no topo. Decisão sem
 registro vira suposição de alguém daqui a seis meses.
 
+## 2026-09-29 — Entrega: change `06-whatsapp` arquivada
+- Arquivada em `openspec/changes/archive/2026-09-29-06-whatsapp/`; spec
+  `notificacoes` ganha REQ-10 (envio pelo Modelo aprovado) e REQ-11 (versão
+  WhatsApp do Template). Cobre RN-4. T-28 a T-33 passando. Validação contra a
+  Meta real segue pendente da conta (to-do).
+
 ## 2026-09-29 — Fatia 6 (`06-whatsapp`) implementada: 13/13
 - Canal WhatsApp pela Cloud API da Meta (Graph `v26.0`, conferida na doc em
   2026-09-29); migration 00004 (Modelo aprovado em `template_conteudos`);

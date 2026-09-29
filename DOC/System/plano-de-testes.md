@@ -8,7 +8,7 @@ haver dois lugares a manter. Tipo: **Exemplo** (caso concreto) ou
 **Propriedade** (invariante). Status: pendente / escrito (não rodado) /
 passando.
 
-T-1 a T-27 vigentes desde 2026-09-29 (`openspec/specs/{autenticacao-origem,notificacoes,segredos}`).
+T-1 a T-33 vigentes desde 2026-09-29 (`openspec/specs/{autenticacao-origem,notificacoes,segredos}`).
 
 Nome do teste em Go cita o T-n: `func TestT7_ReenvioComAMesmaChaveNaoDuplica(t *testing.T)`.
 Unitários com fakes (`internal/testes/`: repositório em memória, realm JWT,

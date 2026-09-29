@@ -59,7 +59,8 @@ Valor: Notificação sai pelo WhatsApp (Cloud API da Meta) quando o pedido inclu
 o Canal; número sem WhatsApp cai no próximo Canal da ordem.
 Cobre: RN-4 (REQ-10, REQ-11)
 Depende de: Fatia 2
-Pronto quando: T-28 a T-33 passando e change arquivada. Incluída no MVP em
+Pronto quando: T-28 a T-33 passando e change arquivada.
+**Entregue em 2026-09-29** (`openspec/changes/archive/2026-09-29-06-whatsapp/`). Incluída no MVP em
 2026-09-29 (antes era "depois"); status de entrega do WhatsApp entra com a Fatia 3.
 
 ## Trilha de infraestrutura (não é fatia)
