@@ -12,21 +12,21 @@ Nome do teste em Go cita o T-n: `func TestT7_ReenvioComAMesmaChaveNaoDuplica(t *
 Unitários com fakes (`internal/testes/`: repositório em memória, realm JWT,
 SendGrid via `httptest`); integração em `internal/integracao/` com
 `testcontainers-go` (Postgres real) — pula sozinho sem runtime de containers;
-rode com `make itest` (Podman). Provedores reais nunca entram em teste.
+rode com `make itest` (Docker ou Podman). Última execução: 2026-09-29, 7/7 contra Postgres 17. Provedores reais nunca entram em teste.
 
 | Teste | Tipo | Onde (arquivo do teste) | Status |
 |---|---|---|---|
 | T-1 | Exemplo | `internal/adaptadores/entrada/http/servidor_test.go` | passando |
 | T-2 | Exemplo | `internal/adaptadores/saida/keycloak/validador_test.go` | passando |
 | T-3 | Exemplo | `internal/adaptadores/entrada/http/servidor_test.go` | passando |
-| T-4 | Exemplo | `internal/aplicacao/aplicacao_test.go` (fake) · `internal/integracao/integracao_test.go` (Postgres) | passando (fake) · escrito, não rodado (Postgres) |
+| T-4 | Exemplo | `internal/aplicacao/aplicacao_test.go` (fake) · `internal/integracao/integracao_test.go` (Postgres) | passando (fake e Postgres) |
 | T-5 | Exemplo | `internal/aplicacao/aplicacao_test.go` | passando |
 | T-6 | Exemplo | `internal/aplicacao/aplicacao_test.go` | passando |
-| T-7 | Exemplo | `internal/integracao/integracao_test.go` | escrito, não rodado |
+| T-7 | Exemplo | `internal/integracao/integracao_test.go` | passando |
 | T-8 | Exemplo | `internal/adaptadores/entrada/http/servidor_test.go` | passando |
-| T-9 | Exemplo | `internal/integracao/integracao_test.go` | escrito, não rodado |
-| T-10 | Exemplo | `internal/adaptadores/entrada/worker/worker_test.go` (fake) · `internal/integracao/integracao_test.go` (Postgres) | passando (fake) · escrito, não rodado (Postgres) |
-| T-11 | Exemplo | `internal/integracao/integracao_test.go` | escrito, não rodado |
-| T-12 | Exemplo | `internal/dominio/dominio_test.go` · `internal/integracao/integracao_test.go` (Postgres) | passando (domínio) · escrito, não rodado (Postgres) |
+| T-9 | Exemplo | `internal/integracao/integracao_test.go` | passando |
+| T-10 | Exemplo | `internal/adaptadores/entrada/worker/worker_test.go` (fake) · `internal/integracao/integracao_test.go` (Postgres) | passando (fake e Postgres) |
+| T-11 | Exemplo | `internal/integracao/integracao_test.go` | passando |
+| T-12 | Exemplo | `internal/dominio/dominio_test.go` · `internal/integracao/integracao_test.go` (Postgres) | passando (domínio e Postgres) |
 | T-13 | Exemplo | `cmd/ominicore/main_test.go` | passando |
 | T-14 | Propriedade | `internal/adaptadores/entrada/worker/worker_test.go` | passando |

@@ -10,8 +10,10 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -77,7 +79,8 @@ func run(ctx context.Context, args []string, env func(string) string, saida io.W
 
 type config struct {
 	Endereco      string
-	KCEmissor     string
+	KCEmissor     string // `iss` conferido no token (host público do Keycloak)
+	KCURL         string // backchannel para JWKS e token; vazio = o próprio emissor
 	KCPublico     string
 	KCClientID    string
 	KCSecret      string
@@ -96,18 +99,34 @@ func lerConfig(env func(string) string) config {
 	return config{
 		Endereco:   padrao("OMINICORE_ADDR", "0.0.0.0:8080"),
 		KCEmissor:  env("OMINICORE_KC_ISSUER"),
+		KCURL:      env("OMINICORE_KC_URL"),
 		KCPublico:  padrao("OMINICORE_KC_AUDIENCE", "ominicore"),
 		KCClientID: padrao("OMINICORE_KC_CLIENT_ID", "ominicore-app"),
 		KCSecret:   env("OMINICORE_KC_CLIENT_SECRET"),
 		Bao: openbao.Config{
 			Endereco: env("OMINICORE_BAO_ADDR"),
 			Mount:    padrao("OMINICORE_BAO_MOUNT", "kv"),
+			Prefixo:  padrao("OMINICORE_BAO_PREFIXO", "ominicore"),
 			Token:    env("OMINICORE_BAO_TOKEN"),
 			Role:     padrao("OMINICORE_BAO_ROLE", "ominicore"),
 		},
 		RedisEndereco: padrao("OMINICORE_REDIS_ADDR", "redis:6379"),
 		SendGridURL:   env("OMINICORE_SENDGRID_URL"),
 	}
+}
+
+// realmInterno é o realm pelo backchannel: OMINICORE_KC_URL + o caminho do
+// emissor (https://auth.flipapi.com.br/realms/x → http://keycloak:8080/realms/x).
+// O host público do Keycloak tem allowlist por IP no Traefik.
+func (c config) realmInterno() string {
+	if c.KCURL == "" {
+		return c.KCEmissor
+	}
+	u, err := url.Parse(c.KCEmissor)
+	if err != nil {
+		return c.KCEmissor
+	}
+	return strings.TrimRight(c.KCURL, "/") + u.Path
 }
 
 // carregarSegredos entra no OpenBao (token local, ou JWT do Keycloak em hml e
@@ -117,7 +136,7 @@ func carregarSegredos(ctx context.Context, cfg config) (openbao.Segredos, error)
 		return openbao.Segredos{}, fmt.Errorf("%w: OMINICORE_BAO_ADDR vazio", openbao.ErrOpenBao)
 	}
 	if cfg.Bao.Token == "" {
-		jwt, err := keycloak.TokenDeServico(ctx, cfg.KCEmissor, cfg.KCClientID, cfg.KCSecret)
+		jwt, err := keycloak.TokenDeServico(ctx, cfg.realmInterno(), cfg.KCClientID, cfg.KCSecret)
 		if err != nil {
 			return openbao.Segredos{}, fmt.Errorf("%w: %w", openbao.ErrOpenBao, err)
 		}
@@ -137,7 +156,7 @@ func rodarAPI(ctx context.Context, cfg config, repo postgres.Repositorio, log *s
 	srv := &http.Server{
 		Addr: cfg.Endereco,
 		Handler: entradahttp.Servidor{
-			Auth:   keycloak.Novo(cfg.KCEmissor, cfg.KCPublico, redis.Cache{Cliente: rdb}),
+			Auth:   keycloak.NovoComBackchannel(cfg.KCEmissor, cfg.realmInterno(), cfg.KCPublico, redis.Cache{Cliente: rdb}),
 			Enviar: aplicacao.SendMessageUseCase{Repo: repo},
 			Log:    log,
 		}.Handler(),

@@ -1,5 +1,5 @@
 {
- "gerado_em": "2026-09-28T17:44:12",
+ "gerado_em": "2026-09-29T11:47:00",
  "raiz": "ominicore",
  "stack": [
   {
@@ -15,7 +15,7 @@
    "importa": []
   },
   "internal": {
-   "arquivos": 29,
+   "arquivos": 30,
    "importa": []
   },
   "migrations": {
@@ -66,6 +66,9 @@
  "filas_publicadas": [],
  "crons": [],
  "env": {
+  "COMPOSE": [
+   "deploy/local/bootstrap.sh"
+  ],
   "SENDGRID_API_KEY": [
    "deploy/local/bootstrap.sh"
   ],

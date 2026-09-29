@@ -66,3 +66,16 @@ func TestKidDesconhecidoNaoReleJWKSACadaToken(t *testing.T) {
 		t.Fatalf("jwks baixado %d vezes, quero 1", n)
 	}
 }
+
+func TestBackchannelConfereOEmissorPublicoEBaixaOJWKSPorDentro(t *testing.T) {
+	realm := emissor.Novo(t) // faz o papel do http://keycloak:8080/realms/ominicore
+	const publico = "https://auth.flipapi.com.br/realms/ominicore"
+	v := keycloak.NovoComBackchannel(publico, realm.URL, "ominicore", &emissor.Cache{})
+	tok := realm.Token(t, jwt.MapClaims{"iss": publico, "aud": "ominicore", "azp": "sistema-a", "exp": time.Now().Add(time.Hour).Unix()})
+	if origem, err := v.SistemaOrigem(context.Background(), tok); err != nil || origem != "sistema-a" {
+		t.Fatalf("origem=%q err=%v", origem, err)
+	}
+	if _, err := v.SistemaOrigem(context.Background(), realm.Valido(t, "sistema-a")); !errors.Is(err, keycloak.ErrNaoAutenticado) {
+		t.Fatalf("token com iss do backchannel foi aceito: %v", err)
+	}
+}

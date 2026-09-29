@@ -1,61 +1,89 @@
 # Ambientes — contrato canônico
 
-Última revisão: `2026-09-28` — por Claude (kickoff/fatia 1), **a revisar pelo dono**.
+Última revisão: `2026-09-29` — decisões do dono (Mauricio Miwa) na sabatina de
+ambientes; ver `log.md` de 2026-09-29.
 
 Regra de conteúdo: **nomes e caminhos sim, valores de segredo nunca.**
-Hoje só existe o ambiente local; hml e prod estão decididos na sabatina
-(`log.md`, 2026-09-28) mas não criados — tudo deles é `A DEFINIR` até a trilha
-de infraestrutura (`System/backlog-mvp.md`).
+hml e prod estão **decididos, não criados**: a criação é a trilha de
+infraestrutura (`System/backlog-mvp.md`, `to-do.md`). Até existirem, toda ação
+no aviva2.0 é tratada como prod.
 
 ## 1. Quais ambientes existem
 
 | Ambiente | Para que serve | Quem usa | Dado real? |
 |---|---|---|---|
 | local | desenvolvimento (`deploy/local/compose.yaml`) | dev | não |
-| hml | validação antes de prod — **não criado** | A DEFINIR | não (Provedores em sandbox) |
-| prod | Sistemas de origem da casa — **não criado** | Sistemas de origem | sim (PII: RN-9) |
+| hml | validação antes de prod | dono + times dos Sistemas de origem em integração | não — só sintético, Provedores em sandbox |
+| prod | Sistemas de origem da casa | Sistemas de origem | sim (PII: RN-9) |
 
 ## 2. Como cada ambiente se identifica
 
 | Ambiente | Evidência (comando/variável) | Valor esperado |
 |---|---|---|
-| local | `echo $OMINICORE_BAO_TOKEN` preenchido e `OMINICORE_KC_ISSUER` em `localhost` | `dev-root` · `http://localhost:8081/realms/ominicore` |
-| hml | `OMINICORE_KC_ISSUER` | `…/realms/ominicore-hml` (A DEFINIR host) |
-| prod | `OMINICORE_KC_ISSUER` | `…/realms/ominicore` (A DEFINIR host) |
+| local | `OMINICORE_KC_ISSUER` (e `OMINICORE_BAO_TOKEN` preenchido) | `http://localhost:8081/realms/ominicore` · `dev-root` |
+| hml | `OMINICORE_KC_ISSUER` + `OMINICORE_BAO_PREFIXO` | `https://auth.flipapi.com.br/realms/ominicore-hml` · `ominicore-hml` |
+| prod | `OMINICORE_KC_ISSUER` + `OMINICORE_BAO_PREFIXO` | `https://auth.flipapi.com.br/realms/ominicore` · `ominicore` |
 
-hml e prod vão rodar **no mesmo host** (aviva2.0): a distinção é o realm e o
-path do OpenBao, não a máquina. Até existirem, toda ação no aviva2.0 é tratada
-como prod.
+No host: `sudo podman inspect <container> --format '{{range .Config.Env}}{{println .}}{{end}}' | grep -E 'KC_ISSUER|BAO_PREFIXO'`.
+hml e prod rodam **no mesmo host** (aviva2.0): a distinção é realm + prefixo
+do cofre + schema, não a máquina. As duas variáveis têm de concordar; se
+discordarem, é defeito — não execute.
+
+Fonte do host/realm: `../flip/infra/aviva2.0/keycloak/keycloak.env`
+(`KC_HOSTNAME`) e o padrão `wbem`/`wbem-hml` de `gerar-realms.py`.
 
 ## 3. Endereços e recursos
 
 | Recurso | hml | prod |
 |---|---|---|
-| URL da aplicação | A DEFINIR (API só na rede `aviva`; webhooks públicos — ADR 0003) | A DEFINIR |
-| Banco | Aurora `db-zillionvf-prod` / `new_aviva`, schema A DEFINIR | Aurora `db-zillionvf-prod` / `new_aviva`, schema `ominicore` |
-| Fila | tabela `tentativas` (ADR 0001) | idem |
-| Host | aviva2.0 (EC2 arm64, us-east-1), quadlets | idem |
-| Path base do OpenBao | A DEFINIR | `kv/ominicore/*` |
+| API de envio (só rede `aviva`) | `http://ominicore-api-hml:8080` | `http://ominicore-api:8080` |
+| Webhooks públicos (Traefik + Cloudflare, ADR 0003) | `https://notify-hml.flipapi.com.br/webhooks/*` | `https://notify.flipapi.com.br/webhooks/*` |
+| Keycloak (`iss`) | `https://auth.flipapi.com.br/realms/ominicore-hml` | `https://auth.flipapi.com.br/realms/ominicore` |
+| Keycloak backchannel (`OMINICORE_KC_URL`) | `http://keycloak:8080` | `http://keycloak:8080` |
+| Banco | Aurora `db-zillionvf-prod` / `new_aviva`, schema `ominicore_hml`, role próprio | Aurora `db-zillionvf-prod` / `new_aviva`, schema `ominicore`, role próprio |
+| Fila | tabela `tentativas` do schema (ADR 0001) | idem |
+| Host | aviva2.0 (EC2 arm64, us-east-1), quadlets `ominicore-api-hml` / `ominicore-worker-hml` | quadlets `ominicore-api` / `ominicore-worker` |
+| OpenBao | `kv/ominicore-hml/*`, policy `ominicore-hml` (só leitura) | `kv/ominicore/*`, policy `ominicore` (só leitura) |
 | Imagem | binário em `distroless/static` (sem registry) | idem |
 | Observabilidade | `slog` JSON no journald | idem |
+
+O Aurora `new_aviva` já é produção de outro produto (zillion): o role de hml
+não enxerga o schema `ominicore`, e nenhum dos dois enxerga os schemas alheios.
 
 ## 4. Configuração
 
 - **Fonte da verdade das chaves:** `deploy/local/README.md` (tabela "Variáveis").
-- **Onde ficam os valores:** OpenBao (`kv/ominicore/postgres`, `kv/ominicore/sendgrid`);
-  client secret do Keycloak como podman secret no host (ADR 0002).
-- **Quem pode ler/escrever valor de prod:** A DEFINIR.
+- **Onde ficam os valores:** OpenBao (`kv/<prefixo>/postgres`, `kv/<prefixo>/sendgrid`);
+  client secret do Keycloak (`ominicore-app`) como podman secret no host (ADR 0002).
+- **Quem pode ler/escrever valor de prod:** escrever — só o dono (Mauricio
+  Miwa), com token de admin do OpenBao; ler — só o app, pela role `jwt` presa
+  ao `azp` `ominicore-app` do realm `ominicore`.
 
 ### Divergências deliberadas
 
-| Chave | local | hml/prod | Por quê |
-|---|---|---|---|
-| `OMINICORE_BAO_TOKEN` | `dev-root` | ausente (login `jwt`) | OpenBao local em modo dev; ADR 0002 |
+| Chave | local | hml | prod | Por quê |
+|---|---|---|---|---|
+| `OMINICORE_BAO_TOKEN` | `dev-root` | ausente | ausente | OpenBao local em modo dev; hml/prod entram por `jwt` (ADR 0002) |
+| `OMINICORE_KC_ISSUER` | realm local | `…/ominicore-hml` | `…/ominicore` | identifica o ambiente |
+| `OMINICORE_BAO_PREFIXO` | `ominicore` | `ominicore-hml` | `ominicore` | isola hml de prod no mesmo cofre |
+| `OMINICORE_KC_URL` | vazio (usa o emissor) | `http://keycloak:8080` | `http://keycloak:8080` | host público tem allowlist por IP |
+| credenciais SendGrid/Twilio | inválidas/teste | sandbox | produção | hml nunca envia a pessoa real |
 
 ## 5. Dados de homologação
 
-- **Origem da carga:** A DEFINIR. **Restaurar hml em prod:** proibido.
+- **Origem da carga:** só sintética — Templates do seed (migrations),
+  Destinatários com endereços de teste, Provedores em sandbox.
+- **Extração de prod para hml:** não existe; se um dia existir, mascarando na
+  extração (`.agents/skills/ambientes/references/config-e-dados.md`).
+- **Restaurar hml em prod:** proibido, sem exceção.
 
 ## 6. Promoção e aprovação
 
-A DEFINIR com a trilha de infraestrutura (`to-do.md`).
+| | hml | prod |
+|---|---|---|
+| Artefato | binário `ominicore-linux-arm64` com o SHA do commit (`make build`) | **o mesmo binário** que rodou em hml, sem rebuild (não embute segredo) |
+| Quem aprova | dono | dono, a cada promoção, depois de ver o bloco de alvo |
+| Migration | `ominicore migrate` com o prefixo de hml | idem com o de prod, antes de trocar o binário; só aditiva |
+| Rollback | binário anterior em `/opt/ominicore/ominicore.anterior` + restart | idem (migration aditiva não precisa voltar) |
+
+Checklist: `.agents/skills/ambientes/references/checklist-promocao.md`.

@@ -11,9 +11,9 @@ import (
 
 // Segredos reunidos no boot. Nenhum deles sai daqui para log.
 type Segredos struct {
-	PostgresDSN       string // kv/ominicore/postgres: dsn
-	SendGridAPIKey    string // kv/ominicore/sendgrid: api_key
-	SendGridRemetente string // kv/ominicore/sendgrid: remetente
+	PostgresDSN       string // <mount>/<prefixo>/postgres: dsn
+	SendGridAPIKey    string // <mount>/<prefixo>/sendgrid: api_key
+	SendGridRemetente string // <mount>/<prefixo>/sendgrid: remetente
 }
 
 // Config diz como chegar e entrar no OpenBao. Token é só para o ambiente local
@@ -21,6 +21,7 @@ type Segredos struct {
 type Config struct {
 	Endereco string
 	Mount    string // padrão "kv"
+	Prefixo  string // padrão "ominicore" (prod); hml usa "ominicore-hml" — DOC/Infra/AMBIENTES.md
 	Token    string
 	JWT      string
 	Role     string
@@ -39,11 +40,15 @@ func Carregar(ctx context.Context, cfg Config) (Segredos, error) {
 	if mount == "" {
 		mount = "kv"
 	}
-	pg, err := ler(ctx, cli, mount, "ominicore/postgres", "dsn")
+	prefixo := cfg.Prefixo
+	if prefixo == "" {
+		prefixo = "ominicore"
+	}
+	pg, err := ler(ctx, cli, mount, prefixo+"/postgres", "dsn")
 	if err != nil {
 		return Segredos{}, err
 	}
-	sg, err := ler(ctx, cli, mount, "ominicore/sendgrid", "api_key", "remetente")
+	sg, err := ler(ctx, cli, mount, prefixo+"/sendgrid", "api_key", "remetente")
 	if err != nil {
 		return Segredos{}, err
 	}

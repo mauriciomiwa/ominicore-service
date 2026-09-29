@@ -1,30 +1,34 @@
 # Estado — ominicore
 
-> Atualizado em 2026-09-28 por Mauricio Miwa + Claude (fatia 1)
+> Atualizado em 2026-09-29 por Mauricio Miwa + Claude (fatia 1 verificada)
 
 Retrato de onde o trabalho parou, reescrito a cada fim de sessão (skill
 `passagem`, no máximo 40 linhas). É o que o próximo chat lê primeiro.
 
 ## Em curso
-- Change `01-enviar-email`: código completo, **22/30 tarefas**. Unitários,
-  lint, govulncheck, sqlc diff e contrato verdes.
-- Falta verificar contra serviços reais: testes de integração (T-7, T-9, T-11 e
-  versões Postgres de T-4/T-10/T-12), `compose` local e login `jwt` no OpenBao.
-- Próximo passo: consertar o runtime de containers (VM do Podman) e rodar
-  `make itest`; depois `make compose-up` seguindo `deploy/local/README.md`.
+- Change `01-enviar-email`: **30/30 tarefas**, verificada contra Postgres,
+  Keycloak, OpenBao e Redis reais (Docker). Pronta para `/opsx:archive`.
+- Commit `e70f224` na branch `fatia/01-enviar-email`; o que veio depois
+  (contrato de ambientes, backchannel/prefixo, verificação) **ainda sem commit**.
+- Próximo passo: commit, `/opsx:archive 01-enviar-email`, abrir a fatia 02
+  (`02-sms-e-fallback`) com a sabatina.
 
 ## Decisões recentes
-- `golang-jwt/jwt/v5` para o JWT (precedente do aviva-back).
-- Despacho segura a transação durante o envio (simples; "pelo menos uma vez").
-- Imagens locais = versões do aviva2.0.
+- hml e prod no mesmo host aviva2.0, separados por realm (`ominicore-hml`),
+  prefixo do cofre (`kv/ominicore-hml/*`) e schema (`ominicore_hml`).
+- Webhooks em `notify(-hml).flipapi.com.br/webhooks/*`; API só na rede `aviva`.
+- Promove-se o mesmo binário de hml para prod; só o dono escreve segredo de prod.
 
 ## Bloqueios e pendências
-- VM `podman-machine-default` sem identidade SSH; Docker parado. Recriar a VM
-  apaga a atual (nunca usada) — decisão do dono.
-- Decisões em aberto no `to-do.md`.
+- VM do Podman quebrada; o local roda no Docker (`COMPOSE="docker compose"`).
+- No diff sem commit há arquivos alterados por ferramentas SDD
+  (`mapa.html`, `mapa_html.py`, `log/historico.jsonl`, `.skills-sync.json`):
+  conferir antes de commitar.
+- Decisões em aberto no `to-do.md` (cadastro de Templates, consulta de status,
+  chave repetida com pedido diferente, entrega "pelo menos uma vez").
 
 ## Arquivos que importam agora
-- `../openspec/changes/01-enviar-email/tasks.md` — o que falta
+- `../openspec/changes/01-enviar-email/` — change a arquivar
 - `System/plano-de-testes.md` — status de cada T-n
-- `../internal/integracao/integracao_test.go` — testes que ainda não rodaram
-- `../deploy/local/README.md` — ambiente local
+- `Infra/AMBIENTES.md` — contrato de hml/prod
+- `../deploy/local/bootstrap.sh` — cofre local com auth `jwt` igual a hml/prod

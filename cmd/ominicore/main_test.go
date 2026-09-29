@@ -57,3 +57,15 @@ func TestT13_SemOpenBaoOProcessoNaoInicia(t *testing.T) {
 		}
 	}
 }
+
+func TestRealmInternoTrocaOHostPublicoPeloBackchannel(t *testing.T) {
+	casos := map[config]string{
+		{KCEmissor: "https://auth.flipapi.com.br/realms/ominicore-hml", KCURL: "http://keycloak:8080/"}: "http://keycloak:8080/realms/ominicore-hml",
+		{KCEmissor: "http://localhost:8081/realms/ominicore"}:                                           "http://localhost:8081/realms/ominicore",
+	}
+	for cfg, quero := range casos {
+		if got := cfg.realmInterno(); got != quero {
+			t.Errorf("realmInterno(%+v) = %q, quero %q", cfg, got, quero)
+		}
+	}
+}

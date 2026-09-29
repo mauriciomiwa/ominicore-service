@@ -55,6 +55,14 @@ func Novo(emissor, publico string, cache Cache) *Validador {
 	}
 }
 
+// NovoComBackchannel confere `iss` = emissor, mas baixa o JWKS por realmInterno
+// (ex.: http://keycloak:8080/realms/ominicore), sem passar pelo host público.
+func NovoComBackchannel(emissor, realmInterno, publico string, cache Cache) *Validador {
+	v := Novo(emissor, publico, cache)
+	v.JWKSURL = realmInterno + "/protocol/openid-connect/certs"
+	return v
+}
+
 // SistemaOrigem valida o token e devolve o client que o pediu (`azp`).
 func (v *Validador) SistemaOrigem(ctx context.Context, token string) (string, error) {
 	claims := struct {

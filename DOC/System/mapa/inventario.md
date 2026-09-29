@@ -1,6 +1,6 @@
 # Inventário do código — ominicore
 
-> GERADO por `tools/mapeia_projeto.py` em 2026-09-28T17:44:12. Não edite: rode o script de novo.
+> GERADO por `tools/mapeia_projeto.py` em 2026-09-29T11:47:00. Não edite: rode o script de novo.
 > A interpretação (o que cada área faz, fluxos, RN candidatas) está nas outras páginas desta pasta.
 
 ## Stack
@@ -14,13 +14,13 @@
 ```mermaid
 graph LR
   cmd["cmd (2)"]
-  internal["internal (29)"]
+  internal["internal (30)"]
   migrations["migrations (1)"]
 ```
 
 | Módulo | Arquivos | Importa |
 |---|---|---|
-| `internal` | 29 | — |
+| `internal` | 30 | — |
 | `cmd` | 2 | — |
 | `migrations` | 1 | — |
 
@@ -39,10 +39,11 @@ graph LR
 | POST | `/protocol/openid-connect/token` | `internal/adaptadores/saida/keycloak/token.go:17` |
 | POST | `/v3/mail/send` | `internal/adaptadores/saida/sendgrid/sendgrid.go:77` |
 
-## Variáveis de ambiente lidas no código (2)
+## Variáveis de ambiente lidas no código (3)
 
 | Variável | Declarada em .env* | Onde é lida |
 |---|---|---|
+| `COMPOSE` | **não** | `deploy/local/bootstrap.sh` |
 | `SENDGRID_API_KEY` | **não** | `deploy/local/bootstrap.sh` |
 | `SENDGRID_REMETENTE` | **não** | `deploy/local/bootstrap.sh` |
 
