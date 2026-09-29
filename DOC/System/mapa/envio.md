@@ -10,13 +10,16 @@ Um Sistema de origem autenticado pede uma Notificação por Template; o worker a
 envia pelos Canais Email (SendGrid), SMS (Twilio) e WhatsApp (Meta, Modelo
 aprovado) na Ordem de Canais, com
 Retentativa de Falha temporária e fallback para o próximo Canal, sem duplicar
-em reenvio (RN-1, RN-2, RN-3, RN-4, RN-7).
+em reenvio (RN-1, RN-2, RN-3, RN-4, RN-7); Avisos de status atualizam a Tentativa e o
+Sistema de origem consulta o resultado (RN-5).
 
 ## Telas / entradas
 | Rota | Tela | Arquivo |
 |---|---|---|
 | `POST /v1/notificacoes` | — (API; contrato em `api/openapi.yaml`) | `internal/adaptadores/entrada/http/servidor.go:34` |
 | `GET /healthz` | — (healthcheck do quadlet) | `internal/adaptadores/entrada/http/servidor.go:33` |
+| `GET /v1/notificacoes/{id}` | — (consulta do dono, REQ-14) | `internal/adaptadores/entrada/http/servidor.go` |
+| `POST /webhooks/{sendgrid,twilio,whatsapp}`, `GET /webhooks/whatsapp` | — (públicos, Aviso de status assinado, REQ-12) | `internal/adaptadores/entrada/webhooks/` |
 | worker (fila no Postgres) | — | `internal/adaptadores/entrada/worker/worker.go` |
 
 ## Fluxo principal
@@ -35,6 +38,9 @@ sequenceDiagram
   W->>P: ReservarTentativa (FOR UPDATE SKIP LOCKED)
   W->>G: POST /v3/mail/send (ou Twilio, Canal SMS)
   W->>P: ConcluirTentativa + próxima Tentativa (Retentativa ou próximo Canal) + status (commit)
+  G-->>A: POST /webhooks/sendgrid (assinado) — delivered / bounce
+  A->>P: ReservarPorIDProvedor (FOR UPDATE t, n) + AplicarAviso [+ próximo Canal] (commit)
+  S->>A: GET /v1/notificacoes/{id} (só o dono)
 ```
 
 ## Chamadas ao back
@@ -51,7 +57,7 @@ sequenceDiagram
 Tabelas (schema `ominicore`, `migrations/00001_notificacoes.sql`): `templates`,
 `template_conteudos`, `notificacoes`, `idempotencia` (chave por Sistema de
 origem, `expira_em` = 24 h), `tentativas` (a fila; Retentativa = nova linha
-com `disponivel_em` no futuro). Seed: Template `boas-vindas`, Email → SMS
+com `disponivel_em` no futuro; `categoria_falha` e índice por `id_provedor`, `00005_*`). Seed: Template `boas-vindas`, Email → SMS
 (`migrations/00002_*`, `00003_sms.sql`, `00004_whatsapp.sql` — versão WhatsApp com Modelo aprovado); `notificacoes.destinatario_telefone` (E.164).
 
 ## Regras de negócio encontradas (a confirmar)
@@ -61,5 +67,5 @@ Nenhuma além das RN da especificação.
 
 ## Specs
 Specs vigentes `openspec/specs/autenticacao-origem/`, `notificacoes/` e
-`segredos/` (REQ-1 a REQ-11); histórico em `openspec/changes/archive/`
-(`2026-09-29-01-enviar-email`, `2026-09-29-02-sms-e-fallback`, `2026-09-29-06-whatsapp`).
+`segredos/` (REQ-1 a REQ-14); histórico em `openspec/changes/archive/`
+(`2026-09-29-01-enviar-email`, `2026-09-29-02-sms-e-fallback`, `2026-09-29-03-status-por-webhook`, `2026-09-29-06-whatsapp`).

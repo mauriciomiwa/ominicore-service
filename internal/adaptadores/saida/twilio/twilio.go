@@ -34,6 +34,9 @@ type Remetente struct {
 	URL  string
 	Cred Credenciais
 	HTTP *http.Client
+	// StatusCallback é a URL pública do webhook de status (REQ-12); vazia no
+	// ambiente local, onde o Twilio não alcança o OminiCore.
+	StatusCallback string
 }
 
 var _ portas.MessageSenderPort = Remetente{}
@@ -49,6 +52,9 @@ func Novo(baseURL string, c Credenciais) Remetente {
 // Enviar manda o corpo da versão SMS; o Messaging Service escolhe o número.
 func (r Remetente) Enviar(ctx context.Context, para string, c dominio.ConteudoCanal) dominio.ResultadoEnvio {
 	form := url.Values{"To": {para}, "MessagingServiceSid": {r.Cred.MessagingServiceSID}, "Body": {c.Corpo}}
+	if r.StatusCallback != "" {
+		form.Set("StatusCallback", r.StatusCallback)
+	}
 	endpoint := fmt.Sprintf("%s/2010-04-01/Accounts/%s/Messages.json", r.URL, url.PathEscape(r.Cred.AccountSID))
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(form.Encode()))
 	if err != nil {

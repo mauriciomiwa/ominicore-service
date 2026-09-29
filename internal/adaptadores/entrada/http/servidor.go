@@ -11,6 +11,7 @@ import (
 	"net/mail"
 	"regexp"
 	"strings"
+	"time"
 
 	"ominicore/internal/aplicacao"
 	"ominicore/internal/dominio"
@@ -23,9 +24,12 @@ type Autenticador interface {
 
 // Servidor liga as rotas aos casos de uso.
 type Servidor struct {
-	Auth   Autenticador
-	Enviar aplicacao.SendMessageUseCase
-	Log    *slog.Logger
+	Auth      Autenticador
+	Enviar    aplicacao.SendMessageUseCase
+	Consultar aplicacao.ConsultarUseCase
+	// Webhooks registra /webhooks/* (públicos, assinados pelo Provedor); nil = sem rotas.
+	Webhooks interface{ Registrar(*http.ServeMux) }
+	Log      *slog.Logger
 }
 
 // Handler devolve o roteador HTTP.
@@ -33,6 +37,10 @@ func (s Servidor) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) })
 	mux.Handle("POST /v1/notificacoes", s.autenticar(http.HandlerFunc(s.pedirNotificacao)))
+	mux.Handle("GET /v1/notificacoes/{id}", s.autenticar(http.HandlerFunc(s.consultarNotificacao)))
+	if s.Webhooks != nil {
+		s.Webhooks.Registrar(mux)
+	}
 	return mux
 }
 
@@ -159,4 +167,55 @@ func escreverJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(v)
+}
+
+var reUUID = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+
+type tentativaJSON struct {
+	Canal        string    `json:"canal"`
+	Numero       int       `json:"numero"`
+	Status       string    `json:"status"`
+	Categoria    string    `json:"categoria_falha,omitempty"`
+	CriadaEm     time.Time `json:"criada_em"`
+	AtualizadaEm time.Time `json:"atualizada_em"`
+}
+
+type consultaJSON struct {
+	ID           string          `json:"id"`
+	TemplateID   string          `json:"template_id"`
+	Status       string          `json:"status"`
+	CriadaEm     time.Time       `json:"criada_em"`
+	AtualizadaEm time.Time       `json:"atualizada_em"`
+	Tentativas   []tentativaJSON `json:"tentativas"`
+}
+
+// consultarNotificacao (REQ-14): só o dono; nunca contato nem texto do motivo.
+func (s Servidor) consultarNotificacao(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	origem := r.Context().Value(chaveOrigem{}).(string)
+	if !reUUID.MatchString(id) {
+		problema(w, http.StatusNotFound, "notificação não encontrada", "")
+		return
+	}
+	consulta, ok, err := s.Consultar.Consultar(r.Context(), origem, id)
+	if err != nil {
+		s.Log.ErrorContext(r.Context(), "consulta de notificação falhou", "erro", err.Error())
+		problema(w, http.StatusInternalServerError, "erro interno", "tente de novo")
+		return
+	}
+	if !ok {
+		problema(w, http.StatusNotFound, "notificação não encontrada", "")
+		return
+	}
+	resp := consultaJSON{
+		ID: consulta.ID, TemplateID: consulta.TemplateID, Status: string(consulta.Status),
+		CriadaEm: consulta.CriadaEm, AtualizadaEm: consulta.AtualizadaEm, Tentativas: []tentativaJSON{},
+	}
+	for _, t := range consulta.Tentativas {
+		resp.Tentativas = append(resp.Tentativas, tentativaJSON{
+			Canal: string(t.Canal), Numero: t.Numero, Status: string(t.Status),
+			Categoria: string(t.Categoria), CriadaEm: t.CriadaEm, AtualizadaEm: t.AtualizadaEm,
+		})
+	}
+	escreverJSON(w, http.StatusOK, resp)
 }

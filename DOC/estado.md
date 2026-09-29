@@ -6,13 +6,12 @@ Retrato de onde o trabalho parou, reescrito a cada fim de sessão (skill
 `passagem`, no máximo 40 linhas). É o que o próximo chat lê primeiro.
 
 ## Em curso
-- Fatias 1, 2 e 6 **entregues e arquivadas**: REQ-1 a REQ-11 vigentes, T-1 a
-  T-33 passando. Nenhuma change ativa.
-- Branch `fatia/06-whatsapp` (commits até `43b6f93`; o arquivamento da 06, sem commit).
-- Próximos, à escolha do dono: (a) fatia 3 `03-status-por-webhook` (sabatina;
-  precisa do deploy hml para os Provedores alcançarem os webhooks); (b) etapas
-  1–4 do runbook `deploy/aviva2/README.md` (dono) e `publicar.sh hml`;
-  (c) fatias 4 (Opt-out) e 5 (retenção), que não dependem do deploy.
+- Fatias 1, 2, 3 e 6 **entregues e arquivadas**: REQ-1 a REQ-14 vigentes, T-1 a
+  T-44 passando. Nenhuma change ativa.
+- Branch `fatia/03-status-por-webhook` (a partir de `934d770`): implementação e
+  arquivamento da fatia 3 **sem commit**.
+- Próximos: fatias 4 (Opt-out, RN-8) e 5 (retenção, RN-9) fecham o MVP; o
+  deploy em hml (runbook, etapas 1–5b do dono) valida os webhooks de verdade.
 
 ## Decisões recentes
 - Retentativa = nova linha em `tentativas` com `disponivel_em` futuro, na mesma
@@ -24,7 +23,8 @@ Retrato de onde o trabalho parou, reescrito a cada fim de sessão (skill
 - Promove-se o mesmo binário de hml para prod; só o dono escreve segredo de prod.
 
 ## Bloqueios e pendências
-- VM do Podman quebrada; o local roda no Docker (`COMPOSE="docker compose"`).
+- VM do Podman quebrada; o local roda no Docker (`COMPOSE="docker compose"`), mas
+  a VM do Docker tem 2 GB e o Supabase de outro projeto deixa o Keycloak sem memória.
 - Decisões em aberto no `to-do.md` (cadastro de Templates, consulta de status,
   chave repetida com pedido diferente, entrega "pelo menos uma vez").
 

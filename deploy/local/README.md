@@ -50,9 +50,11 @@ TWILIO_MESSAGING_SERVICE_SID=...` antes do `./deploy/local/bootstrap.sh`.
 | `OMINICORE_BAO_AUTH_MOUNT` | `jwt` | mount do auth `jwt`; hml = `jwt-ominicore-hml`, prod = `jwt-ominicore` |
 | `OMINICORE_SENDGRID_URL` | `https://api.sendgrid.com` | trocar só em teste |
 | `OMINICORE_TWILIO_URL` | `https://api.twilio.com` | trocar só em teste |
+| `OMINICORE_WEBHOOK_URL` | — | origem pública dos webhooks (`https://notify-hml.flipapi.com.br`); vazia no local: SMS sem `StatusCallback` e webhook do Twilio recusado |
 | `OMINICORE_WHATSAPP_URL` | `https://graph.facebook.com` | trocar só em teste (versão da Graph API fixada no adaptador) |
 
 Segredos no OpenBao: `kv/<prefixo>/postgres` (`dsn`), `kv/<prefixo>/sendgrid`
 (`api_key`, `remetente`), `kv/<prefixo>/twilio` (`account_sid`, `api_key_sid`,
-`api_key_secret`, `messaging_service_sid`) e `kv/<prefixo>/whatsapp` (`token`,
-`phone_number_id`). Endereços de hml e prod: `DOC/Infra/AMBIENTES.md`.
+`api_key_secret`, `messaging_service_sid`), `kv/<prefixo>/whatsapp` (`token`,
+`phone_number_id`) e `kv/<prefixo>/webhooks` (`sendgrid_chave_publica`,
+`twilio_auth_token`, `meta_app_secret`, `meta_verify_token`). Endereços de hml e prod: `DOC/Infra/AMBIENTES.md`.

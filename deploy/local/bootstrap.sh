@@ -29,6 +29,12 @@ echo ">> segredos em kv/ominicore/*"
 "${BAO[@]}" kv put kv/ominicore/whatsapp \
   token="${WHATSAPP_TOKEN:-local-invalido}" phone_number_id="${WHATSAPP_PHONE_NUMBER_ID:-000000000}" >/dev/null
 
+# Webhooks: chave pública ECDSA de verdade (o boot recusa chave inválida) e
+# segredos de exemplo; localmente os Provedores não alcançam o OminiCore.
+SG_PUB=$(openssl ecparam -name prime256v1 -genkey -noout 2>/dev/null | openssl ec -pubout 2>/dev/null | grep -v PUBLIC | tr -d '\n')
+"${BAO[@]}" kv put kv/ominicore/webhooks sendgrid_chave_publica="$SG_PUB" \
+  twilio_auth_token="local-invalido" meta_app_secret="local-invalido" meta_verify_token="local-verify" >/dev/null
+
 echo ">> auth jwt com o Keycloak local (ADR 0002 — o mesmo desenho de hml/prod)"
 "${BAO[@]}" auth enable jwt >/dev/null 2>&1 || true
 # JWKS pelo backchannel (rede do compose); o iss dos tokens é o host público localhost:8081

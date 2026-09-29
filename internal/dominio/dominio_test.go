@@ -153,3 +153,52 @@ func TestPreencherWhatsAppDevolveValoresNaOrdemDosParametros(t *testing.T) {
 		t.Fatalf("variáveis = %v", got)
 	}
 }
+
+func TestAvancaSoParaFrente(t *testing.T) {
+	casos := []struct {
+		de, para StatusTentativa
+		quero    bool
+	}{
+		{TentativaEnviada, TentativaEntregue, true},
+		{TentativaEnviada, TentativaLida, true},
+		{TentativaEntregue, TentativaLida, true},
+		{TentativaLida, TentativaEntregue, false},
+		{TentativaEntregue, TentativaEntregue, false},
+		{TentativaEnviada, TentativaFalhou, true},
+		{TentativaEntregue, TentativaFalhou, false},
+		{TentativaFalhou, TentativaEntregue, false},
+		{TentativaPendente, TentativaEntregue, false},
+	}
+	for _, c := range casos {
+		if got := c.de.Avanca(c.para); got != c.quero {
+			t.Errorf("%s → %s: %v, quero %v", c.de, c.para, got, c.quero)
+		}
+	}
+}
+
+func TestCategoriaSoNoCanalFalho(t *testing.T) {
+	d := meio.Decidir(Tentativa{Canal: CanalEmail, Numero: 1}, notificacao(""), temporaria)
+	if d.Categoria != "" {
+		t.Fatalf("Retentativa não é Canal falho: categoria %q", d.Categoria)
+	}
+	if d = meio.Decidir(Tentativa{Canal: CanalEmail, Numero: 4}, notificacao(""), temporaria); d.Categoria != FalhaRetentativasEsgotadas {
+		t.Fatalf("4ª Tentativa temporária: categoria %q", d.Categoria)
+	}
+	if d = meio.Decidir(Tentativa{Canal: CanalEmail, Numero: 1}, notificacao(""), definitiva); d.Categoria != FalhaRecusadoPeloProvedor {
+		t.Fatalf("definitiva sem categoria do adaptador: %q", d.Categoria)
+	}
+}
+
+func TestDecidirAvisoFalhaTardia(t *testing.T) {
+	n := notificacao("+5511999998888")
+	n.Status = NotificacaoEnviada
+	a := meio.DecidirAviso(Tentativa{Canal: CanalEmail, Numero: 1}, n, AvisoStatus{Status: TentativaFalhou, Categoria: FalhaContatoInvalido})
+	if a.Tentativa != TentativaFalhou || a.Proxima == nil || a.Proxima.Canal != CanalSMS || a.Categoria != FalhaContatoInvalido {
+		t.Fatalf("atualização = %+v", a)
+	}
+	n.Status = NotificacaoEntregue
+	a = meio.DecidirAviso(Tentativa{Canal: CanalEmail, Numero: 1}, n, AvisoStatus{Status: TentativaFalhou})
+	if a.Proxima != nil || a.Notificacao != "" {
+		t.Fatalf("Notificação entregue não reabre: %+v", a)
+	}
+}

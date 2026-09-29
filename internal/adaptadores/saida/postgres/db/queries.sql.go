@@ -7,7 +7,33 @@ package db
 
 import (
 	"context"
+	"time"
 )
+
+const aplicarAviso = `-- name: AplicarAviso :exec
+UPDATE tentativas
+SET status = $1,
+    motivo = CASE WHEN $2::text = '' THEN motivo ELSE $2::text END,
+    categoria_falha = $3, atualizada_em = now()
+WHERE id = $4
+`
+
+type AplicarAvisoParams struct {
+	Status         string
+	Motivo         string
+	CategoriaFalha string
+	ID             int64
+}
+
+func (q *Queries) AplicarAviso(ctx context.Context, arg AplicarAvisoParams) error {
+	_, err := q.db.Exec(ctx, aplicarAviso,
+		arg.Status,
+		arg.Motivo,
+		arg.CategoriaFalha,
+		arg.ID,
+	)
+	return err
+}
 
 const atualizarStatusNotificacao = `-- name: AtualizarStatusNotificacao :exec
 UPDATE notificacoes SET status = $2, atualizada_em = now() WHERE id = $1
@@ -96,15 +122,16 @@ func (q *Queries) BuscarTemplate(ctx context.Context, id string) ([]BuscarTempla
 
 const concluirTentativa = `-- name: ConcluirTentativa :exec
 UPDATE tentativas
-SET status = $2, motivo = $3, id_provedor = $4, atualizada_em = now()
+SET status = $2, motivo = $3, id_provedor = $4, categoria_falha = $5, atualizada_em = now()
 WHERE id = $1
 `
 
 type ConcluirTentativaParams struct {
-	ID         int64
-	Status     string
-	Motivo     string
-	IDProvedor string
+	ID             int64
+	Status         string
+	Motivo         string
+	IDProvedor     string
+	CategoriaFalha string
 }
 
 func (q *Queries) ConcluirTentativa(ctx context.Context, arg ConcluirTentativaParams) error {
@@ -113,8 +140,41 @@ func (q *Queries) ConcluirTentativa(ctx context.Context, arg ConcluirTentativaPa
 		arg.Status,
 		arg.Motivo,
 		arg.IDProvedor,
+		arg.CategoriaFalha,
 	)
 	return err
+}
+
+const consultarNotificacao = `-- name: ConsultarNotificacao :one
+SELECT id, template_id, status, criada_em, atualizada_em
+FROM notificacoes
+WHERE id = $1 AND sistema_origem = $2
+`
+
+type ConsultarNotificacaoParams struct {
+	ID            string
+	SistemaOrigem string
+}
+
+type ConsultarNotificacaoRow struct {
+	ID           string
+	TemplateID   string
+	Status       string
+	CriadaEm     time.Time
+	AtualizadaEm time.Time
+}
+
+func (q *Queries) ConsultarNotificacao(ctx context.Context, arg ConsultarNotificacaoParams) (ConsultarNotificacaoRow, error) {
+	row := q.db.QueryRow(ctx, consultarNotificacao, arg.ID, arg.SistemaOrigem)
+	var i ConsultarNotificacaoRow
+	err := row.Scan(
+		&i.ID,
+		&i.TemplateID,
+		&i.Status,
+		&i.CriadaEm,
+		&i.AtualizadaEm,
+	)
+	return i, err
 }
 
 const inserirNotificacao = `-- name: InserirNotificacao :exec
@@ -168,6 +228,49 @@ func (q *Queries) InserirTentativa(ctx context.Context, arg InserirTentativaPara
 	return err
 }
 
+const listarTentativas = `-- name: ListarTentativas :many
+SELECT canal, numero, status, categoria_falha, criada_em, atualizada_em
+FROM tentativas
+WHERE notificacao_id = $1
+ORDER BY id
+`
+
+type ListarTentativasRow struct {
+	Canal          string
+	Numero         int32
+	Status         string
+	CategoriaFalha string
+	CriadaEm       time.Time
+	AtualizadaEm   time.Time
+}
+
+func (q *Queries) ListarTentativas(ctx context.Context, notificacaoID string) ([]ListarTentativasRow, error) {
+	rows, err := q.db.Query(ctx, listarTentativas, notificacaoID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListarTentativasRow
+	for rows.Next() {
+		var i ListarTentativasRow
+		if err := rows.Scan(
+			&i.Canal,
+			&i.Numero,
+			&i.Status,
+			&i.CategoriaFalha,
+			&i.CriadaEm,
+			&i.AtualizadaEm,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const reivindicarChave = `-- name: ReivindicarChave :one
 INSERT INTO idempotencia (sistema_origem, chave, notificacao_id, expira_em)
 VALUES ($1, $2, gen_random_uuid(), now() + interval '24 hours')
@@ -189,6 +292,54 @@ func (q *Queries) ReivindicarChave(ctx context.Context, arg ReivindicarChavePara
 	var notificacao_id string
 	err := row.Scan(&notificacao_id)
 	return notificacao_id, err
+}
+
+const reservarPorIDProvedor = `-- name: ReservarPorIDProvedor :one
+SELECT t.id, t.notificacao_id, t.canal, t.numero, t.status AS status_tentativa,
+       n.sistema_origem, n.template_id, n.destinatario_email, n.destinatario_telefone,
+       n.dados, n.ordem_canais, n.status AS status_notificacao
+FROM tentativas t
+JOIN notificacoes n ON n.id = t.notificacao_id
+WHERE t.id_provedor = $1
+LIMIT 1
+FOR UPDATE OF t, n
+`
+
+type ReservarPorIDProvedorRow struct {
+	ID                   int64
+	NotificacaoID        string
+	Canal                string
+	Numero               int32
+	StatusTentativa      string
+	SistemaOrigem        string
+	TemplateID           string
+	DestinatarioEmail    string
+	DestinatarioTelefone string
+	Dados                []byte
+	OrdemCanais          []string
+	StatusNotificacao    string
+}
+
+// Trava a Tentativa e a Notificação: dois avisos da mesma Notificação não
+// disparam o fallback duas vezes (REQ-13).
+func (q *Queries) ReservarPorIDProvedor(ctx context.Context, idProvedor string) (ReservarPorIDProvedorRow, error) {
+	row := q.db.QueryRow(ctx, reservarPorIDProvedor, idProvedor)
+	var i ReservarPorIDProvedorRow
+	err := row.Scan(
+		&i.ID,
+		&i.NotificacaoID,
+		&i.Canal,
+		&i.Numero,
+		&i.StatusTentativa,
+		&i.SistemaOrigem,
+		&i.TemplateID,
+		&i.DestinatarioEmail,
+		&i.DestinatarioTelefone,
+		&i.Dados,
+		&i.OrdemCanais,
+		&i.StatusNotificacao,
+	)
+	return i, err
 }
 
 const reservarTentativa = `-- name: ReservarTentativa :one

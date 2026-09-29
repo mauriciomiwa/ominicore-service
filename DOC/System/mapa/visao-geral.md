@@ -12,7 +12,8 @@ Template e o envio pelo Canal Email.
 ## Como está organizado
 ```mermaid
 graph LR
-  S[Sistemas de origem] -->|POST /v1/notificacoes| API[ominicore api]
+  S[Sistemas de origem] -->|POST/GET /v1/notificacoes| API[ominicore api]
+  PV[Provedores] -->|/webhooks/* assinados| API
   API --> APP[aplicacao: SendMessageUseCase]
   W[ominicore worker] --> DESP[aplicacao: DespacharUseCase]
   APP --> DOM[dominio: Template, NotificationRouter]
@@ -33,7 +34,7 @@ Camadas: `internal/dominio` (sem dependência externa) · `internal/aplicacao` e
 ## Áreas
 | Área | O que faz | Entradas (rotas/endpoints) | Depende de |
 |---|---|---|---|
-| [Envio](envio.md) | pedido de Notificação por Template e despacho por Email, SMS e WhatsApp, com Retentativa e fallback | `POST /v1/notificacoes`, worker | Keycloak, OpenBao, Postgres, Redis, SendGrid, Twilio, Meta |
+| [Envio](envio.md) | pedido de Notificação por Template e despacho por Email, SMS e WhatsApp, com Retentativa e fallback | `POST`/`GET /v1/notificacoes`, `/webhooks/*`, worker | Keycloak, OpenBao, Postgres, Redis, SendGrid, Twilio, Meta |
 
 ## Integrações externas
 | Sistema | Como é chamado | Onde |

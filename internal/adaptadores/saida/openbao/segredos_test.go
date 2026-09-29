@@ -34,6 +34,7 @@ func TestPrefixoSeparaHmlDeProd(t *testing.T) {
 			"account_sid": "AChml", "api_key_sid": "SKhml", "api_key_secret": "x", "messaging_service_sid": "MGhml",
 		},
 		"/v1/kv/data/ominicore-hml/whatsapp": {"token": "t", "phone_number_id": "1"},
+		"/v1/kv/data/ominicore-hml/webhooks": {"sendgrid_chave_publica": "k", "twilio_auth_token": "t", "meta_app_secret": "s", "meta_verify_token": "v"},
 	})
 	seg, err := openbao.Carregar(context.Background(), openbao.Config{Endereco: addr, Token: "t", Prefixo: "ominicore-hml"})
 	if err != nil || seg.PostgresDSN != "postgres://hml" || seg.SendGridAPIKey != "SG.hml" || seg.Twilio["account_sid"] != "AChml" {
@@ -64,6 +65,7 @@ func TestLoginJWTUsaOMountDoAmbiente(t *testing.T) {
 		"/v1/kv/data/ominicore-hml/sendgrid": {"api_key": "SG.hml", "remetente": "hml@exemplo.com"},
 		"/v1/kv/data/ominicore-hml/twilio":   {"account_sid": "AC", "api_key_sid": "SK", "api_key_secret": "x", "messaging_service_sid": "MG"},
 		"/v1/kv/data/ominicore-hml/whatsapp": {"token": "t", "phone_number_id": "1"},
+		"/v1/kv/data/ominicore-hml/webhooks": {"sendgrid_chave_publica": "k", "twilio_auth_token": "t", "meta_app_secret": "s", "meta_verify_token": "v"},
 	}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasSuffix(r.URL.Path, "/login") {

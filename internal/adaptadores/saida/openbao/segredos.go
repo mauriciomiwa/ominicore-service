@@ -16,7 +16,11 @@ type Segredos struct {
 	SendGridRemetente string            // <mount>/<prefixo>/sendgrid: remetente
 	Twilio            map[string]string // <mount>/<prefixo>/twilio: CamposTwilio
 	WhatsApp          map[string]string // <mount>/<prefixo>/whatsapp: CamposWhatsApp
+	Webhooks          map[string]string // <mount>/<prefixo>/webhooks: CamposWebhooks
 }
+
+// CamposWebhooks validam a assinatura dos Avisos de status (REQ-12).
+var CamposWebhooks = []string{"sendgrid_chave_publica", "twilio_auth_token", "meta_app_secret", "meta_verify_token"}
 
 // CamposWhatsApp são os campos exigidos em <mount>/<prefixo>/whatsapp (REQ-10).
 var CamposWhatsApp = []string{"token", "phone_number_id"}
@@ -71,7 +75,14 @@ func Carregar(ctx context.Context, cfg Config) (Segredos, error) {
 	if err != nil {
 		return Segredos{}, err
 	}
-	return Segredos{PostgresDSN: pg["dsn"], SendGridAPIKey: sg["api_key"], SendGridRemetente: sg["remetente"], Twilio: tw, WhatsApp: wa}, nil
+	wh, err := ler(ctx, cli, mount, prefixo+"/webhooks", CamposWebhooks...)
+	if err != nil {
+		return Segredos{}, err
+	}
+	return Segredos{
+		PostgresDSN: pg["dsn"], SendGridAPIKey: sg["api_key"], SendGridRemetente: sg["remetente"],
+		Twilio: tw, WhatsApp: wa, Webhooks: wh,
+	}, nil
 }
 
 func entrar(ctx context.Context, cfg Config) (*bao.Client, error) {

@@ -2,7 +2,7 @@
 # Configura o OpenBao do aviva2.0 para um ambiente do OminiCore (ADR 0002):
 # mount KV v2 "kv" (se faltar), auth jwt próprio do realm, policy só-leitura em
 # kv/<prefixo>/* e role presa ao azp ominicore-app. Depois pede os segredos
-# (DSN, SendGrid, Twilio, WhatsApp) sem ecoar e grava em kv/<prefixo>/*.
+# (DSN, SendGrid, Twilio, WhatsApp, webhooks) sem ecoar e grava em kv/<prefixo>/*.
 # Quem roda: o dono, no host, como root. Pede um token de admin do OpenBao.
 # Uso: sudo ./configurar-openbao.sh hml|prod [--sem-segredos]
 set -euo pipefail
@@ -39,6 +39,15 @@ if [ "${2:-}" != "--sem-segredos" ]; then
     api_key_secret=- messaging_service_sid="$TW_MG" >/dev/null <<<"$TW_SEC"; unset TW_SEC
   WA_TOKEN=$(ler "WhatsApp token (System User)"); read -r -p "WhatsApp phone_number_id: " WA_ID
   "${BAO[@]}" kv put "kv/$PREFIXO/whatsapp" token=- phone_number_id="$WA_ID" >/dev/null <<<"$WA_TOKEN"; unset WA_TOKEN
-  echo ">> segredos gravados em kv/$PREFIXO/{postgres,sendgrid,twilio,whatsapp}"
+  echo "Webhooks (validação dos Avisos de status):"
+  read -r -p "SendGrid: chave pública de verificação (base64, do painel): " WH_SG
+  WH_TW=$(ler "Twilio Auth Token (Console > Account)"); WH_APP=$(ler "Meta App Secret")
+  WH_VT=$(ler "Meta verify token (o mesmo que você cadastrar no painel)")
+  # um segredo por comando, sempre pelo stdin (nunca em argumento nem em JSON montado à mão)
+  "${BAO[@]}" kv put "kv/$PREFIXO/webhooks" sendgrid_chave_publica="$WH_SG" twilio_auth_token=- >/dev/null <<<"$WH_TW"
+  "${BAO[@]}" kv patch "kv/$PREFIXO/webhooks" meta_app_secret=- >/dev/null <<<"$WH_APP"
+  "${BAO[@]}" kv patch "kv/$PREFIXO/webhooks" meta_verify_token=- >/dev/null <<<"$WH_VT"
+  unset WH_TW WH_APP WH_VT
+  echo ">> segredos gravados em kv/$PREFIXO/{postgres,sendgrid,twilio,whatsapp,webhooks}"
 fi
 unset BAO_TOKEN

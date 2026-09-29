@@ -71,6 +71,35 @@ paths:
           $ref: "#/components/responses/Problema"
         "500":
           $ref: "#/components/responses/Problema"
+  /v1/notificacoes/{id}:
+    get:
+      operationId: consultarNotificacao
+      summary: Consultar uma Notificação do próprio Sistema de origem
+      description: |
+        Status da Notificação e de cada Tentativa, atualizado pelos Avisos de
+        status dos Provedores (RN-5). Só o Sistema de origem que pediu enxerga;
+        para os demais a Notificação não existe (404). Nunca devolve contato do
+        Destinatário nem o texto do motivo — só a classificação da falha (RN-9).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Notificação e Tentativas.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Consulta"
+        "401":
+          $ref: "#/components/responses/Problema"
+        "404":
+          $ref: "#/components/responses/Problema"
+        "500":
+          $ref: "#/components/responses/Problema"
 components:
   securitySchemes:
     keycloak:
@@ -133,7 +162,47 @@ components:
           format: uuid
         status:
           type: string
-          enum: [pendente, enviada, falhou]
+          enum: [pendente, enviada, entregue, falhou]
+    Consulta:
+      type: object
+      required: [id, template_id, status, criada_em, atualizada_em, tentativas]
+      properties:
+        id:
+          type: string
+          format: uuid
+        template_id:
+          type: string
+        status:
+          type: string
+          enum: [pendente, enviada, entregue, falhou]
+        criada_em:
+          type: string
+          format: date-time
+        atualizada_em:
+          type: string
+          format: date-time
+        tentativas:
+          type: array
+          items:
+            type: object
+            required: [canal, numero, status, criada_em, atualizada_em]
+            properties:
+              canal:
+                type: string
+              numero:
+                type: integer
+              status:
+                type: string
+                enum: [pendente, enviada, entregue, lida, falhou]
+              categoria_falha:
+                type: string
+                enum: [contato_invalido, recusado_pelo_provedor, retentativas_esgotadas]
+              criada_em:
+                type: string
+                format: date-time
+              atualizada_em:
+                type: string
+                format: date-time
     Problema:
       type: object
       required: [status, title]

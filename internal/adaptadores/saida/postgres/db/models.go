@@ -5,14 +5,14 @@
 package db
 
 import (
-	"github.com/jackc/pgx/v5/pgtype"
+	"time"
 )
 
 type Idempotencium struct {
 	SistemaOrigem string
 	Chave         string
 	NotificacaoID string
-	ExpiraEm      pgtype.Timestamptz
+	ExpiraEm      time.Time
 }
 
 type Notificaco struct {
@@ -23,8 +23,8 @@ type Notificaco struct {
 	Dados                []byte
 	OrdemCanais          []string
 	Status               string
-	CriadaEm             pgtype.Timestamptz
-	AtualizadaEm         pgtype.Timestamptz
+	CriadaEm             time.Time
+	AtualizadaEm         time.Time
 	DestinatarioTelefone string
 }
 
@@ -44,14 +44,15 @@ type TemplateConteudo struct {
 }
 
 type Tentativa struct {
-	ID            int64
-	NotificacaoID string
-	Canal         string
-	Numero        int32
-	Status        string
-	DisponivelEm  pgtype.Timestamptz
-	Motivo        string
-	IDProvedor    string
-	CriadaEm      pgtype.Timestamptz
-	AtualizadaEm  pgtype.Timestamptz
+	ID             int64
+	NotificacaoID  string
+	Canal          string
+	Numero         int32
+	Status         string
+	DisponivelEm   time.Time
+	Motivo         string
+	IDProvedor     string
+	CriadaEm       time.Time
+	AtualizadaEm   time.Time
+	CategoriaFalha string
 }

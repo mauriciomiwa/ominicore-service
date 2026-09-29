@@ -18,6 +18,7 @@ em `ambientes/hml.sh` e `ambientes/prod.sh`.
 | 3 | Realm + client `ominicore-app` + podman secret: `sudo keycloak/criar-realm.sh hml` | host | dono | senha admin do Keycloak |
 | 4 | Cofre: `sudo openbao/configurar-openbao.sh hml` (auth `jwt-ominicore-hml`, policy, role, segredos) | host | dono | token admin do OpenBao; chaves SendGrid/Twilio de sandbox |
 | 5 | `./deploy/aviva2/publicar.sh hml` (build arm64, migrate, quadlets, rota) | máquina local → host | dono ou Claude, com bloco de alvo | chave SSH `~/.ssh/aviva2.0.pem` |
+| 5b | Cadastrar os webhooks nos painéis: SendGrid Event Webhook → `https://notify-hml.flipapi.com.br/webhooks/sendgrid` (eventos delivered, bounce, dropped; **Signed Event Webhook** ligado); Meta → `https://notify-hml.flipapi.com.br/webhooks/whatsapp` com o verify token do passo 4 (campo `messages`). O Twilio não precisa: cada SMS leva a `StatusCallback` | painéis SendGrid e Meta | dono | contas dos Provedores |
 | 6 | Sistemas de origem: `sudo keycloak/criar-sistema-origem.sh hml <client-id>` | host | dono | senha admin do Keycloak |
 
 Para copiar os scripts ao host: `scp -i ~/.ssh/aviva2.0.pem -r deploy/aviva2 ubuntu@44.209.101.158:/tmp/`.

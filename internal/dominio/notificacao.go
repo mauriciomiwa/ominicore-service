@@ -22,6 +22,7 @@ type StatusNotificacao string
 const (
 	NotificacaoPendente StatusNotificacao = "pendente"
 	NotificacaoEnviada  StatusNotificacao = "enviada"
+	NotificacaoEntregue StatusNotificacao = "entregue"
 	NotificacaoFalhou   StatusNotificacao = "falhou"
 )
 
@@ -31,6 +32,8 @@ type StatusTentativa string
 const (
 	TentativaPendente StatusTentativa = "pendente"
 	TentativaEnviada  StatusTentativa = "enviada"
+	TentativaEntregue StatusTentativa = "entregue"
+	TentativaLida     StatusTentativa = "lida"
 	TentativaFalhou   StatusTentativa = "falhou"
 )
 
@@ -82,6 +85,7 @@ type Tentativa struct {
 	Numero        int
 	Status        StatusTentativa
 	Motivo        string
+	Categoria     CategoriaFalha
 }
 
 // Erros de validação do pedido (RN-1). O detalhe vai na mensagem.

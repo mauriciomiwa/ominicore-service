@@ -41,8 +41,39 @@ FOR UPDATE OF t SKIP LOCKED;
 
 -- name: ConcluirTentativa :exec
 UPDATE tentativas
-SET status = $2, motivo = $3, id_provedor = $4, atualizada_em = now()
+SET status = $2, motivo = $3, id_provedor = $4, categoria_falha = $5, atualizada_em = now()
 WHERE id = $1;
 
 -- name: AtualizarStatusNotificacao :exec
 UPDATE notificacoes SET status = $2, atualizada_em = now() WHERE id = $1;
+
+-- name: ReservarPorIDProvedor :one
+-- Trava a Tentativa e a Notificação: dois avisos da mesma Notificação não
+-- disparam o fallback duas vezes (REQ-13).
+SELECT t.id, t.notificacao_id, t.canal, t.numero, t.status AS status_tentativa,
+       n.sistema_origem, n.template_id, n.destinatario_email, n.destinatario_telefone,
+       n.dados, n.ordem_canais, n.status AS status_notificacao
+FROM tentativas t
+JOIN notificacoes n ON n.id = t.notificacao_id
+WHERE t.id_provedor = $1
+LIMIT 1
+FOR UPDATE OF t, n;
+
+-- name: AplicarAviso :exec
+UPDATE tentativas
+SET status = sqlc.arg(status),
+    motivo = CASE WHEN sqlc.arg(motivo)::text = '' THEN motivo ELSE sqlc.arg(motivo)::text END,
+    categoria_falha = sqlc.arg(categoria_falha), atualizada_em = now()
+WHERE id = sqlc.arg(id);
+
+-- name: ConsultarNotificacao :one
+SELECT id, template_id, status, criada_em, atualizada_em
+FROM notificacoes
+WHERE id = $1 AND sistema_origem = $2;
+
+-- name: ListarTentativas :many
+SELECT canal, numero, status, categoria_falha, criada_em, atualizada_em
+FROM tentativas
+WHERE notificacao_id = $1
+ORDER BY id;
+

@@ -44,3 +44,16 @@ func TestTwilioInacessivelEFalhaTemporaria(t *testing.T) {
 		t.Fatalf("tipo = %v", res.Tipo)
 	}
 }
+
+func TestStatusCallbackVaiNoEnvioQuandoHaURLPublica(t *testing.T) {
+	f := twiliofake.Novo(t)
+	r := twilio.Novo(f.URL, cred())
+	r.StatusCallback = "https://notify-hml.flipapi.com.br/webhooks/twilio"
+	r.Enviar(context.Background(), "+5511999998888", dominio.ConteudoCanal{Corpo: "oi"})
+	sem := twilio.Novo(f.URL, cred())
+	sem.Enviar(context.Background(), "+5511999998888", dominio.ConteudoCanal{Corpo: "oi"})
+	s := f.Recebidos()
+	if len(s) != 2 || s[0].StatusCallback != r.StatusCallback || s[1].StatusCallback != "" {
+		t.Fatalf("recebidos = %+v", s)
+	}
+}

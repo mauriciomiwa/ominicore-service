@@ -4,6 +4,7 @@ package portas
 
 import (
 	"context"
+	"time"
 
 	"ominicore/internal/dominio"
 )
@@ -46,6 +47,41 @@ type MessageRepositoryPort interface {
 	// ReservarTentativa tira da fila a próxima Tentativa pendente; ok=false
 	// quando a fila está vazia.
 	ReservarTentativa(ctx context.Context) (t TentativaReservada, ok bool, err error)
+	// ReservarPorIDProvedor trava a Tentativa (e a Notificação) do aviso;
+	// ok=false quando o id do Provedor não existe (REQ-12).
+	ReservarPorIDProvedor(ctx context.Context, idProvedor string) (a AvisoReservado, ok bool, err error)
+	// ConsultarNotificacao devolve a Notificação só se for do Sistema de origem.
+	ConsultarNotificacao(ctx context.Context, sistemaOrigem, id string) (c Consulta, ok bool, err error)
+}
+
+// AvisoReservado é a Tentativa travada para aplicar um Aviso de status.
+// Aplicar grava e libera; Liberar desiste sem gravar (aviso que não avança).
+type AvisoReservado struct {
+	Tentativa   dominio.Tentativa
+	Notificacao dominio.Notificacao
+	Aplicar     func(context.Context, dominio.AtualizacaoAviso) error
+	Liberar     func(context.Context)
+}
+
+// Consulta é a visão da Notificação para o Sistema de origem (REQ-14): sem
+// contato do Destinatário nem texto do motivo.
+type Consulta struct {
+	ID           string
+	TemplateID   string
+	Status       dominio.StatusNotificacao
+	CriadaEm     time.Time
+	AtualizadaEm time.Time
+	Tentativas   []TentativaConsultada
+}
+
+// TentativaConsultada é uma Tentativa na Consulta.
+type TentativaConsultada struct {
+	Canal        dominio.Canal
+	Numero       int
+	Status       dominio.StatusTentativa
+	Categoria    dominio.CategoriaFalha
+	CriadaEm     time.Time
+	AtualizadaEm time.Time
 }
 
 // MessageSenderPort envia uma Tentativa pelo Provedor de um Canal.

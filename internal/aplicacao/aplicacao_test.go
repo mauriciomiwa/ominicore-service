@@ -196,3 +196,35 @@ func TestT33_ParametroDoModeloAprovadoEVariavelExigida(t *testing.T) {
 		t.Fatalf("registrou %d notificações", n)
 	}
 }
+
+func aceita(t *testing.T, repo *memoria.Repositorio, p aplicacao.PedidoNotificacao, idProvedor string) {
+	t.Helper()
+	if _, err := (aplicacao.SendMessageUseCase{Repo: repo}).Pedir(context.Background(), p); err != nil {
+		t.Fatal(err)
+	}
+	repo.MarcarAceita(len(repo.Historico())-1, idProvedor)
+}
+
+func receber() aplicacao.ReceiveMessageUseCase {
+	return aplicacao.ReceiveMessageUseCase{Repo: nil, Log: slog.New(slog.NewTextHandler(io.Discard, nil))}
+}
+
+func TestReceberAplicaIgnoraEDesconhece(t *testing.T) {
+	repo := memoria.Novo()
+	aceita(t, repo, pedido(), "msg-1")
+	uc := receber()
+	uc.Repo = repo
+	ctx := context.Background()
+	if r, err := uc.Receber(ctx, dominio.AvisoStatus{IDProvedor: "msg-1", Status: dominio.TentativaEntregue}); err != nil || r != aplicacao.AvisoAplicado {
+		t.Fatalf("1º aviso: %v %v", r, err)
+	}
+	if r, _ := uc.Receber(ctx, dominio.AvisoStatus{IDProvedor: "msg-1", Status: dominio.TentativaEntregue}); r != aplicacao.AvisoIgnorado {
+		t.Fatalf("aviso repetido: %v", r)
+	}
+	if r, _ := uc.Receber(ctx, dominio.AvisoStatus{IDProvedor: "nao-existe", Status: dominio.TentativaEntregue}); r != aplicacao.AvisoDesconhecido {
+		t.Fatalf("aviso desconhecido: %v", r)
+	}
+	if s := repo.StatusNotificacao(repo.Historico()[0].NotificacaoID); s != dominio.NotificacaoEntregue {
+		t.Fatalf("notificação = %s", s)
+	}
+}

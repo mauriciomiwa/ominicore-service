@@ -22,8 +22,8 @@ const (
 
 // SMS é o que o fake recebeu num POST .../Messages.json.
 type SMS struct {
-	Para, Corpo, MessagingService string
-	AuthOK                        bool
+	Para, Corpo, MessagingService, StatusCallback string
+	AuthOK                                        bool
 }
 
 // Fake guarda os SMS recebidos.
@@ -60,7 +60,8 @@ func (f *Fake) receber(w http.ResponseWriter, r *http.Request) {
 	f.mu.Lock()
 	f.sms = append(f.sms, SMS{
 		Para: r.PostForm.Get("To"), Corpo: r.PostForm.Get("Body"),
-		MessagingService: r.PostForm.Get("MessagingServiceSid"), AuthOK: u == APIKeySID && p == APIKeySecret,
+		MessagingService: r.PostForm.Get("MessagingServiceSid"), StatusCallback: r.PostForm.Get("StatusCallback"),
+		AuthOK: u == APIKeySID && p == APIKeySecret,
 	})
 	status, code := f.status, f.code
 	f.mu.Unlock()

@@ -3,6 +3,44 @@
 Registro cronológico de decisões e eventos, mais recente no topo. Decisão sem
 registro vira suposição de alguém daqui a seis meses.
 
+## 2026-09-29 — Entrega: change `03-status-por-webhook` arquivada
+- Arquivada em `openspec/changes/archive/2026-09-29-03-status-por-webhook/`;
+  spec `notificacoes` ganha REQ-12 (Aviso de status), REQ-13 (falha depois do
+  aceite) e REQ-14 (consulta). Cobre RN-5 e fecha a meta de entrega final da
+  RN-2. T-34 a T-44 passando. Validação real depende do deploy em hml.
+
+## 2026-09-29 — Fatia 3 (`03-status-por-webhook`) implementada: 21/21
+- Webhooks `/webhooks/{sendgrid,twilio,whatsapp}` com assinatura validada sobre
+  o corpo cru (ECDSA SendGrid, HMAC-SHA1 Twilio sobre `OMINICORE_WEBHOOK_URL`,
+  HMAC-SHA256 Meta), comparação em tempo constante; `GET` de verificação da
+  Meta só devolve o desafio numérico. Status só avança; falha tardia vira
+  Falha definitiva e fallback, com `FOR UPDATE` em Tentativa + Notificação (8
+  avisos simultâneos = 1 fallback, provado no Postgres). `GET
+  /v1/notificacoes/{id}` só para o dono, com `categoria_falha` e sem motivo.
+- Formatos conferidos na doc oficial; suposição a validar em hml: chave pública
+  do SendGrid (aceita PEM ou base64 DER) e `sg_message_id` = `X-Message-Id` + `.sufixo`.
+- Traefik: access log desligado na rota de webhooks (o `hub.verify_token` vai
+  na query).
+- Verde: `go test -race`, `make itest` 21/21, lint, `sqlc diff`, contrato,
+  `openspec validate --strict`, rastreabilidade; boot local com o segredo
+  `webhooks`. T-34 a T-44 passando.
+- Sentinel: aprovado com ressalvas — sem proteção de replay além da
+  idempotência (status só avança); Auth Token do Twilio no cofre; ambiente
+  local: Keycloak morto por falta de memória (VM do Docker com 2 GB, dividida
+  com o Supabase de outro projeto).
+
+## 2026-09-29 — Sabatina da fatia 03 fechada; change `03-status-por-webhook` aberta
+- Decidido (recomendações aceitas): falha de entrega depois do aceite =
+  Falha definitiva e fallback, salvo Notificação já entregue; status só avança
+  (enviada → entregue → lida; falhou final); consulta `GET /v1/notificacoes/{id}`
+  só para o dono (callback depois); credenciais de validação em
+  `kv/<prefixo>/webhooks` (inclui Auth Token do Twilio); aviso válido sempre
+  2xx; rotas `/webhooks/{sendgrid,twilio,whatsapp}`; `OMINICORE_WEBHOOK_URL`
+  para o `StatusCallback`; o `GET` expõe só a classificação da falha.
+- RN-5 detalhada; glossário: **Aviso de status**; to-do: decisão de consulta ×
+  callback resolvida. Backlog: fatia 3 com REQ-12 a REQ-14; fatias 4 e 5 com
+  REQ-15 e REQ-16. Change aberta com T-34 a T-44.
+
 ## 2026-09-29 — Entrega: change `06-whatsapp` arquivada
 - Arquivada em `openspec/changes/archive/2026-09-29-06-whatsapp/`; spec
   `notificacoes` ganha REQ-10 (envio pelo Modelo aprovado) e REQ-11 (versão

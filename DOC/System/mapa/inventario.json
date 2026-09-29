@@ -1,5 +1,5 @@
 {
- "gerado_em": "2026-09-29T16:30:01",
+ "gerado_em": "2026-09-29T18:59:13",
  "raiz": "ominicore",
  "stack": [
   {
@@ -15,7 +15,7 @@
    "importa": []
   },
   "internal": {
-   "arquivos": 38,
+   "arquivos": 45,
    "importa": []
   },
   "migrations": {
@@ -34,16 +34,58 @@
   },
   {
    "metodo": "GET",
+   "path": "/v1/notificacoes/{id}",
+   "arquivo": "api/openapi.yaml",
+   "linha": 0,
+   "tipo": "openapi"
+  },
+  {
+   "metodo": "GET",
    "path": "/healthz",
    "arquivo": "internal/adaptadores/entrada/http/servidor.go",
-   "linha": 34,
+   "linha": 38,
    "tipo": "go"
   },
   {
    "metodo": "POST",
    "path": "/v1/notificacoes",
    "arquivo": "internal/adaptadores/entrada/http/servidor.go",
-   "linha": 35,
+   "linha": 39,
+   "tipo": "go"
+  },
+  {
+   "metodo": "GET",
+   "path": "/v1/notificacoes/{id}",
+   "arquivo": "internal/adaptadores/entrada/http/servidor.go",
+   "linha": 40,
+   "tipo": "go"
+  },
+  {
+   "metodo": "POST",
+   "path": "/webhooks/sendgrid",
+   "arquivo": "internal/adaptadores/entrada/webhooks/webhooks.go",
+   "linha": 49,
+   "tipo": "go"
+  },
+  {
+   "metodo": "POST",
+   "path": "/webhooks/twilio",
+   "arquivo": "internal/adaptadores/entrada/webhooks/webhooks.go",
+   "linha": 50,
+   "tipo": "go"
+  },
+  {
+   "metodo": "GET",
+   "path": "/webhooks/whatsapp",
+   "arquivo": "internal/adaptadores/entrada/webhooks/webhooks.go",
+   "linha": 51,
+   "tipo": "go"
+  },
+  {
+   "metodo": "POST",
+   "path": "/webhooks/whatsapp",
+   "arquivo": "internal/adaptadores/entrada/webhooks/webhooks.go",
+   "linha": 52,
    "tipo": "go"
   }
  ],
@@ -110,7 +152,7 @@
    "migrations"
   ],
   "schemas": [],
-  "sql": 6
+  "sql": 7
  },
  "infra": {
   "docker": [],

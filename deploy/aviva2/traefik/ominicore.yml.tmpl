@@ -9,6 +9,10 @@ http:
       entryPoints: [websecure]
       service: ominicore${SUFIXO}-api
       tls: {}
+      # a verificação da Meta leva hub.verify_token na query, e o accessLog do
+      # traefik.yml grava a URL inteira (mesma solução do webhook Celcoin do aviva-back)
+      observability:
+        accessLogs: false
   services:
     ominicore${SUFIXO}-api:
       loadBalancer:

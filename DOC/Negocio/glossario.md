@@ -45,6 +45,11 @@ Falha de uma Tentativa que não muda se repetida (contato inválido, recusa do
 provedor); leva ao próximo Canal.
 _Evitar_: erro permanente, hard fail
 
+**Aviso de status**:
+Mensagem que o Provedor manda ao OminiCore dizendo o que aconteceu com uma
+Tentativa já aceita (entregue, lida, falhou).
+_Evitar_: callback, evento, webhook (é o meio, não o conceito)
+
 **Template**:
 Conteúdo cadastrado no OminiCore, com variáveis, em uma versão por Canal, e com
 a Ordem de Canais padrão.

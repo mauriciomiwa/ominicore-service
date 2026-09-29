@@ -5,7 +5,6 @@ ficam no `System/backlog-mvp.md` (cada uma é uma change do OpenSpec); furos de 
 
 ## Decisões em aberto
 - [ ] Cadastro de Templates: seed por migration (fatia 1) basta no MVP ou precisa de API de administração?
-- [ ] Consulta de status pelo Sistema de origem (`GET /v1/notificacoes/{id}`) ou aviso de volta (callback)? Decidir antes da Fatia 3.
 - [ ] Mesma Chave de idempotência com pedido diferente dentro de 24 h: devolver a Notificação existente (como hoje) ou recusar como conflito?
 - [ ] Prazo e orçamento do MVP.
 

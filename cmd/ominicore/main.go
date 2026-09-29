@@ -33,6 +33,7 @@ import (
 	"ominicore/internal/portas"
 
 	entradahttp "ominicore/internal/adaptadores/entrada/http"
+	"ominicore/internal/adaptadores/entrada/webhooks"
 )
 
 var version = "dev"
@@ -71,7 +72,7 @@ func run(ctx context.Context, args []string, env func(string) string, saida io.W
 	case "migrate":
 		return postgres.Migrar(ctx, pool, cfg.Schema)
 	case "api":
-		return rodarAPI(ctx, cfg, repo, log)
+		return rodarAPI(ctx, cfg, seg, repo, log)
 	case "worker":
 		return rodarWorker(ctx, cfg, seg, repo, log)
 	default:
@@ -93,6 +94,7 @@ type config struct {
 	TwilioURL     string
 	WhatsAppURL   string
 	Schema        string // search_path no Postgres: ominicore (prod) ou ominicore_hml
+	WebhookURL    string // origem pública dos webhooks (https://notify-hml.flipapi.com.br); vazia no local
 }
 
 func lerConfig(env func(string) string) config {
@@ -123,6 +125,7 @@ func lerConfig(env func(string) string) config {
 		TwilioURL:     env("OMINICORE_TWILIO_URL"),
 		WhatsAppURL:   env("OMINICORE_WHATSAPP_URL"),
 		Schema:        padrao("OMINICORE_DB_SCHEMA", postgres.SchemaPadrao),
+		WebhookURL:    strings.TrimRight(env("OMINICORE_WEBHOOK_URL"), "/"),
 	}
 }
 
@@ -158,18 +161,32 @@ func carregarSegredos(ctx context.Context, cfg config) (openbao.Segredos, error)
 	return openbao.Carregar(ctx, cfg.Bao)
 }
 
-func rodarAPI(ctx context.Context, cfg config, repo postgres.Repositorio, log *slog.Logger) error {
+func rodarAPI(ctx context.Context, cfg config, seg openbao.Segredos, repo postgres.Repositorio, log *slog.Logger) error {
 	if cfg.KCEmissor == "" {
 		return errors.New("OMINICORE_KC_ISSUER vazio")
+	}
+	chaveSG, err := webhooks.ChavePublicaSendGrid(seg.Webhooks["sendgrid_chave_publica"])
+	if err != nil {
+		return err
 	}
 	rdb := goredis.NewClient(&goredis.Options{Addr: cfg.RedisEndereco, Password: cfg.RedisSenha})
 	defer func() { _ = rdb.Close() }()
 	srv := &http.Server{
 		Addr: cfg.Endereco,
 		Handler: entradahttp.Servidor{
-			Auth:   keycloak.NovoComBackchannel(cfg.KCEmissor, cfg.realmInterno(), cfg.KCPublico, redis.Cache{Cliente: rdb}),
-			Enviar: aplicacao.SendMessageUseCase{Repo: repo},
-			Log:    log,
+			Auth:      keycloak.NovoComBackchannel(cfg.KCEmissor, cfg.realmInterno(), cfg.KCPublico, redis.Cache{Cliente: rdb}),
+			Enviar:    aplicacao.SendMessageUseCase{Repo: repo},
+			Consultar: aplicacao.ConsultarUseCase{Repo: repo},
+			Webhooks: webhooks.Webhooks{
+				Cred: webhooks.Credenciais{
+					SendGridChavePublica: chaveSG, TwilioAuthToken: seg.Webhooks["twilio_auth_token"],
+					MetaAppSecret: seg.Webhooks["meta_app_secret"], MetaVerifyToken: seg.Webhooks["meta_verify_token"],
+					URLPublica: cfg.WebhookURL,
+				},
+				Receptor: aplicacao.ReceiveMessageUseCase{Repo: repo, Log: log},
+				Log:      log,
+			},
+			Log: log,
 		}.Handler(),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
@@ -195,10 +212,7 @@ func rodarWorker(ctx context.Context, cfg config, seg openbao.Segredos, repo pos
 		Repo: repo,
 		Remetentes: map[dominio.Canal]portas.MessageSenderPort{
 			dominio.CanalEmail: sendgrid.Novo(cfg.SendGridURL, seg.SendGridAPIKey, seg.SendGridRemetente),
-			dominio.CanalSMS: twilio.Novo(cfg.TwilioURL, twilio.Credenciais{
-				AccountSID: seg.Twilio["account_sid"], APIKeySID: seg.Twilio["api_key_sid"],
-				APIKeySecret: seg.Twilio["api_key_secret"], MessagingServiceSID: seg.Twilio["messaging_service_sid"],
-			}),
+			dominio.CanalSMS:   remetenteSMS(cfg, seg),
 			dominio.CanalWhatsApp: whatsapp.Novo(cfg.WhatsAppURL, whatsapp.Credenciais{
 				Token: seg.WhatsApp["token"], PhoneNumberID: seg.WhatsApp["phone_number_id"],
 			}),
@@ -208,4 +222,16 @@ func rodarWorker(ctx context.Context, cfg config, seg openbao.Segredos, repo pos
 	log.Info("worker no ar", "versao", version)
 	worker.Worker{Despachante: uc, Log: log}.Rodar(ctx)
 	return nil
+}
+
+// remetenteSMS pede o Aviso de status ao Twilio quando há URL pública (REQ-12).
+func remetenteSMS(cfg config, seg openbao.Segredos) twilio.Remetente {
+	r := twilio.Novo(cfg.TwilioURL, twilio.Credenciais{
+		AccountSID: seg.Twilio["account_sid"], APIKeySID: seg.Twilio["api_key_sid"],
+		APIKeySecret: seg.Twilio["api_key_secret"], MessagingServiceSID: seg.Twilio["messaging_service_sid"],
+	})
+	if cfg.WebhookURL != "" {
+		r.StatusCallback = cfg.WebhookURL + "/webhooks/twilio"
+	}
+	return r
 }

@@ -6,6 +6,9 @@ package integracao
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"io"
 	"log/slog"
@@ -35,6 +38,7 @@ import (
 	"ominicore/internal/testes/twiliofake"
 
 	entradahttp "ominicore/internal/adaptadores/entrada/http"
+	"ominicore/internal/adaptadores/entrada/webhooks"
 )
 
 var (
@@ -490,5 +494,85 @@ func TestT29_NumeroSemWhatsAppPassaAoSMSPontaAPonta(t *testing.T) {
 	h := esperarHistorico(t, p.pool, id, func(h []linhaTentativa) bool { return len(h) == 2 && h[1].Status == "enviada" })
 	if len(h) != 2 || h[0].Canal != "whatsapp" || h[0].Status != "falhou" || h[1].Canal != "sms" || statusNotificacao(t, p.pool, id) != "enviada" {
 		t.Fatalf("histórico = %+v", h)
+	}
+}
+
+const appSecretTeste = "app-secret-do-teste"
+
+func (p ponta) webhookMeta(t *testing.T, corpo string) int {
+	t.Helper()
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	mux := http.NewServeMux()
+	webhooks.Webhooks{
+		Cred:     webhooks.Credenciais{MetaAppSecret: appSecretTeste, MetaVerifyToken: "v"},
+		Receptor: aplicacao.ReceiveMessageUseCase{Repo: postgres.Repositorio{Pool: p.pool}, Log: log},
+		Log:      log,
+	}.Registrar(mux)
+	m := hmac.New(sha256.New, []byte(appSecretTeste))
+	m.Write([]byte(corpo))
+	req := httptest.NewRequest(http.MethodPost, "/webhooks/whatsapp", strings.NewReader(corpo))
+	req.Header.Set("X-Hub-Signature-256", "sha256="+hex.EncodeToString(m.Sum(nil)))
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	return rec.Code
+}
+
+func falhaMeta(wamid string) string {
+	return `{"entry":[{"changes":[{"value":{"statuses":[{"id":"` + wamid + `","status":"failed","errors":[{"code":131026}]}]}}]}]}`
+}
+
+// aceitaWhatsApp pede WhatsApp → SMS e espera a Tentativa de WhatsApp aceita
+// pela Meta falsa (wamid.fake); o SMS só nasce se o WhatsApp falhar.
+func (p ponta) aceitaWhatsApp(t *testing.T, chave string) string {
+	t.Helper()
+	id, _ := p.pedirCorpo(t, chave, pedidoWhatsAppSMS)
+	esperarHistorico(t, p.pool, id, func(h []linhaTentativa) bool { return len(h) == 1 && h[0].Status == "enviada" })
+	return id
+}
+
+func TestT41_FalhaTardiaNoWhatsAppPassaAoSMSPontaAPonta(t *testing.T) {
+	p := novaPonta(t)
+	id := p.aceitaWhatsApp(t, "k-41")
+	if code := p.webhookMeta(t, falhaMeta("wamid.fake")); code != http.StatusNoContent {
+		t.Fatalf("webhook: %d", code)
+	}
+	h := esperarHistorico(t, p.pool, id, func(h []linhaTentativa) bool { return len(h) == 2 && h[1].Status == "enviada" })
+	if len(h) != 2 || h[0].Status != "falhou" || h[1].Canal != "sms" {
+		t.Fatalf("histórico = %+v", h)
+	}
+	var cat string
+	_ = p.pool.QueryRow(context.Background(), `SELECT categoria_falha FROM tentativas WHERE notificacao_id = $1 AND canal = 'whatsapp'`, id).Scan(&cat)
+	if cat != "contato_invalido" {
+		t.Fatalf("categoria = %q", cat)
+	}
+}
+
+func TestAvisosDeFalhaSimultaneosCriamUmSoFallback(t *testing.T) {
+	p := novaPonta(t)
+	id := p.aceitaWhatsApp(t, "k-concorrente")
+	var wg sync.WaitGroup
+	for range 8 {
+		wg.Add(1)
+		go func() { defer wg.Done(); p.webhookMeta(t, falhaMeta("wamid.fake")) }()
+	}
+	wg.Wait()
+	var sms int
+	_ = p.pool.QueryRow(context.Background(), `SELECT count(*) FROM tentativas WHERE notificacao_id = $1 AND canal = 'sms'`, id).Scan(&sms)
+	if sms != 1 {
+		t.Fatalf("8 avisos simultâneos criaram %d Tentativas de SMS, quero 1", sms)
+	}
+}
+
+func TestT43_ConsultaNoPostgresSemContatoNemMotivo(t *testing.T) {
+	p := novaPonta(t)
+	id := p.aceitaWhatsApp(t, "k-43")
+	p.webhookMeta(t, falhaMeta("wamid.fake"))
+	esperarHistorico(t, p.pool, id, func(h []linhaTentativa) bool { return len(h) == 2 && h[1].Status == "enviada" })
+	c, ok, err := postgres.Repositorio{Pool: p.pool}.ConsultarNotificacao(context.Background(), "sistema-a", id)
+	if err != nil || !ok || len(c.Tentativas) != 2 || c.Tentativas[0].Categoria != dominio.FalhaContatoInvalido || c.CriadaEm.IsZero() {
+		t.Fatalf("consulta = %+v ok=%v err=%v", c, ok, err)
+	}
+	if _, ok, _ := (postgres.Repositorio{Pool: p.pool}).ConsultarNotificacao(context.Background(), "sistema-b", id); ok {
+		t.Fatal("sistema-b enxergou a Notificação de sistema-a")
 	}
 }

@@ -1,6 +1,6 @@
 # Inventário do código — ominicore
 
-> GERADO por `tools/mapeia_projeto.py` em 2026-09-29T16:30:01. Não edite: rode o script de novo.
+> GERADO por `tools/mapeia_projeto.py` em 2026-09-29T18:59:13. Não edite: rode o script de novo.
 > A interpretação (o que cada área faz, fluxos, RN candidatas) está nas outras páginas desta pasta.
 
 ## Stack
@@ -14,23 +14,29 @@
 ```mermaid
 graph LR
   cmd["cmd (2)"]
-  internal["internal (38)"]
+  internal["internal (45)"]
   migrations["migrations (1)"]
 ```
 
 | Módulo | Arquivos | Importa |
 |---|---|---|
-| `internal` | 38 | — |
+| `internal` | 45 | — |
 | `cmd` | 2 | — |
 | `migrations` | 1 | — |
 
-## Endpoints (3)
+## Endpoints (9)
 
 | Método | Caminho | Onde |
 |---|---|---|
-| GET | `/healthz` | `internal/adaptadores/entrada/http/servidor.go`:34 |
+| GET | `/healthz` | `internal/adaptadores/entrada/http/servidor.go`:38 |
 | POST | `/v1/notificacoes` | `api/openapi.yaml` (contrato) |
-| POST | `/v1/notificacoes` | `internal/adaptadores/entrada/http/servidor.go`:35 |
+| POST | `/v1/notificacoes` | `internal/adaptadores/entrada/http/servidor.go`:39 |
+| GET | `/v1/notificacoes/{id}` | `api/openapi.yaml` (contrato) |
+| GET | `/v1/notificacoes/{id}` | `internal/adaptadores/entrada/http/servidor.go`:40 |
+| POST | `/webhooks/sendgrid` | `internal/adaptadores/entrada/webhooks/webhooks.go`:49 |
+| POST | `/webhooks/twilio` | `internal/adaptadores/entrada/webhooks/webhooks.go`:50 |
+| GET | `/webhooks/whatsapp` | `internal/adaptadores/entrada/webhooks/webhooks.go`:51 |
+| POST | `/webhooks/whatsapp` | `internal/adaptadores/entrada/webhooks/webhooks.go`:52 |
 
 ## Chamadas HTTP de saída (2)
 
@@ -60,7 +66,7 @@ graph LR
 
 - Migrations: `migrations`
 - Schemas/modelos: —
-- Arquivos .sql: 6
+- Arquivos .sql: 7
 
 ## Infra
 

@@ -111,16 +111,13 @@ func (r Repositorio) ReservarTentativa(ctx context.Context) (portas.TentativaRes
 func concluir(ctx context.Context, tx pgx.Tx, t dominio.Tentativa, d dominio.Decisao, res dominio.ResultadoEnvio) error {
 	defer func() { _ = tx.Rollback(ctx) }()
 	q := db.New(tx)
-	if err := q.ConcluirTentativa(ctx, db.ConcluirTentativaParams{ID: t.ID, Status: string(d.Tentativa), Motivo: d.Motivo, IDProvedor: res.IDProvedor}); err != nil {
+	if err := q.ConcluirTentativa(ctx, db.ConcluirTentativaParams{
+		ID: t.ID, Status: string(d.Tentativa), Motivo: d.Motivo, IDProvedor: res.IDProvedor, CategoriaFalha: string(d.Categoria),
+	}); err != nil {
 		return err
 	}
-	if p := d.Proxima; p != nil { // Retentativa (REQ-8) ou próximo Canal (REQ-9), na mesma transação
-		if err := q.InserirTentativa(ctx, db.InserirTentativaParams{
-			NotificacaoID: t.NotificacaoID, Canal: string(p.Canal), Numero: int32(p.Numero), //nolint:gosec // Numero ≤ 4
-			EsperaMs: p.Espera.Milliseconds(),
-		}); err != nil {
-			return err
-		}
+	if err := inserirProxima(ctx, q, t.NotificacaoID, d.Proxima); err != nil { // REQ-8/REQ-9, mesma transação
+		return err
 	}
 	if err := q.AtualizarStatusNotificacao(ctx, db.AtualizarStatusNotificacaoParams{ID: t.NotificacaoID, Status: string(d.Notificacao)}); err != nil {
 		return err
@@ -154,4 +151,88 @@ func textos(c []dominio.Canal) []string {
 		out[i] = string(v)
 	}
 	return out
+}
+
+func inserirProxima(ctx context.Context, q *db.Queries, notificacao string, p *dominio.ProximaTentativa) error {
+	if p == nil {
+		return nil
+	}
+	return q.InserirTentativa(ctx, db.InserirTentativaParams{
+		NotificacaoID: notificacao, Canal: string(p.Canal), Numero: int32(p.Numero), //nolint:gosec // Numero ≤ 4
+		EsperaMs: p.Espera.Milliseconds(),
+	})
+}
+
+// ReservarPorIDProvedor abre a transação do aviso e trava Tentativa e
+// Notificação (REQ-12, REQ-13).
+func (r Repositorio) ReservarPorIDProvedor(ctx context.Context, idProvedor string) (portas.AvisoReservado, bool, error) {
+	tx, err := r.Pool.Begin(ctx)
+	if err != nil {
+		return portas.AvisoReservado{}, false, fmt.Errorf("abrir transação: %w", err)
+	}
+	l, err := db.New(tx).ReservarPorIDProvedor(ctx, idProvedor)
+	if errors.Is(err, pgx.ErrNoRows) {
+		_ = tx.Rollback(ctx)
+		return portas.AvisoReservado{}, false, nil
+	}
+	if err != nil {
+		_ = tx.Rollback(ctx)
+		return portas.AvisoReservado{}, false, fmt.Errorf("reservar aviso: %w", err)
+	}
+	n, err := notificacaoDe(db.ReservarTentativaRow{
+		NotificacaoID: l.NotificacaoID, SistemaOrigem: l.SistemaOrigem, TemplateID: l.TemplateID,
+		DestinatarioEmail: l.DestinatarioEmail, DestinatarioTelefone: l.DestinatarioTelefone, Dados: l.Dados, OrdemCanais: l.OrdemCanais,
+	})
+	if err != nil {
+		_ = tx.Rollback(ctx)
+		return portas.AvisoReservado{}, false, err
+	}
+	n.Status = dominio.StatusNotificacao(l.StatusNotificacao)
+	t := dominio.Tentativa{ID: l.ID, NotificacaoID: l.NotificacaoID, Canal: dominio.Canal(l.Canal), Numero: int(l.Numero), Status: dominio.StatusTentativa(l.StatusTentativa)}
+	return portas.AvisoReservado{
+		Tentativa: t, Notificacao: n,
+		Aplicar: func(ctx context.Context, a dominio.AtualizacaoAviso) error { return aplicarAviso(ctx, tx, t, a) },
+		Liberar: func(ctx context.Context) { _ = tx.Rollback(ctx) },
+	}, true, nil
+}
+
+func aplicarAviso(ctx context.Context, tx pgx.Tx, t dominio.Tentativa, a dominio.AtualizacaoAviso) error {
+	defer func() { _ = tx.Rollback(ctx) }()
+	q := db.New(tx)
+	if err := q.AplicarAviso(ctx, db.AplicarAvisoParams{ID: t.ID, Status: string(a.Tentativa), Motivo: a.Motivo, CategoriaFalha: string(a.Categoria)}); err != nil {
+		return err
+	}
+	if err := inserirProxima(ctx, q, t.NotificacaoID, a.Proxima); err != nil {
+		return err
+	}
+	if a.Notificacao != "" {
+		if err := q.AtualizarStatusNotificacao(ctx, db.AtualizarStatusNotificacaoParams{ID: t.NotificacaoID, Status: string(a.Notificacao)}); err != nil {
+			return err
+		}
+	}
+	return tx.Commit(ctx)
+}
+
+// ConsultarNotificacao filtra pelo Sistema de origem na própria query (REQ-14).
+func (r Repositorio) ConsultarNotificacao(ctx context.Context, sistemaOrigem, id string) (portas.Consulta, bool, error) {
+	q := db.New(r.Pool)
+	n, err := q.ConsultarNotificacao(ctx, db.ConsultarNotificacaoParams{ID: id, SistemaOrigem: sistemaOrigem})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return portas.Consulta{}, false, nil
+	}
+	if err != nil {
+		return portas.Consulta{}, false, fmt.Errorf("consultar notificação: %w", err)
+	}
+	linhas, err := q.ListarTentativas(ctx, id)
+	if err != nil {
+		return portas.Consulta{}, false, fmt.Errorf("listar tentativas: %w", err)
+	}
+	c := portas.Consulta{ID: n.ID, TemplateID: n.TemplateID, Status: dominio.StatusNotificacao(n.Status), CriadaEm: n.CriadaEm, AtualizadaEm: n.AtualizadaEm}
+	for _, l := range linhas {
+		c.Tentativas = append(c.Tentativas, portas.TentativaConsultada{
+			Canal: dominio.Canal(l.Canal), Numero: int(l.Numero), Status: dominio.StatusTentativa(l.Status),
+			Categoria: dominio.CategoriaFalha(l.CategoriaFalha), CriadaEm: l.CriadaEm, AtualizadaEm: l.AtualizadaEm,
+		})
+	}
+	return c, true, nil
 }

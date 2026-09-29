@@ -8,13 +8,13 @@ haver dois lugares a manter. Tipo: **Exemplo** (caso concreto) ou
 **Propriedade** (invariante). Status: pendente / escrito (não rodado) /
 passando.
 
-T-1 a T-33 vigentes desde 2026-09-29 (`openspec/specs/{autenticacao-origem,notificacoes,segredos}`).
+T-1 a T-44 vigentes desde 2026-09-29 (`openspec/specs/{autenticacao-origem,notificacoes,segredos}`).
 
 Nome do teste em Go cita o T-n: `func TestT7_ReenvioComAMesmaChaveNaoDuplica(t *testing.T)`.
 Unitários com fakes (`internal/testes/`: repositório em memória, realm JWT,
 SendGrid via `httptest`); integração em `internal/integracao/` com
 `testcontainers-go` (Postgres real) — pula sozinho sem runtime de containers;
-rode com `make itest` (Docker ou Podman). Última execução: 2026-09-29, 17/17 contra Postgres 17. Provedores reais nunca entram em teste.
+rode com `make itest` (Docker ou Podman). Última execução: 2026-09-29, 21/21 contra Postgres 17. Provedores reais nunca entram em teste.
 
 | Teste | Tipo | Onde (arquivo do teste) | Status |
 |---|---|---|---|
@@ -51,3 +51,14 @@ rode com `make itest` (Docker ou Podman). Última execução: 2026-09-29, 17/17 
 | T-31 | Exemplo | `internal/adaptadores/saida/whatsapp/whatsapp_test.go` · `internal/adaptadores/entrada/worker/worker_test.go` | passando |
 | T-32 | Exemplo | `internal/aplicacao/aplicacao_test.go` | passando |
 | T-33 | Exemplo | `internal/aplicacao/aplicacao_test.go` | passando |
+| T-34 | Exemplo | `internal/adaptadores/entrada/webhooks/webhooks_test.go` | passando |
+| T-35 | Exemplo | `internal/adaptadores/entrada/webhooks/webhooks_test.go` | passando |
+| T-36 | Exemplo | `internal/adaptadores/entrada/webhooks/webhooks_test.go` | passando |
+| T-37 | Exemplo | `internal/adaptadores/entrada/webhooks/webhooks_test.go` | passando |
+| T-38 | Exemplo | `internal/adaptadores/entrada/webhooks/webhooks_test.go` | passando |
+| T-39 | Exemplo | `internal/adaptadores/entrada/webhooks/webhooks_test.go` | passando |
+| T-40 | Exemplo | `internal/adaptadores/entrada/webhooks/webhooks_test.go` | passando |
+| T-41 | Exemplo | `internal/adaptadores/entrada/webhooks/webhooks_test.go` · `internal/integracao/integracao_test.go` (Postgres; + 8 avisos simultâneos = 1 fallback) | passando (fake e Postgres) |
+| T-42 | Exemplo | `internal/adaptadores/entrada/webhooks/webhooks_test.go` | passando |
+| T-43 | Exemplo | `internal/adaptadores/entrada/http/servidor_test.go` · `internal/integracao/integracao_test.go` (Postgres) | passando (fake e Postgres) |
+| T-44 | Exemplo | `internal/adaptadores/entrada/http/servidor_test.go` · `internal/integracao/integracao_test.go` (Postgres) | passando (fake e Postgres) |

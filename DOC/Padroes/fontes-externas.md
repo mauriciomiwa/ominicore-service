@@ -15,9 +15,10 @@ API/comportamento, uma query precisa.
 | OpenBao | https://openbao.org/docs/ | auth `jwt`: https://openbao.org/docs/auth/jwt/ · KV v2: https://openbao.org/docs/secrets/kv/kv-v2/ |
 | Keycloak | https://www.keycloak.org/documentation | service accounts / `client_credentials` |
 | PostgreSQL | https://www.postgresql.org/docs/current/ | `SKIP LOCKED`: seção SELECT, "The Locking Clause" |
-| SendGrid | https://www.twilio.com/docs/sendgrid | Event Webhook com assinatura ECDSA |
+| SendGrid | https://www.twilio.com/docs/sendgrid · eventos: https://www.twilio.com/docs/sendgrid/for-developers/tracking-events/event · assinatura: https://www.twilio.com/docs/sendgrid/for-developers/tracking-events/getting-started-event-webhook-security-features | ECDSA/SHA-256 sobre timestamp + corpo cru; formato da chave e relação `sg_message_id` × `X-Message-Id` não documentados na página (suposição: prefixo antes do 1º `.`, validar em hml) |
+| Webhooks da Meta | https://developers.facebook.com/docs/graph-api/webhooks/getting-started · status: https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/components | `hub.challenge`; `X-Hub-Signature-256: sha256=<hex>` (App Secret); reenvio por 36 h |
 | WhatsApp Cloud API (Meta) | https://developers.facebook.com/docs/whatsapp/cloud-api/reference/messages · erros: https://developers.facebook.com/docs/whatsapp/cloud-api/support/error-codes | versão fixada `v26.0` (conferida 2026-09-29; https://developers.facebook.com/docs/graph-api/changelog/versions) |
-| Twilio SMS | https://www.twilio.com/docs/messaging | validação `X-Twilio-Signature` |
+| Twilio SMS | https://www.twilio.com/docs/messaging · status: https://www.twilio.com/docs/messaging/guides/track-outbound-message-status · assinatura: https://www.twilio.com/docs/usage/webhooks/webhooks-security | `X-Twilio-Signature` = HMAC-SHA1 (Auth Token, não API Key) sobre URL + parâmetros ordenados |
 | testcontainers-go | https://golang.testcontainers.org | |
 | golangci-lint | https://golangci-lint.run | |
 | Podman / quadlet | https://docs.podman.io · `man podman-systemd.unit` | |

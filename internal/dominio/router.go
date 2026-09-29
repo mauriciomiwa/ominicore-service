@@ -20,6 +20,7 @@ type ResultadoEnvio struct {
 	Tipo       TipoResultado
 	Motivo     string
 	IDProvedor string
+	Categoria  CategoriaFalha // o adaptador marca contato_invalido quando sabe; vazio = recusado
 }
 
 // ProximaTentativa é a Tentativa que a decisão manda criar: Retentativa no
@@ -36,6 +37,7 @@ type Decisao struct {
 	Tentativa   StatusTentativa
 	Notificacao StatusNotificacao
 	Motivo      string
+	Categoria   CategoriaFalha
 	Proxima     *ProximaTentativa
 }
 
@@ -62,9 +64,17 @@ func (r NotificationRouter) Decidir(t Tentativa, n Notificacao, res ResultadoEnv
 	}
 	d := Decisao{Tentativa: TentativaFalhou, Notificacao: NotificacaoPendente, Motivo: res.Motivo}
 	if res.Tipo == FalhaTemporaria && t.Numero <= len(esperas) {
+		// Tentativa intermediária: sem categoria, o Canal ainda não falhou
 		d.Proxima = &ProximaTentativa{Canal: t.Canal, Numero: t.Numero + 1, Espera: r.espera(t.Numero)}
 		return d
 	}
+	d.Categoria = categoriaDe(res)
+	return r.proximoCanal(t, n, d)
+}
+
+// proximoCanal completa a decisão de um Canal falho: próximo Canal da ordem
+// com contato (REQ-9) ou fim da Notificação.
+func (r NotificationRouter) proximoCanal(t Tentativa, n Notificacao, d Decisao) Decisao {
 	atual := slices.Index(n.OrdemCanais, t.Canal)
 	if proximo, ok := n.Destinatario.PrimeiroComContato(n.OrdemCanais, atual+1); ok && atual >= 0 {
 		d.Proxima = &ProximaTentativa{Canal: proximo, Numero: 1}
@@ -83,4 +93,15 @@ func (r NotificationRouter) espera(numero int) time.Duration {
 	}
 	fator := 1 - Jitter + 2*Jitter*sorteio()
 	return time.Duration(float64(esperas[numero-1]) * fator)
+}
+
+func categoriaDe(res ResultadoEnvio) CategoriaFalha {
+	switch {
+	case res.Tipo == FalhaTemporaria:
+		return FalhaRetentativasEsgotadas // só chega ao Canal falho depois de esgotar
+	case res.Categoria != "":
+		return res.Categoria
+	default:
+		return FalhaRecusadoPeloProvedor
+	}
 }

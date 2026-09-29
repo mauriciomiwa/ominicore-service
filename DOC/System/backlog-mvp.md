@@ -31,25 +31,27 @@ Pronto quando: testes dos REQ-7 a REQ-9 passando e change arquivada.
 
 ### Fatia 3 — Status de entrega por webhook
 Change: `03-status-por-webhook`
-Valor: o status devolvido por SendGrid e Twilio aparece na Tentativa; aviso sem
-assinatura válida é recusado.
-Cobre: RN-5 (REQ-12, REQ-13)
-Depende de: Fatia 2
-Pronto quando: testes dos REQ-12 e REQ-13 passando e change arquivada.
+Valor: o Aviso de status de SendGrid, Twilio e Meta atualiza a Tentativa (entregue,
+lida); falha de entrega depois do aceite passa ao próximo Canal; o Sistema de
+origem consulta a Notificação; aviso sem assinatura válida é recusado.
+Cobre: RN-5 (REQ-12, REQ-13, REQ-14)
+Depende de: Fatias 2 e 6
+Pronto quando: testes dos REQ-12 a REQ-14 passando e change arquivada.
+**Entregue em 2026-09-29** (`openspec/changes/archive/2026-09-29-03-status-por-webhook/`).
 
 ### Fatia 4 — Opt-out por Canal
 Change: `04-opt-out`
 Valor: Destinatário com Opt-out de um Canal não recebe por ele; a Notificação
 segue pelos demais Canais da Ordem.
-Cobre: RN-8 (REQ-14)
+Cobre: RN-8 (REQ-15)
 Depende de: Fatia 2
-Pronto quando: testes do REQ-14 passando e change arquivada.
+Pronto quando: testes do REQ-16 passando e change arquivada.
 
 ### Fatia 5 — Retenção de 30 dias
 Change: `05-retencao`
 Valor: conteúdo e contato do Destinatário ficam ilegíveis após o prazo
 (padrão 30 dias, configurável).
-Cobre: RN-9 (REQ-15)
+Cobre: RN-9 (REQ-16)
 Depende de: Fatia 1
 Pronto quando: testes do REQ-15 passando e change arquivada.
 

@@ -2,14 +2,18 @@ package http_test
 
 import (
 	"bytes"
+	"context"
+	"encoding/json"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"ominicore/internal/adaptadores/saida/keycloak"
 	"ominicore/internal/aplicacao"
+	"ominicore/internal/dominio"
 	"ominicore/internal/testes/emissor"
 	"ominicore/internal/testes/memoria"
 
@@ -28,9 +32,10 @@ func novo(t *testing.T) ambiente {
 	realm := emissor.Novo(t)
 	repo := memoria.Novo()
 	h := entradahttp.Servidor{
-		Auth:   keycloak.Novo(realm.URL, "ominicore", &emissor.Cache{}),
-		Enviar: aplicacao.SendMessageUseCase{Repo: repo},
-		Log:    slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Auth:      keycloak.Novo(realm.URL, "ominicore", &emissor.Cache{}),
+		Enviar:    aplicacao.SendMessageUseCase{Repo: repo},
+		Consultar: aplicacao.ConsultarUseCase{Repo: repo},
+		Log:       slog.New(slog.NewTextHandler(io.Discard, nil)),
 	}.Handler()
 	return ambiente{realm: realm, repo: repo, h: h}
 }
@@ -139,5 +144,60 @@ func TestCanaisVazioERecusado(t *testing.T) {
 	corpo := `{"template_id":"boas-vindas","destinatario":{"email":"ana@exemplo.com"},"dados":{"nome":"Ana"},"canais":[]}`
 	if rec := a.pedir(a.realm.Valido(t, "sistema-a"), "k-1", corpo); rec.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d", rec.Code)
+	}
+}
+
+func (a ambiente) consultar(token, id string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodGet, "/v1/notificacoes/"+id, nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+	a.h.ServeHTTP(rec, req)
+	return rec
+}
+
+func TestT43_DonoConsultaStatusETentativas(t *testing.T) {
+	a := novo(t)
+	tok := a.realm.Valido(t, "sistema-a")
+	rec := a.pedir(tok, "k-43", `{"template_id":"boas-vindas","destinatario":{"email":"ana@exemplo.com","telefone":"+5511999998888"},"dados":{"nome":"Ana"}}`)
+	var criada struct{ ID string }
+	_ = json.Unmarshal(rec.Body.Bytes(), &criada)
+	// bounce no Email (contato inválido) e SMS entregue
+	a.repo.MarcarAceita(0, "msg-1")
+	uc := aplicacao.ReceiveMessageUseCase{Repo: a.repo, Log: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	ctx := context.Background()
+	_, _ = uc.Receber(ctx, dominio.AvisoStatus{IDProvedor: "msg-1", Status: dominio.TentativaFalhou, Motivo: "sendgrid bounce: 550 ana@exemplo.com", Categoria: dominio.FalhaContatoInvalido})
+	a.repo.MarcarAceita(1, "SM1")
+	_, _ = uc.Receber(ctx, dominio.AvisoStatus{IDProvedor: "SM1", Status: dominio.TentativaEntregue})
+
+	res := a.consultar(tok, criada.ID)
+	corpo := res.Body.String()
+	if res.Code != http.StatusOK {
+		t.Fatalf("status %d: %s", res.Code, corpo)
+	}
+	for _, quero := range []string{`"status":"entregue"`, `"canal":"email"`, `"categoria_falha":"contato_invalido"`, `"canal":"sms"`} {
+		if !strings.Contains(corpo, quero) {
+			t.Errorf("resposta sem %s: %s", quero, corpo)
+		}
+	}
+	for _, proibido := range []string{"ana@exemplo.com", "+5511999998888", "550", "bounce", "motivo"} {
+		if strings.Contains(corpo, proibido) {
+			t.Errorf("resposta expõe %q: %s", proibido, corpo)
+		}
+	}
+}
+
+func TestT44_OutroSistemaDeOrigemNaoEnxerga(t *testing.T) {
+	a := novo(t)
+	rec := a.pedir(a.realm.Valido(t, "sistema-a"), "k-44", corpoValido)
+	var criada struct{ ID string }
+	_ = json.Unmarshal(rec.Body.Bytes(), &criada)
+	if res := a.consultar(a.realm.Valido(t, "sistema-b"), criada.ID); res.Code != http.StatusNotFound {
+		t.Fatalf("sistema-b: status %d", res.Code)
+	}
+	if res := a.consultar(a.realm.Valido(t, "sistema-a"), "nao-e-uuid"); res.Code != http.StatusNotFound {
+		t.Fatalf("id inválido: status %d", res.Code)
+	}
+	if res := a.consultar("", criada.ID); res.Code != http.StatusUnauthorized {
+		t.Fatalf("sem token: status %d", res.Code)
 	}
 }
