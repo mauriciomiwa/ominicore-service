@@ -41,19 +41,20 @@ Pronto quando: testes dos REQ-12 a REQ-14 passando e change arquivada.
 
 ### Fatia 4 — Opt-out por Canal
 Change: `04-opt-out`
-Valor: Destinatário com Opt-out de um Canal não recebe por ele; a Notificação
-segue pelos demais Canais da Ordem.
-Cobre: RN-8 (REQ-15)
-Depende de: Fatia 2
-Pronto quando: testes do REQ-16 passando e change arquivada.
+Valor: Destinatário com Opt-out de um Canal não recebe por ele (de nenhum
+Sistema de origem); a Notificação segue pelos demais Canais da Ordem. Opt-out
+por API e pelos sinais do Provedor; contato só em HMAC.
+Cobre: RN-8 (REQ-15 a REQ-18; REQ-14 modificado)
+Depende de: Fatias 2 e 3
+Pronto quando: testes dos REQ-15 a REQ-18 passando e change arquivada.
 
 ### Fatia 5 — Retenção de 30 dias
 Change: `05-retencao`
 Valor: conteúdo e contato do Destinatário ficam ilegíveis após o prazo
-(padrão 30 dias, configurável).
-Cobre: RN-9 (REQ-16)
+(padrão 30 dias, configurável); o Opt-out (só HMAC) não expira.
+Cobre: RN-9 (REQ-19)
 Depende de: Fatia 1
-Pronto quando: testes do REQ-15 passando e change arquivada.
+Pronto quando: testes do REQ-19 passando e change arquivada.
 
 ### Fatia 6 — WhatsApp por Modelo aprovado
 Change: `06-whatsapp`

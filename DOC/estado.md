@@ -6,12 +6,11 @@ Retrato de onde o trabalho parou, reescrito a cada fim de sessão (skill
 `passagem`, no máximo 40 linhas). É o que o próximo chat lê primeiro.
 
 ## Em curso
-- Fatias 1, 2, 3 e 6 **entregues e arquivadas**: REQ-1 a REQ-14 vigentes, T-1 a
-  T-44 passando. Nenhuma change ativa.
-- Branch `fatia/03-status-por-webhook` (a partir de `934d770`): implementação e
-  arquivamento da fatia 3 **sem commit**.
-- Próximos: fatias 4 (Opt-out, RN-8) e 5 (retenção, RN-9) fecham o MVP; o
-  deploy em hml (runbook, etapas 1–5b do dono) valida os webhooks de verdade.
+- Fatias 1, 2, 3 e 6 entregues e arquivadas (REQ-1 a REQ-14, T-1 a T-44).
+- **Change `04-opt-out` aberta** (sabatina fechada): REQ-14 modificado, REQ-15 a
+  REQ-18, T-45 a T-55. Branch `fatia/04-opt-out` (a partir de `11a6c4a`), sem
+  commit. Próximo passo: `/opsx:apply 04-opt-out`.
+- Depois: fatia 5 (retenção) fecha o MVP; deploy em hml valida webhooks.
 
 ## Decisões recentes
 - Retentativa = nova linha em `tentativas` com `disponivel_em` futuro, na mesma

@@ -62,3 +62,14 @@ rode com `make itest` (Docker ou Podman). Última execução: 2026-09-29, 21/21 
 | T-42 | Exemplo | `internal/adaptadores/entrada/webhooks/webhooks_test.go` | passando |
 | T-43 | Exemplo | `internal/adaptadores/entrada/http/servidor_test.go` · `internal/integracao/integracao_test.go` (Postgres) | passando (fake e Postgres) |
 | T-44 | Exemplo | `internal/adaptadores/entrada/http/servidor_test.go` · `internal/integracao/integracao_test.go` (Postgres) | passando (fake e Postgres) |
+| T-45 | Exemplo | a definir (change `04-opt-out`) | pendente |
+| T-46 | Exemplo | a definir (change `04-opt-out`) | pendente |
+| T-47 | Exemplo | a definir (change `04-opt-out`) | pendente |
+| T-48 | Exemplo | a definir (change `04-opt-out`) | pendente |
+| T-49 | Exemplo | a definir (change `04-opt-out`) | pendente |
+| T-50 | Exemplo | a definir (change `04-opt-out`) | pendente |
+| T-51 | Exemplo | a definir (change `04-opt-out`) | pendente |
+| T-52 | Exemplo | a definir (change `04-opt-out`) | pendente |
+| T-53 | Exemplo | a definir (change `04-opt-out`) | pendente |
+| T-54 | Exemplo | a definir (change `04-opt-out`) | pendente |
+| T-55 | Exemplo | a definir (change `04-opt-out`) | pendente |

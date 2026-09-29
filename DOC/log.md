@@ -3,6 +3,18 @@
 Registro cronológico de decisões e eventos, mais recente no topo. Decisão sem
 registro vira suposição de alguém daqui a seis meses.
 
+## 2026-09-29 — Sabatina da fatia 04 fechada; change `04-opt-out` aberta
+- Decidido (recomendações aceitas): Opt-out por API e pelos sinais do Provedor
+  (SendGrid unsubscribe/spamreport, Twilio 21610); vale para toda a casa, por
+  contato + Canal; só a API remove, com registro de quem/quando; contato só em
+  HMAC-SHA256 (chave em `kv/<prefixo>/optout`), sem expirar; Canal em Opt-out
+  pulado no pedido (422 se nenhum), no fallback e no envio (categoria `opt_out`).
+- Menores, pela recomendação: `POST`/`DELETE /v1/opt-outs` com contato no corpo
+  (nunca na URL); sem `GET` no MVP; REQ-14 modificado (categoria `opt_out`).
+- RN-8 detalhada. Backlog: corrigido o "Pronto quando" trocado entre as fatias
+  4 e 5 (erro da renumeração da fatia 3); fatia 4 = REQ-15 a REQ-18, fatia 5 = REQ-19.
+- Change aberta com T-45 a T-55.
+
 ## 2026-09-29 — Entrega: change `03-status-por-webhook` arquivada
 - Arquivada em `openspec/changes/archive/2026-09-29-03-status-por-webhook/`;
   spec `notificacoes` ganha REQ-12 (Aviso de status), REQ-13 (falha depois do
