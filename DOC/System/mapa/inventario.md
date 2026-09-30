@@ -1,6 +1,6 @@
 # Inventário do código — ominicore
 
-> GERADO por `tools/mapeia_projeto.py` em 2026-09-29T18:59:13. Não edite: rode o script de novo.
+> GERADO por `tools/mapeia_projeto.py` em 2026-09-29T19:48:17. Não edite: rode o script de novo.
 > A interpretação (o que cada área faz, fluxos, RN candidatas) está nas outras páginas desta pasta.
 
 ## Stack

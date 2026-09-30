@@ -565,13 +565,28 @@ def divergencias_declaradas(amb: Path):
     return set(re.findall(r"`([A-Za-z0-9_.*-]+)`", m.group(1))) if m else set()
 
 
+def contrato_ambientes(d: Path):
+    """Infra/AMBIENTES.md ou infra/AMBIENTES.md (DOC com pastas em inglês).
+    Lista o diretório em vez de montar o caminho: no macOS o disco não diferencia
+    maiúscula e `d / "Infra"` acha `infra/`, mas no runner Linux do CI não acha —
+    a checagem passava local e reprovava no CI."""
+    try:
+        pastas = [p for p in d.iterdir() if p.is_dir() and p.name in ("Infra", "infra")]
+    except OSError:
+        return None
+    for pasta in sorted(pastas, key=lambda p: p.name != "Infra"):  # a do padrão primeiro
+        c = pasta / "AMBIENTES.md"
+        if c.is_file():
+            return c
+    return None
+
+
 def checa_ambientes(raiz, docs, rel, modo):
     area = "ambientes"
     amb = None
     for d in docs:
-        c = d / "Infra" / "AMBIENTES.md"
-        if c.is_file():
-            amb = c
+        amb = contrato_ambientes(d)
+        if amb:
             break
     if amb is None:
         if tem_deploy(raiz):
@@ -635,9 +650,32 @@ def checa_mapa(raiz, docs, rel, modo):
 
 
 # --------------------------------------------------------------- nomad
+# Cópia de registro de jobs antigos (DOC/Suporte/legado/): não é implantada, e
+# reescrevê-la para passar na checagem apagaria o registro histórico.
+NOMAD_REGISTRO = ("Suporte", "legado")
+# Casa por SEGMENTO do nome (separado por "_"), não por substring: "PASS" dentro
+# de "BYPASS" (CROWDSEC_BYPASS_DB_VOLUME_CHECK) é flag, não senha.
+SEGMENTO_SEGREDO = re.compile(r"^(PASS|PASSWORD|PASSWD|PASSPHRASE|PWD|SECRET|TOKEN|PRIVATE|APIKEY|CREDENTIALS?)$"
+                              r"|(PASSWORD|PASSWD|SECRET|TOKEN)$")
+
+
+def e_registro_nomad(rel_path: Path) -> bool:
+    partes = rel_path.parts
+    n = len(NOMAD_REGISTRO)
+    return any(partes[i:i + n] == NOMAD_REGISTRO for i in range(len(partes) - n + 1))
+
+
+def nome_de_segredo(chave: str) -> bool:
+    segs = chave.upper().split("_")
+    return any(SEGMENTO_SEGREDO.search(s) for s in segs) or \
+        any(x == "API" and y == "KEY" for x, y in zip(segs, segs[1:]))
+
+
 def checa_nomad(raiz, rel):
     area = "nomad-worker"
     for f in jobs_nomad(raiz):
+        if e_registro_nomad(f.relative_to(raiz)):
+            continue
         txt = f.read_text(encoding="utf-8", errors="replace")
         nome = f.relative_to(raiz)
         for img in re.findall(r'image\s*=\s*"([^"]+)"', txt):
@@ -650,7 +688,7 @@ def checa_nomad(raiz, rel):
                 rel.furo(area, f"{nome}: imagem '{img}' com :latest — use tag imutável (SHA).")
         for bloco in re.findall(r"\benv\s*\{(.*?)\}", txt, re.S):
             for k, v in re.findall(r'([A-Za-z0-9_]+)\s*=\s*"([^"]*)"', bloco):
-                if re.search(r"PASS|SECRET|TOKEN|PRIVATE|API_?KEY|CREDENTIAL", k, re.I) and v \
+                if nome_de_segredo(k) and v \
                         and "${" not in v and "{{" not in v:
                     rel.furo(area, f"{nome}: segredo literal em env ({k}) — segredo só via template do Vault.")
 
