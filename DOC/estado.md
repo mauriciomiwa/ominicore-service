@@ -8,9 +8,9 @@ Retrato de onde o trabalho parou, reescrito a cada fim de sessão (skill
 ## Em curso
 - **MVP completo**: fatias 1 a 6 entregues e arquivadas; REQ-1 a REQ-19 vigentes,
   T-1 a T-62 passando (integração 30/30). Nenhuma change ativa.
-- Branch `fatia/05-retencao` (a partir de `fatia/04-opt-out`, último commit
-  `ce068f8`): fatias 4 e 5 **sem commit**.
-- Próximo: commit; depois deploy em hml (runbook `deploy/aviva2/README.md`,
+- Tudo commitado na `main` (`74b0912`); as branches `fatia/*` ficam como
+  histórico (todas contidas na `main`). Sem remoto ainda.
+- Próximo: deploy em hml (runbook `deploy/aviva2/README.md`,
   etapas 1–5b do dono) e validação real dos Provedores (to-do).
 
 ## Decisões recentes
