@@ -255,3 +255,18 @@ func TestT31_ModeloNaoAprovadoEFalhaDefinitiva(t *testing.T) {
 		t.Fatalf("quero 1 Tentativa falhou com 132001, sem Retentativa: %+v", h)
 	}
 }
+
+func TestT50_STOPNoTwilioRegistraOptOutDeSMSESegueAOrdem(t *testing.T) {
+	f := novoFluxo(t)
+	f.tw.Responder(http.StatusBadRequest, 21610)
+	f.pedir(t, `{"template_id":"boas-vindas","destinatario":{"email":"ana@exemplo.com","telefone":"+5511999998888"},"dados":{"nome":"Ana"},"canais":["sms","email"]}`)
+	f.sg.Esperar(t, 1, 3*time.Second) // seguiu para o Email
+	h := f.repo.Historico()
+	oo, _ := f.repo.OptOutsDe(context.Background(), dominio.Destinatario{Telefone: "+5511999998888"})
+	if len(h) != 2 || h[0].Canal != dominio.CanalSMS || h[0].Categoria != dominio.FalhaOptOut || h[1].Canal != dominio.CanalEmail || !oo[dominio.CanalSMS] {
+		t.Fatalf("histórico = %+v, opt-out = %v", h, oo)
+	}
+	if len(f.tw.Recebidos()) != 1 {
+		t.Fatalf("Twilio chamado %d vezes: STOP não tem Retentativa", len(f.tw.Recebidos()))
+	}
+}

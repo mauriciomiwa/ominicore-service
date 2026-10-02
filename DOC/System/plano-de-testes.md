@@ -8,13 +8,13 @@ haver dois lugares a manter. Tipo: **Exemplo** (caso concreto) ou
 **Propriedade** (invariante). Status: pendente / escrito (não rodado) /
 passando.
 
-T-1 a T-44 vigentes desde 2026-09-29 (`openspec/specs/{autenticacao-origem,notificacoes,segredos}`).
+T-1 a T-62 vigentes desde 2026-10-02 (`openspec/specs/{autenticacao-origem,notificacoes,segredos}`).
 
 Nome do teste em Go cita o T-n: `func TestT7_ReenvioComAMesmaChaveNaoDuplica(t *testing.T)`.
 Unitários com fakes (`internal/testes/`: repositório em memória, realm JWT,
 SendGrid via `httptest`); integração em `internal/integracao/` com
 `testcontainers-go` (Postgres real) — pula sozinho sem runtime de containers;
-rode com `make itest` (Docker ou Podman). Última execução: 2026-09-29, 21/21 contra Postgres 17. Provedores reais nunca entram em teste.
+rode com `make itest` (Docker Desktop, Colima ou Podman: usa o socket do contexto ativo). Última execução: 2026-10-02, 30/30 contra Postgres 17 (Colima). Provedores reais nunca entram em teste.
 
 | Teste | Tipo | Onde (arquivo do teste) | Status |
 |---|---|---|---|
@@ -62,14 +62,21 @@ rode com `make itest` (Docker ou Podman). Última execução: 2026-09-29, 21/21 
 | T-42 | Exemplo | `internal/adaptadores/entrada/webhooks/webhooks_test.go` | passando |
 | T-43 | Exemplo | `internal/adaptadores/entrada/http/servidor_test.go` · `internal/integracao/integracao_test.go` (Postgres) | passando (fake e Postgres) |
 | T-44 | Exemplo | `internal/adaptadores/entrada/http/servidor_test.go` · `internal/integracao/integracao_test.go` (Postgres) | passando (fake e Postgres) |
-| T-45 | Exemplo | a definir (change `04-opt-out`) | pendente |
-| T-46 | Exemplo | a definir (change `04-opt-out`) | pendente |
-| T-47 | Exemplo | a definir (change `04-opt-out`) | pendente |
-| T-48 | Exemplo | a definir (change `04-opt-out`) | pendente |
-| T-49 | Exemplo | a definir (change `04-opt-out`) | pendente |
-| T-50 | Exemplo | a definir (change `04-opt-out`) | pendente |
-| T-51 | Exemplo | a definir (change `04-opt-out`) | pendente |
-| T-52 | Exemplo | a definir (change `04-opt-out`) | pendente |
-| T-53 | Exemplo | a definir (change `04-opt-out`) | pendente |
-| T-54 | Exemplo | a definir (change `04-opt-out`) | pendente |
-| T-55 | Exemplo | a definir (change `04-opt-out`) | pendente |
+| T-45 | Exemplo | `internal/adaptadores/entrada/http/servidor_test.go` | passando |
+| T-46 | Exemplo | `internal/adaptadores/entrada/http/servidor_test.go` | passando |
+| T-47 | Exemplo | `internal/adaptadores/entrada/http/servidor_test.go` · `internal/integracao/integracao_test.go` (Postgres) | passando (fake e Postgres) |
+| T-48 | Exemplo | `internal/adaptadores/entrada/http/servidor_test.go` | passando |
+| T-49 | Exemplo | `internal/adaptadores/entrada/webhooks/webhooks_test.go` | passando |
+| T-50 | Exemplo | `internal/adaptadores/entrada/worker/worker_test.go` | passando |
+| T-51 | Exemplo | `internal/adaptadores/entrada/http/servidor_test.go` | passando |
+| T-52 | Exemplo | `internal/adaptadores/entrada/http/servidor_test.go` | passando |
+| T-53 | Exemplo | `internal/aplicacao/aplicacao_test.go` · `internal/integracao/integracao_test.go` (Postgres) | passando (fake e Postgres) |
+| T-54 | Exemplo | `internal/adaptadores/entrada/http/servidor_test.go` | passando |
+| T-55 | Exemplo | `internal/integracao/integracao_test.go` (Postgres) | passando |
+| T-56 | Exemplo | `internal/adaptadores/entrada/http/servidor_test.go` · `internal/integracao/integracao_test.go` (Postgres) | passando (fake e Postgres) |
+| T-57 | Exemplo | `internal/aplicacao/aplicacao_test.go` (fake) · `internal/integracao/integracao_test.go` (Postgres) | passando (fake e Postgres) |
+| T-58 | Exemplo | `internal/integracao/integracao_test.go` (Postgres) | passando |
+| T-59 | Exemplo | `internal/integracao/integracao_test.go` (Postgres) | passando |
+| T-60 | Exemplo | `internal/integracao/integracao_test.go` (Postgres) | passando |
+| T-61 | Exemplo | `internal/integracao/integracao_test.go` (Postgres) | passando |
+| T-62 | Exemplo | `internal/integracao/integracao_test.go` (Postgres) | passando |

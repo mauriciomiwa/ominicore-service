@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"ominicore/internal/adaptadores/saida/keycloak"
 	"ominicore/internal/aplicacao"
@@ -35,6 +36,7 @@ func novo(t *testing.T) ambiente {
 		Auth:      keycloak.Novo(realm.URL, "ominicore", &emissor.Cache{}),
 		Enviar:    aplicacao.SendMessageUseCase{Repo: repo},
 		Consultar: aplicacao.ConsultarUseCase{Repo: repo},
+		OptOut:    aplicacao.OptOutUseCase{Repo: repo},
 		Log:       slog.New(slog.NewTextHandler(io.Discard, nil)),
 	}.Handler()
 	return ambiente{realm: realm, repo: repo, h: h}
@@ -199,5 +201,124 @@ func TestT44_OutroSistemaDeOrigemNaoEnxerga(t *testing.T) {
 	}
 	if res := a.consultar("", criada.ID); res.Code != http.StatusUnauthorized {
 		t.Fatalf("sem token: status %d", res.Code)
+	}
+}
+
+func (a ambiente) optOut(metodo, token, corpo string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(metodo, "/v1/opt-outs", strings.NewReader(corpo))
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+	a.h.ServeHTTP(rec, req)
+	return rec
+}
+
+const optOutSMS = `{"canal":"sms","contato":"+5511999998888"}`
+
+func TestT45_RegistrarOptOut(t *testing.T) {
+	a := novo(t)
+	if rec := a.optOut(http.MethodPost, a.realm.Valido(t, "sistema-a"), optOutSMS); rec.Code != http.StatusNoContent {
+		t.Fatalf("status %d: %s", rec.Code, rec.Body)
+	}
+	oo, _ := a.repo.OptOutsDe(context.Background(), dominio.Destinatario{Telefone: "+5511999998888"})
+	if !oo[dominio.CanalSMS] || oo[dominio.CanalWhatsApp] {
+		t.Fatalf("opt-outs = %v (SMS e WhatsApp são Canais distintos)", oo)
+	}
+}
+
+func TestT46_RegistroRepetidoEIdempotente(t *testing.T) {
+	a := novo(t)
+	tok := a.realm.Valido(t, "sistema-a")
+	for range 2 {
+		if rec := a.optOut(http.MethodPost, tok, optOutSMS); rec.Code != http.StatusNoContent {
+			t.Fatalf("status %d", rec.Code)
+		}
+	}
+	if n := a.repo.QuantosOptOuts(); n != 1 || len(a.repo.EventosOptOut) != 1 {
+		t.Fatalf("opt-outs = %d, eventos = %v", n, a.repo.EventosOptOut)
+	}
+}
+
+func TestT47_RemocaoGuardaQuemRemoveu(t *testing.T) {
+	a := novo(t)
+	a.optOut(http.MethodPost, a.realm.Valido(t, "sistema-a"), optOutSMS)
+	if rec := a.optOut(http.MethodDelete, a.realm.Valido(t, "sistema-b"), optOutSMS); rec.Code != http.StatusNoContent {
+		t.Fatalf("status %d", rec.Code)
+	}
+	oo, _ := a.repo.OptOutsDe(context.Background(), dominio.Destinatario{Telefone: "+5511999998888"})
+	if oo[dominio.CanalSMS] || len(a.repo.EventosOptOut) != 2 || a.repo.EventosOptOut[1] != "removido api:sistema-b" {
+		t.Fatalf("opt-outs = %v, eventos = %v", oo, a.repo.EventosOptOut)
+	}
+}
+
+func TestT48_PedidoDeOptOutInvalidoERecusado(t *testing.T) {
+	a := novo(t)
+	tok := a.realm.Valido(t, "sistema-a")
+	for _, corpo := range []string{
+		`{"canal":"telegram","contato":"x"}`, `{"canal":"email","contato":"sem-arroba"}`,
+		`{"canal":"sms","contato":"11 99999-8888"}`, `{"canal":"sms"`, `{"canal":"sms","contato":"+5511999998888","extra":1}`,
+	} {
+		if rec := a.optOut(http.MethodPost, tok, corpo); rec.Code != http.StatusBadRequest {
+			t.Errorf("%s: status %d", corpo, rec.Code)
+		}
+	}
+	if n := a.repo.QuantosOptOuts(); n != 0 {
+		t.Fatalf("registrou %d opt-outs", n)
+	}
+	if rec := a.optOut(http.MethodPost, "", optOutSMS); rec.Code != http.StatusUnauthorized {
+		t.Fatalf("sem token: %d", rec.Code)
+	}
+}
+
+func TestT51_OptOutDeSMSFazOrdemSMSEmailSairPorEmail(t *testing.T) {
+	a := novo(t)
+	tok := a.realm.Valido(t, "sistema-a")
+	a.optOut(http.MethodPost, tok, optOutSMS)
+	rec := a.pedir(tok, "k-51", `{"template_id":"boas-vindas","destinatario":{"email":"ana@exemplo.com","telefone":"+5511999998888"},"dados":{"nome":"Ana"},"canais":["sms","email"]}`)
+	if rec.Code != http.StatusAccepted || a.repo.Historico()[0].Canal != dominio.CanalEmail {
+		t.Fatalf("status %d, 1ª Tentativa %s", rec.Code, a.repo.Historico()[0].Canal)
+	}
+}
+
+func TestT52_TodosOsCanaisEmOptOutRecusamOPedido(t *testing.T) {
+	a := novo(t)
+	tok := a.realm.Valido(t, "sistema-a")
+	a.optOut(http.MethodPost, tok, optOutSMS)
+	a.optOut(http.MethodPost, tok, `{"canal":"email","contato":"ana@exemplo.com"}`)
+	rec := a.pedir(tok, "k-52", `{"template_id":"boas-vindas","destinatario":{"email":"ana@exemplo.com","telefone":"+5511999998888"},"dados":{"nome":"Ana"},"canais":["sms","email"]}`)
+	if rec.Code != http.StatusUnprocessableEntity || !strings.Contains(rec.Body.String(), "destinatário sem contato para os canais") {
+		t.Fatalf("status %d: %s", rec.Code, rec.Body)
+	}
+	if n, _ := a.repo.Contar(); n != 0 {
+		t.Fatalf("registrou %d notificações", n)
+	}
+}
+
+func TestT54_OptOutValeParaTodosOsSistemasDeOrigem(t *testing.T) {
+	a := novo(t)
+	a.optOut(http.MethodPost, a.realm.Valido(t, "sistema-a"), `{"canal":"email","contato":"Ana@Exemplo.com"}`)
+	rec := a.pedir(a.realm.Valido(t, "sistema-b"), "k-54", `{"template_id":"boas-vindas","destinatario":{"email":"ana@exemplo.com"},"dados":{"nome":"Ana"},"canais":["email"]}`)
+	if rec.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("sistema-b: status %d", rec.Code)
+	}
+}
+
+func TestT56_ConsultaMostraQuandoFoiAnonimizadaNoHTTP(t *testing.T) {
+	a := novo(t)
+	tok := a.realm.Valido(t, "sistema-a")
+	rec := a.pedir(tok, "k-56", corpoValido)
+	var criada struct{ ID string }
+	_ = json.Unmarshal(rec.Body.Bytes(), &criada)
+	if res := a.consultar(tok, criada.ID); strings.Contains(res.Body.String(), "anonimizada_em") {
+		t.Fatalf("anonimizada_em antes da retenção: %s", res.Body)
+	}
+	a.repo.MarcarAceita(0, "msg-1")
+	a.repo.Envelhecer(31 * 24 * time.Hour)
+	uc := aplicacao.RetencaoUseCase{Repo: a.repo, Prazo: 30 * 24 * time.Hour, Log: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	if n, err := uc.Rodar(context.Background()); err != nil || n != 1 {
+		t.Fatalf("retenção: %d %v", n, err)
+	}
+	res := a.consultar(tok, criada.ID)
+	if res.Code != http.StatusOK || !strings.Contains(res.Body.String(), `"anonimizada_em"`) || !strings.Contains(res.Body.String(), `"tentativas":[{`) {
+		t.Fatalf("status %d: %s", res.Code, res.Body)
 	}
 }

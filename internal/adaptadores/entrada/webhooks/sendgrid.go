@@ -25,12 +25,14 @@ func (w Webhooks) sendgrid(rw http.ResponseWriter, r *http.Request) {
 		Type        string `json:"type"`
 		SgMessageID string `json:"sg_message_id"`
 		Reason      string `json:"reason"`
+		Email       string `json:"email"`
 	}
 	if err := json.Unmarshal(corpo, &eventos); err != nil {
 		http.Error(rw, "lote inválido", http.StatusBadRequest)
 		return
 	}
 	var avisos []dominio.AvisoStatus
+	var descadastros []string
 	for _, e := range eventos {
 		// sg_message_id = <X-Message-Id do envio>.<sufixo> (validar em hml)
 		id, _, _ := strings.Cut(e.SgMessageID, ".")
@@ -42,6 +44,8 @@ func (w Webhooks) sendgrid(rw http.ResponseWriter, r *http.Request) {
 				IDProvedor: id, Status: dominio.TentativaFalhou,
 				Motivo: "sendgrid bounce: " + e.Reason, Categoria: dominio.FalhaContatoInvalido,
 			})
+		case e.Event == "unsubscribe" || e.Event == "spamreport": // Opt-out (REQ-16)
+			descadastros = append(descadastros, e.Email)
 		case e.Event == "dropped":
 			avisos = append(avisos, dominio.AvisoStatus{
 				IDProvedor: id, Status: dominio.TentativaFalhou,
@@ -49,6 +53,15 @@ func (w Webhooks) sendgrid(rw http.ResponseWriter, r *http.Request) {
 			})
 		}
 		// processed, deferred e blocked (temporários) e engajamento: ignorados
+	}
+	if w.OptOut != nil {
+		for _, email := range descadastros {
+			if err := w.OptOut.RegistrarPeloProvedor(r.Context(), dominio.CanalEmail, email, "sendgrid"); err != nil {
+				w.Log.ErrorContext(r.Context(), "opt-out do sendgrid falhou", "erro", err.Error())
+				http.Error(rw, "erro interno", http.StatusInternalServerError)
+				return
+			}
+		}
 	}
 	w.aplicar(rw, r, "sendgrid", avisos)
 }

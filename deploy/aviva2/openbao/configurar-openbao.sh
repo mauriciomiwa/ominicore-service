@@ -27,6 +27,15 @@ printf 'path "kv/data/%s/*" { capabilities = ["read"] }\n' "$PREFIXO" | "${BAO[@
 JSON
 echo ">> auth $AUTH_MOUNT, policy e role $ROLE prontos"
 
+# Chave do HMAC dos Opt-outs (REQ-18): gerada aqui uma única vez e NUNCA
+# sobrescrita — trocá-la faz todos os Opt-outs pararem de valer.
+if "${BAO[@]}" kv get "kv/$PREFIXO/optout" >/dev/null 2>&1; then
+  echo ">> kv/$PREFIXO/optout já existe — mantido (não rotacionar)"
+else
+  openssl rand -hex 32 | tr -d '\n' | "${BAO[@]}" kv put "kv/$PREFIXO/optout" chave=- >/dev/null
+  echo ">> kv/$PREFIXO/optout criado (chave permanente, valor não exibido)"
+fi
+
 if [ "${2:-}" != "--sem-segredos" ]; then
   ler() { local v; read -r -s -p "$1: " v; echo >&2; printf '%s' "$v"; }
   DSN=$(ler "DSN do Postgres ($SCHEMA, com sslrootcert=/etc/ominicore/rds-ca.pem)")

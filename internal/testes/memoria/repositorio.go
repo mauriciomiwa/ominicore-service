@@ -19,9 +19,13 @@ type Repositorio struct {
 	Templates    map[string]dominio.Template
 	Notificacoes map[string]dominio.Notificacao
 	Tentativas   []dominio.Tentativa
-	disponivel   []time.Time // disponivel_em de cada Tentativa (a fila respeita)
-	idProvedor   []string    // id_provedor de cada Tentativa aceita
-	chaves       map[string]string
+	disponivel   []time.Time       // disponivel_em de cada Tentativa (a fila respeita)
+	idProvedor   []string          // id_provedor de cada Tentativa aceita
+	optOuts      map[string]string // canal|contato normalizado → origem (o fake guarda em claro)
+	// EventosOptOut é o histórico de registro/remoção ("acao por").
+	EventosOptOut []string
+	anonimizadas  map[string]time.Time
+	chaves        map[string]string
 }
 
 var _ portas.MessageRepositoryPort = (*Repositorio)(nil)
@@ -32,6 +36,7 @@ func Novo() *Repositorio {
 		Templates:    map[string]dominio.Template{"boas-vindas": BoasVindas()},
 		Notificacoes: map[string]dominio.Notificacao{},
 		chaves:       map[string]string{},
+		optOuts:      map[string]string{},
 	}
 }
 
@@ -69,7 +74,7 @@ func (r *Repositorio) RegistrarNotificacao(_ context.Context, n portas.NovaNotif
 	r.chaves[chave] = id
 	r.Notificacoes[id] = dominio.Notificacao{
 		ID: id, SistemaOrigem: n.SistemaOrigem, TemplateID: n.TemplateID, Destinatario: n.Destinatario,
-		Dados: n.Dados, OrdemCanais: n.OrdemCanais, Status: dominio.NotificacaoPendente,
+		Dados: n.Dados, OrdemCanais: n.OrdemCanais, Status: dominio.NotificacaoPendente, CriadaEm: time.Now(),
 	}
 	r.enfileirar(id, n.PrimeiroCanal, 1, 0)
 	return portas.Registro{ID: id, Status: dominio.NotificacaoPendente}, nil
@@ -94,7 +99,7 @@ func (r *Repositorio) ReservarTentativa(_ context.Context) (portas.TentativaRese
 		i := i
 		return portas.TentativaReservada{
 			Tentativa:   t,
-			Notificacao: r.Notificacoes[t.NotificacaoID],
+			Notificacao: r.comOptOut(r.Notificacoes[t.NotificacaoID]),
 			Concluir: func(_ context.Context, d dominio.Decisao, res dominio.ResultadoEnvio) error {
 				r.mu.Lock()
 				defer r.mu.Unlock()
@@ -155,7 +160,7 @@ func (r *Repositorio) ReservarPorIDProvedor(_ context.Context, id string) (porta
 			continue
 		}
 		return portas.AvisoReservado{
-			Tentativa: t, Notificacao: r.Notificacoes[t.NotificacaoID],
+			Tentativa: t, Notificacao: r.comOptOut(r.Notificacoes[t.NotificacaoID]),
 			Aplicar: func(_ context.Context, a dominio.AtualizacaoAviso) error {
 				r.mu.Lock()
 				defer r.mu.Unlock()
@@ -188,6 +193,9 @@ func (r *Repositorio) ConsultarNotificacao(_ context.Context, sistemaOrigem, id 
 		return portas.Consulta{}, false, nil
 	}
 	c := portas.Consulta{ID: n.ID, TemplateID: n.TemplateID, Status: n.Status}
+	if em, ok := r.anonimizadas[id]; ok {
+		c.AnonimizadaEm = &em
+	}
 	for _, t := range r.Tentativas {
 		if t.NotificacaoID == id {
 			c.Tentativas = append(c.Tentativas, portas.TentativaConsultada{Canal: t.Canal, Numero: t.Numero, Status: t.Status, Categoria: t.Categoria})
@@ -216,4 +224,126 @@ func (r *Repositorio) AdicionarAceita(notificacao string, c dominio.Canal, idPro
 	i := len(r.Tentativas) - 1
 	r.Tentativas[i].Status = dominio.TentativaEnviada
 	r.idProvedor[i] = idProvedor
+}
+
+func chaveOptOut(c dominio.Canal, contato string) (string, bool) {
+	norm, err := dominio.NormalizarContato(c, contato)
+	return string(c) + "|" + norm, err == nil
+}
+
+// optOutsDe exige r.mu travado.
+func (r *Repositorio) optOutsDe(d dominio.Destinatario) map[dominio.Canal]bool {
+	out := map[dominio.Canal]bool{}
+	for _, c := range []dominio.Canal{dominio.CanalEmail, dominio.CanalSMS, dominio.CanalWhatsApp} {
+		if k, ok := chaveOptOut(c, d.Contato(c)); ok && r.optOuts[k] != "" {
+			out[c] = true
+		}
+	}
+	return out
+}
+
+// comOptOut exige r.mu travado.
+func (r *Repositorio) comOptOut(n dominio.Notificacao) dominio.Notificacao {
+	n.Destinatario.OptOut = r.optOutsDe(n.Destinatario)
+	return n
+}
+
+func (r *Repositorio) OptOutsDe(_ context.Context, d dominio.Destinatario) (map[dominio.Canal]bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.optOutsDe(d), nil
+}
+
+func (r *Repositorio) RegistrarOptOut(_ context.Context, c dominio.Canal, contato, por string) error {
+	k, ok := chaveOptOut(c, contato)
+	if !ok {
+		return dominio.ErrContatoInvalido
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.optOuts[k] == "" {
+		r.optOuts[k] = por
+		r.EventosOptOut = append(r.EventosOptOut, "registrado "+por)
+	}
+	return nil
+}
+
+func (r *Repositorio) RemoverOptOut(_ context.Context, c dominio.Canal, contato, por string) error {
+	k, ok := chaveOptOut(c, contato)
+	if !ok {
+		return dominio.ErrContatoInvalido
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.optOuts[k] != "" {
+		delete(r.optOuts, k)
+		r.EventosOptOut = append(r.EventosOptOut, "removido "+por)
+	}
+	return nil
+}
+
+// QuantosOptOuts devolve o número de Opt-outs registrados.
+func (r *Repositorio) QuantosOptOuts() int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return len(r.optOuts)
+}
+
+// pendente exige r.mu travado.
+func (r *Repositorio) temPendente(id string) bool {
+	for _, t := range r.Tentativas {
+		if t.NotificacaoID == id && t.Status == dominio.TentativaPendente {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *Repositorio) AnonimizarLote(_ context.Context, antes time.Time, lote int) (int, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.anonimizadas == nil {
+		r.anonimizadas = map[string]time.Time{}
+	}
+	n := 0
+	for id, no := range r.Notificacoes {
+		if n == lote || !no.CriadaEm.Before(antes) || no.Status == dominio.NotificacaoPendente || r.temPendente(id) {
+			continue
+		}
+		if _, ja := r.anonimizadas[id]; ja {
+			continue
+		}
+		no.Destinatario, no.Dados = dominio.Destinatario{}, map[string]string{}
+		r.Notificacoes[id] = no
+		for i := range r.Tentativas {
+			if r.Tentativas[i].NotificacaoID == id {
+				r.Tentativas[i].Motivo = ""
+			}
+		}
+		r.anonimizadas[id] = time.Now()
+		n++
+	}
+	return n, nil
+}
+
+func (r *Repositorio) PendentesVencidas(_ context.Context, antes time.Time) (int, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	n := 0
+	for id, no := range r.Notificacoes {
+		if _, ja := r.anonimizadas[id]; !ja && no.CriadaEm.Before(antes) && no.Status == dominio.NotificacaoPendente {
+			n++
+		}
+	}
+	return n, nil
+}
+
+// Envelhecer recua a criação de todas as Notificações (testes de retenção).
+func (r *Repositorio) Envelhecer(d time.Duration) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for id, no := range r.Notificacoes {
+		no.CriadaEm = no.CriadaEm.Add(-d)
+		r.Notificacoes[id] = no
+	}
 }

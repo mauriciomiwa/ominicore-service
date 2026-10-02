@@ -15,6 +15,8 @@ mover qualquer doc — a regra "repositório primeiro" depende dele.
 | docs oficiais de cada tecnologia | `Padroes/fontes-externas.md` |
 | como e onde cada T-n é testado | `System/plano-de-testes.md` |
 | política do Dependabot, SLA de CVE | `Infra/seguranca-dependencias.md` |
+| onde roda, bancos e recursos de hml e prod | `Infra/infraestrutura.md` |
+| contrato de ambientes (como provar o alvo) | `Infra/AMBIENTES.md` |
 | comportamento vigente: REQ e cenários de teste (T-n) | `../openspec/specs/` (OpenSpec) |
 | mudanças em curso: proposal, deltas, tarefas | `../openspec/changes/` (OpenSpec) |
 | por que uma mudança entregue foi feita | `../openspec/changes/archive/` |

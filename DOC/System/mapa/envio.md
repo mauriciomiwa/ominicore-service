@@ -11,7 +11,9 @@ envia pelos Canais Email (SendGrid), SMS (Twilio) e WhatsApp (Meta, Modelo
 aprovado) na Ordem de Canais, com
 Retentativa de Falha temporária e fallback para o próximo Canal, sem duplicar
 em reenvio (RN-1, RN-2, RN-3, RN-4, RN-7); Avisos de status atualizam a Tentativa e o
-Sistema de origem consulta o resultado (RN-5).
+Sistema de origem consulta o resultado (RN-5); Canal em Opt-out é pulado no
+pedido, no fallback e no envio (RN-8); o worker anonimiza as Notificações finalizadas
+depois do prazo de retenção (RN-9).
 
 ## Telas / entradas
 | Rota | Tela | Arquivo |
@@ -20,7 +22,9 @@ Sistema de origem consulta o resultado (RN-5).
 | `GET /healthz` | — (healthcheck do quadlet) | `internal/adaptadores/entrada/http/servidor.go:33` |
 | `GET /v1/notificacoes/{id}` | — (consulta do dono, REQ-14) | `internal/adaptadores/entrada/http/servidor.go` |
 | `POST /webhooks/{sendgrid,twilio,whatsapp}`, `GET /webhooks/whatsapp` | — (públicos, Aviso de status assinado, REQ-12) | `internal/adaptadores/entrada/webhooks/` |
+| `POST`/`DELETE /v1/opt-outs` | — (Opt-out por contato + Canal, REQ-15) | `internal/adaptadores/entrada/http/servidor.go` |
 | worker (fila no Postgres) | — | `internal/adaptadores/entrada/worker/worker.go` |
+| worker (retenção, a cada 1 h) | — | `internal/adaptadores/entrada/worker/retencao.go` |
 
 ## Fluxo principal
 ```mermaid
@@ -58,7 +62,7 @@ Tabelas (schema `ominicore`, `migrations/00001_notificacoes.sql`): `templates`,
 `template_conteudos`, `notificacoes`, `idempotencia` (chave por Sistema de
 origem, `expira_em` = 24 h), `tentativas` (a fila; Retentativa = nova linha
 com `disponivel_em` no futuro; `categoria_falha` e índice por `id_provedor`, `00005_*`). Seed: Template `boas-vindas`, Email → SMS
-(`migrations/00002_*`, `00003_sms.sql`, `00004_whatsapp.sql` — versão WhatsApp com Modelo aprovado); `notificacoes.destinatario_telefone` (E.164).
+(`migrations/00002_*`, `00003_sms.sql`, `00004_whatsapp.sql` — versão WhatsApp com Modelo aprovado); `opt_outs` e `opt_out_eventos` (`00006_*`, só HMAC do contato); `notificacoes.anonimizada_em` (`00007_*`); `notificacoes.destinatario_telefone` (E.164).
 
 ## Regras de negócio encontradas (a confirmar)
 Nenhuma além das RN da especificação.
@@ -67,5 +71,5 @@ Nenhuma além das RN da especificação.
 
 ## Specs
 Specs vigentes `openspec/specs/autenticacao-origem/`, `notificacoes/` e
-`segredos/` (REQ-1 a REQ-14); histórico em `openspec/changes/archive/`
-(`2026-09-29-01-enviar-email`, `2026-09-29-02-sms-e-fallback`, `2026-09-29-03-status-por-webhook`, `2026-09-29-06-whatsapp`).
+`segredos/` (REQ-1 a REQ-19); histórico em `openspec/changes/archive/`
+(`2026-09-29-01-enviar-email`, `2026-09-29-02-sms-e-fallback`, `2026-09-29-03-status-por-webhook`, `2026-09-29-06-whatsapp`, `2026-10-02-04-opt-out`, `2026-10-02-05-retencao`).

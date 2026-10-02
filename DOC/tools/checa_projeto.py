@@ -581,8 +581,32 @@ def contrato_ambientes(d: Path):
     return None
 
 
+def doc_infraestrutura(d: Path):
+    """Infra/infraestrutura.md (ou infra/, como no contrato de ambientes)."""
+    for nome in ("Infra", "infra"):
+        f = d / nome / "infraestrutura.md"
+        if f.is_file():
+            return f
+    return None
+
+
+def pendencias_infra(f: Path) -> int:
+    """Campos 'A DEFINIR' nas tabelas de stack, onde roda e bancos."""
+    t = f.read_text(encoding="utf-8", errors="replace")
+    corte = t.find("## Detectado no repositório")
+    return (t if corte < 0 else t[:corte]).count("A DEFINIR")
+
+
 def checa_ambientes(raiz, docs, rel, modo):
     area = "ambientes"
+    if modo == "local":  # documentação da infra é julgamento: só alerta, só na checagem local
+        for d in docs:
+            inf = doc_infraestrutura(d)
+            if inf is None:
+                rel.alerta(area, f"{d.relative_to(raiz).as_posix()}/Infra/infraestrutura.md não existe — stack, onde "
+                                 "roda e onde está o banco de hml e de prod não estão documentados.")
+            elif pendencias_infra(inf):
+                rel.alerta(area, f"{inf.relative_to(raiz)} com {pendencias_infra(inf)} campo(s) 'A DEFINIR'.")
     amb = None
     for d in docs:
         amb = contrato_ambientes(d)

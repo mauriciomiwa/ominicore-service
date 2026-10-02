@@ -70,6 +70,13 @@ func (r Remetente) Enviar(ctx context.Context, para string, c dominio.ConteudoCa
 	return classificar(resp)
 }
 
+// Códigos de erro do Twilio que decidem a categoria.
+// https://www.twilio.com/docs/api/errors
+const (
+	codigoNumeroInvalido = 21211
+	codigoSTOP           = 21610
+)
+
 // resposta cobre o sucesso (sid) e o erro (code, message) do Twilio.
 type resposta struct {
 	SID     string `json:"sid"`
@@ -84,5 +91,12 @@ func classificar(resp *http.Response) dominio.ResultadoEnvio {
 	if resp.StatusCode >= 300 {
 		motivo = fmt.Sprintf("twilio %d/%d: %s", resp.StatusCode, r.Code, r.Message)
 	}
-	return provedor.Classificar(resp.StatusCode, motivo, r.SID)
+	res := provedor.Classificar(resp.StatusCode, motivo, r.SID)
+	switch r.Code {
+	case codigoSTOP: // o Destinatário respondeu STOP: Opt-out (REQ-16)
+		res.Tipo, res.Categoria = dominio.FalhaDefinitiva, dominio.FalhaOptOut
+	case codigoNumeroInvalido:
+		res.Categoria = dominio.FalhaContatoInvalido
+	}
+	return res
 }

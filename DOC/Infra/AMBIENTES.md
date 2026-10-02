@@ -57,7 +57,8 @@ não enxerga o schema `ominicore`, e nenhum dos dois enxerga os schemas alheios.
 - **Onde ficam os valores:** OpenBao (`kv/<prefixo>/postgres`, `kv/<prefixo>/sendgrid`,
   `kv/<prefixo>/twilio` — API Key + Messaging Service, `kv/<prefixo>/whatsapp` —
   token de System User + `phone_number_id`, `kv/<prefixo>/webhooks` — chave pública
-  do SendGrid, Auth Token do Twilio, App Secret e verify token da Meta);
+  do SendGrid, Auth Token do Twilio, App Secret e verify token da Meta,
+  `kv/<prefixo>/optout` — chave do HMAC dos Opt-outs, **permanente**, uma por ambiente);
   client secret do Keycloak (`ominicore-app`) como podman secret no host (ADR 0002).
 - **Quem pode ler/escrever valor de prod:** escrever — só o dono (Mauricio
   Miwa), com token de admin do OpenBao; ler — só o app, pela role `jwt` presa
@@ -75,6 +76,7 @@ não enxerga o schema `ominicore`, e nenhum dos dois enxerga os schemas alheios.
 | `OMINICORE_BAO_AUTH_MOUNT` | `jwt` | `jwt-ominicore-hml` | `jwt-ominicore` | um mount `jwt` aceita um só emissor (realm) |
 | `OMINICORE_BAO_ROLE` | `ominicore` | `ominicore-hml` | `ominicore` | policy por ambiente |
 | `OMINICORE_REDIS_PASSWORD` | vazio | podman secret `redis-password` | idem | Redis do aviva2.0 com `requirepass` |
+| `OMINICORE_RETENCAO_DIAS` | `30` | `30` | `30` | igual nos três: o prazo é regra de negócio (RN-9), não de ambiente |
 | `OMINICORE_WEBHOOK_URL` | vazio | `https://notify-hml.flipapi.com.br` | `https://notify.flipapi.com.br` | origem que o Twilio assina e usa na `StatusCallback` |
 | credenciais SendGrid/Twilio/WhatsApp | inválidas/teste | sandbox (WhatsApp: número de teste da Meta) | produção | hml nunca envia a pessoa real |
 

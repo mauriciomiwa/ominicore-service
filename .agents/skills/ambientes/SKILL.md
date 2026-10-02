@@ -27,6 +27,12 @@ primeira entrega é criá-lo com `references/AMBIENTES-template.md`,
 **perguntando** cada campo. Sem contrato, toda ação com efeito fora da máquina
 local é tratada como prod. Campo faltando: diga qual e pergunte.
 
+Onde cada coisa está (stack, cluster, banco de hml e de prod, fila, storage,
+serviços externos): `DOC/Infra/infraestrutura.md`. Não existe? Crie com
+`references/infraestrutura-template.md` preenchendo o que o repositório mostra (manifestos,
+Docker/Compose/Nomad, migrations, `System/mapa/inventario.md`) e perguntando o
+resto. Host e path do cofre sim; senha ou string de conexão com senha nunca.
+
 ## Passo 1 — bloco de alvo antes de toda ação com efeito
 
 Deploy, `nomad job run`/`kubectl apply`, migration, seed, restore,

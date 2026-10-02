@@ -118,17 +118,26 @@ def _podar(pasta: Path):
 
 
 def ultimas_por_script(log: Path):
-    """Última execução de cada script (dict script -> detalhe)."""
-    ultimas = {}
+    """Última execução de cada script (dict script -> detalhe).
+
+    Nome sem sufixo é legado das variantes: "checa_projeto" sai quando há
+    "checa_projeto-<algo>" gravado depois (o script passou a registrar por modo,
+    e só a exceção não tratada ainda usa o nome base).
+    """
+    ultimas, ordem = {}, {}
     hist = log / "historico.jsonl"
     if not hist.is_file():
         return ultimas
-    for ln in hist.read_text(encoding="utf-8").splitlines():
+    for i, ln in enumerate(hist.read_text(encoding="utf-8").splitlines()):
         try:
             d = json.loads(ln)
         except json.JSONDecodeError:
             continue
         ultimas[d.get("script")] = d
+        ordem[d.get("script")] = i
+    for script in [s for s in ultimas if s]:
+        if any(o > ordem[script] for s, o in ordem.items() if s and s.startswith(script + "-")):
+            del ultimas[script]
     out = {}
     for script, d in ultimas.items():
         f = log / d.get("detalhe", "")

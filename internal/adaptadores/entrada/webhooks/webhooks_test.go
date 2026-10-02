@@ -55,6 +55,7 @@ func novo(t *testing.T) *ambiente {
 	webhooks.Webhooks{
 		Cred:     webhooks.Credenciais{SendGridChavePublica: pub, TwilioAuthToken: authToken, MetaAppSecret: appSecret, MetaVerifyToken: verifyToken, URLPublica: urlPublica},
 		Receptor: aplicacao.ReceiveMessageUseCase{Repo: a.repo, Log: log},
+		OptOut:   aplicacao.OptOutUseCase{Repo: a.repo},
 		Log:      log,
 	}.Registrar(mux)
 	a.h = mux
@@ -249,5 +250,20 @@ func TestChavePublicaSendGridAceitaPEMEBase64(t *testing.T) {
 	}
 	if _, err := webhooks.ChavePublicaSendGrid("local-invalida"); err == nil {
 		t.Error("chave inválida aceita")
+	}
+}
+
+func TestT49_DescadastroNoSendGridRegistraOptOutDeEmail(t *testing.T) {
+	a := novo(t)
+	rec := a.sendgrid(t, `[{"event":"unsubscribe","email":"Ana@Exemplo.com","sg_message_id":"x.y"},{"event":"spamreport","email":"bia@exemplo.com","sg_message_id":"z.w"}]`, true)
+	ana, _ := a.repo.OptOutsDe(context.Background(), dominio.Destinatario{Email: "ana@exemplo.com"})
+	bia, _ := a.repo.OptOutsDe(context.Background(), dominio.Destinatario{Email: "bia@exemplo.com"})
+	if rec.Code != http.StatusNoContent || !ana[dominio.CanalEmail] || !bia[dominio.CanalEmail] {
+		t.Fatalf("status %d, ana=%v bia=%v", rec.Code, ana, bia)
+	}
+	// sem assinatura válida, nada é registrado
+	a.sendgrid(t, `[{"event":"unsubscribe","email":"cid@exemplo.com"}]`, false)
+	if cid, _ := a.repo.OptOutsDe(context.Background(), dominio.Destinatario{Email: "cid@exemplo.com"}); cid[dominio.CanalEmail] {
+		t.Fatal("descadastro sem assinatura foi registrado")
 	}
 }

@@ -1,16 +1,17 @@
 # Estado — ominicore
 
-> Atualizado em 2026-09-29 por Mauricio Miwa + Claude (fatia 1 verificada)
+> Atualizado em 2026-10-02 por Mauricio Miwa + Claude (fatia 4 arquivada)
 
 Retrato de onde o trabalho parou, reescrito a cada fim de sessão (skill
 `passagem`, no máximo 40 linhas). É o que o próximo chat lê primeiro.
 
 ## Em curso
-- Fatias 1, 2, 3 e 6 entregues e arquivadas (REQ-1 a REQ-14, T-1 a T-44).
-- **Change `04-opt-out` aberta** (sabatina fechada): REQ-14 modificado, REQ-15 a
-  REQ-18, T-45 a T-55. Branch `fatia/04-opt-out` (a partir de `11a6c4a`), sem
-  commit. Próximo passo: `/opsx:apply 04-opt-out`.
-- Depois: fatia 5 (retenção) fecha o MVP; deploy em hml valida webhooks.
+- **MVP completo**: fatias 1 a 6 entregues e arquivadas; REQ-1 a REQ-19 vigentes,
+  T-1 a T-62 passando (integração 30/30). Nenhuma change ativa.
+- Branch `fatia/05-retencao` (a partir de `fatia/04-opt-out`, último commit
+  `ce068f8`): fatias 4 e 5 **sem commit**.
+- Próximo: commit; depois deploy em hml (runbook `deploy/aviva2/README.md`,
+  etapas 1–5b do dono) e validação real dos Provedores (to-do).
 
 ## Decisões recentes
 - Retentativa = nova linha em `tentativas` com `disponivel_em` futuro, na mesma
@@ -22,8 +23,8 @@ Retrato de onde o trabalho parou, reescrito a cada fim de sessão (skill
 - Promove-se o mesmo binário de hml para prod; só o dono escreve segredo de prod.
 
 ## Bloqueios e pendências
-- VM do Podman quebrada; o local roda no Docker (`COMPOSE="docker compose"`), mas
-  a VM do Docker tem 2 GB e o Supabase de outro projeto deixa o Keycloak sem memória.
+- Runtime local: Colima ativo (contexto `colima`); `make itest` segue o contexto.
+  VM do Podman quebrada; com Docker Desktop de 2 GB o Keycloak fica sem memória.
 - Decisões em aberto no `to-do.md` (cadastro de Templates, consulta de status,
   chave repetida com pedido diferente, entrega "pelo menos uma vez").
 

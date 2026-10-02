@@ -32,11 +32,13 @@ lint:
 test:
 	go test -race ./...
 
-# Docker respondendo: usa o Docker. Senão, o socket da VM do Podman.
+# Docker respondendo: usa o socket do contexto ativo (Docker Desktop, Colima…) —
+# o testcontainers não lê contextos do docker CLI. Senão, a VM do Podman.
 DOCKER_OK := $(shell docker info >/dev/null 2>&1 && echo sim)
+DOCKER_SOCK := $(shell docker context inspect --format '{{.Endpoints.docker.Host}}' 2>/dev/null)
 itest:
 ifeq ($(DOCKER_OK),sim)
-	go test -race -count=1 ./internal/integracao/ -v
+	DOCKER_HOST=$(DOCKER_SOCK) TESTCONTAINERS_RYUK_DISABLED=true go test -race -count=1 ./internal/integracao/ -v
 else
 	@test -n "$(PODMAN_SOCK)" || { echo 'sem Docker nem podman machine'; exit 1; }
 	DOCKER_HOST=unix://$(PODMAN_SOCK) TESTCONTAINERS_RYUK_DISABLED=true go test -race -count=1 ./internal/integracao/ -v

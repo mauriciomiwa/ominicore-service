@@ -44,6 +44,11 @@ func (uc SendMessageUseCase) Pedir(ctx context.Context, p PedidoNotificacao) (po
 			return portas.Registro{}, fmt.Errorf("%w: %s", dominio.ErrCanalSemVersao, c)
 		}
 	}
+	optOut, err := uc.Repo.OptOutsDe(ctx, p.Destinatario)
+	if err != nil {
+		return portas.Registro{}, err
+	}
+	p.Destinatario.OptOut = optOut
 	primeiro, ok := p.Destinatario.PrimeiroComContato(ordem, 0)
 	if !ok {
 		return portas.Registro{}, dominio.ErrSemContato

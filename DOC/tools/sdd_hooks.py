@@ -135,7 +135,7 @@ def cmd_session_start(_args):
         "log.md inteiro (só a entrada do topo ou uma busca), no mapa só a página da área, nas specs só a "
         "capacidade envolvida.",
         "Ciclo de mudança de comportamento: sabatina → /opsx:propose (RN de origem) → /opsx:apply (sentinel "
-        "audita cada trecho) → openspec validate + valida_rastreabilidade → deploy pela skill ambientes → "
+        "audita o diff de cada tarefa) → openspec validate + valida_rastreabilidade → deploy pela skill ambientes → "
         "/opsx:archive → passagem ao encerrar.",
         "Garantias: o hook Stop recusa encerrar com FURO; comandos com efeito em prod pedem permissão; o "
         "pre-commit e o CI repetem as checagens.",

@@ -1,6 +1,6 @@
 # Inventário do código — ominicore
 
-> GERADO por `tools/mapeia_projeto.py` em 2026-09-29T19:48:17. Não edite: rode o script de novo.
+> GERADO por `tools/mapeia_projeto.py` em 2026-10-02T20:36:09. Não edite: rode o script de novo.
 > A interpretação (o que cada área faz, fluxos, RN candidatas) está nas outras páginas desta pasta.
 
 ## Stack
@@ -14,29 +14,33 @@
 ```mermaid
 graph LR
   cmd["cmd (2)"]
-  internal["internal (45)"]
+  internal["internal (48)"]
   migrations["migrations (1)"]
 ```
 
 | Módulo | Arquivos | Importa |
 |---|---|---|
-| `internal` | 45 | — |
+| `internal` | 48 | — |
 | `cmd` | 2 | — |
 | `migrations` | 1 | — |
 
-## Endpoints (9)
+## Endpoints (13)
 
 | Método | Caminho | Onde |
 |---|---|---|
-| GET | `/healthz` | `internal/adaptadores/entrada/http/servidor.go`:38 |
+| GET | `/healthz` | `internal/adaptadores/entrada/http/servidor.go`:39 |
 | POST | `/v1/notificacoes` | `api/openapi.yaml` (contrato) |
-| POST | `/v1/notificacoes` | `internal/adaptadores/entrada/http/servidor.go`:39 |
+| POST | `/v1/notificacoes` | `internal/adaptadores/entrada/http/servidor.go`:40 |
 | GET | `/v1/notificacoes/{id}` | `api/openapi.yaml` (contrato) |
-| GET | `/v1/notificacoes/{id}` | `internal/adaptadores/entrada/http/servidor.go`:40 |
-| POST | `/webhooks/sendgrid` | `internal/adaptadores/entrada/webhooks/webhooks.go`:49 |
-| POST | `/webhooks/twilio` | `internal/adaptadores/entrada/webhooks/webhooks.go`:50 |
-| GET | `/webhooks/whatsapp` | `internal/adaptadores/entrada/webhooks/webhooks.go`:51 |
-| POST | `/webhooks/whatsapp` | `internal/adaptadores/entrada/webhooks/webhooks.go`:52 |
+| GET | `/v1/notificacoes/{id}` | `internal/adaptadores/entrada/http/servidor.go`:41 |
+| DELETE | `/v1/opt-outs` | `api/openapi.yaml` (contrato) |
+| DELETE | `/v1/opt-outs` | `internal/adaptadores/entrada/http/servidor.go`:43 |
+| POST | `/v1/opt-outs` | `api/openapi.yaml` (contrato) |
+| POST | `/v1/opt-outs` | `internal/adaptadores/entrada/http/servidor.go`:42 |
+| POST | `/webhooks/sendgrid` | `internal/adaptadores/entrada/webhooks/webhooks.go`:55 |
+| POST | `/webhooks/twilio` | `internal/adaptadores/entrada/webhooks/webhooks.go`:56 |
+| GET | `/webhooks/whatsapp` | `internal/adaptadores/entrada/webhooks/webhooks.go`:57 |
+| POST | `/webhooks/whatsapp` | `internal/adaptadores/entrada/webhooks/webhooks.go`:58 |
 
 ## Chamadas HTTP de saída (2)
 
@@ -66,7 +70,7 @@ graph LR
 
 - Migrations: `migrations`
 - Schemas/modelos: —
-- Arquivos .sql: 7
+- Arquivos .sql: 9
 
 ## Infra
 

@@ -8,6 +8,7 @@ const (
 	FalhaContatoInvalido       CategoriaFalha = "contato_invalido"
 	FalhaRecusadoPeloProvedor  CategoriaFalha = "recusado_pelo_provedor"
 	FalhaRetentativasEsgotadas CategoriaFalha = "retentativas_esgotadas"
+	FalhaOptOut                CategoriaFalha = "opt_out"
 )
 
 // AvisoStatus é o Aviso de status de um Provedor já traduzido (REQ-12).

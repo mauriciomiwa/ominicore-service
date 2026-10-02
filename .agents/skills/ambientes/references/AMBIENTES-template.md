@@ -40,6 +40,9 @@ não der, toda ação com efeito fora da máquina local é tratada como prod.
 
 ## 3. Endereços e recursos
 
+Resumo para provar o alvo. O detalhe (motor e versão do banco, nome do banco,
+backup, path da credencial no cofre, onde roda) fica em `Infra/infraestrutura.md`.
+
 | Recurso | hml | prod |
 |---|---|---|
 | URL da aplicação | | |

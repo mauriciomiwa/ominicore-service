@@ -576,3 +576,227 @@ func TestT43_ConsultaNoPostgresSemContatoNemMotivo(t *testing.T) {
 		t.Fatal("sistema-b enxergou a Notificação de sistema-a")
 	}
 }
+
+var chaveOptOutTeste = []byte("chave-de-teste-com-mais-de-32-caracteres")
+
+func TestT55_TabelaDeOptOutSemContatoLegivel(t *testing.T) {
+	pool := banco(t)
+	repo := postgres.Repositorio{Pool: pool, ChaveOptOut: chaveOptOutTeste}
+	ctx := context.Background()
+	if err := repo.RegistrarOptOut(ctx, dominio.CanalEmail, "Ana@Exemplo.com", "api:sistema-a"); err != nil {
+		t.Fatal(err)
+	}
+	var despejo string
+	if err := pool.QueryRow(ctx, `SELECT coalesce(string_agg(o::text, ' '), '') FROM opt_outs o`).Scan(&despejo); err != nil {
+		t.Fatal(err)
+	}
+	var eventos string
+	_ = pool.QueryRow(ctx, `SELECT coalesce(string_agg(e::text, ' '), '') FROM opt_out_eventos e`).Scan(&eventos)
+	for _, proibido := range []string{"ana@exemplo.com", "Ana@Exemplo.com", "exemplo"} {
+		if strings.Contains(strings.ToLower(despejo+eventos), strings.ToLower(proibido)) {
+			t.Fatalf("contato em claro no banco: %s | %s", despejo, eventos)
+		}
+	}
+	oo, err := repo.OptOutsDe(ctx, dominio.Destinatario{Email: "ana@exemplo.com"})
+	if err != nil || !oo[dominio.CanalEmail] {
+		t.Fatalf("normalização: opt-out = %v err=%v", oo, err)
+	}
+	// outra chave não enxerga o Opt-out: por isso a chave é permanente
+	outra := postgres.Repositorio{Pool: pool, ChaveOptOut: []byte("outra-chave-com-mais-de-32-caracteres!!")}
+	if oo, _ := outra.OptOutsDe(ctx, dominio.Destinatario{Email: "ana@exemplo.com"}); oo[dominio.CanalEmail] {
+		t.Fatal("Opt-out visível com outra chave")
+	}
+}
+
+func TestT47_HistoricoDaRemocaoNoPostgres(t *testing.T) {
+	pool := banco(t)
+	repo := postgres.Repositorio{Pool: pool, ChaveOptOut: chaveOptOutTeste}
+	ctx := context.Background()
+	_ = repo.RegistrarOptOut(ctx, dominio.CanalSMS, "+5511999998888", "api:sistema-a")
+	_ = repo.RegistrarOptOut(ctx, dominio.CanalSMS, "+5511999998888", "api:sistema-a") // idempotente
+	if err := repo.RemoverOptOut(ctx, dominio.CanalSMS, "+5511999998888", "api:sistema-b"); err != nil {
+		t.Fatal(err)
+	}
+	var historico string
+	_ = pool.QueryRow(ctx, `SELECT string_agg(acao || ' ' || por, ', ' ORDER BY id) FROM opt_out_eventos`).Scan(&historico)
+	var restantes int
+	_ = pool.QueryRow(ctx, `SELECT count(*) FROM opt_outs`).Scan(&restantes)
+	if historico != "registrado api:sistema-a, removido api:sistema-b" || restantes != 0 {
+		t.Fatalf("histórico = %q, opt-outs restantes = %d", historico, restantes)
+	}
+}
+
+func TestT53_OptOutCarregadoNaReservaDaFila(t *testing.T) {
+	pool := banco(t)
+	repo := postgres.Repositorio{Pool: pool, ChaveOptOut: chaveOptOutTeste}
+	ctx := context.Background()
+	p := nova("sistema-a", "k-53")
+	p.Destinatario.Telefone = "+5511999998888"
+	p.OrdemCanais = []dominio.Canal{dominio.CanalSMS, dominio.CanalEmail}
+	p.PrimeiroCanal = dominio.CanalSMS
+	if _, err := repo.RegistrarNotificacao(ctx, p); err != nil {
+		t.Fatal(err)
+	}
+	_ = repo.RegistrarOptOut(ctx, dominio.CanalSMS, "+5511999998888", "api:sistema-a")
+	res, ok, err := repo.ReservarTentativa(ctx)
+	if err != nil || !ok {
+		t.Fatalf("reserva: ok=%v err=%v", ok, err)
+	}
+	if !res.Notificacao.Destinatario.OptOut[dominio.CanalSMS] || res.Notificacao.Destinatario.OptOut[dominio.CanalEmail] {
+		t.Fatalf("opt-out na reserva = %v", res.Notificacao.Destinatario.OptOut)
+	}
+	_ = res.Concluir(ctx, dominio.Decisao{Tentativa: dominio.TentativaFalhou, Notificacao: dominio.NotificacaoFalhou}, dominio.ResultadoEnvio{})
+}
+
+// finalizada cria uma Notificação com e-mail, telefone, `nome` e uma Tentativa
+// falhou com motivo, no status dado, criada há `dias` dias.
+func finalizada(t *testing.T, pool *pgxpool.Pool, chave, status string, dias int) string {
+	t.Helper()
+	ctx := context.Background()
+	repo := postgres.Repositorio{Pool: pool, ChaveOptOut: chaveOptOutTeste}
+	n := nova("sistema-a", chave)
+	n.Destinatario.Telefone = "+5511999998888"
+	n.PrimeiroCanal = dominio.CanalEmail
+	reg, err := repo.RegistrarNotificacao(ctx, n)
+	if err != nil {
+		t.Fatal(err)
+	}
+	statusTentativa := "falhou"
+	if status == "pendente" {
+		statusTentativa = "pendente"
+	}
+	_, err = pool.Exec(ctx, `UPDATE tentativas SET status = $2, motivo = 'sendgrid 400: ana@exemplo.com inválido', categoria_falha = 'contato_invalido' WHERE notificacao_id = $1`, reg.ID, statusTentativa)
+	if err == nil {
+		_, err = pool.Exec(ctx, `UPDATE notificacoes SET status = $2, criada_em = now() - make_interval(days => $3) WHERE id = $1`, reg.ID, status, dias)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	return reg.ID
+}
+
+type linhaRetencao struct {
+	Email, Telefone, Dados, Status, Motivo, Categoria string
+	Anonimizada                                       bool
+}
+
+func retencaoDe(t *testing.T, pool *pgxpool.Pool, id string) linhaRetencao {
+	t.Helper()
+	var l linhaRetencao
+	err := pool.QueryRow(context.Background(), `
+		SELECT n.destinatario_email, n.destinatario_telefone, n.dados::text, n.status, t.motivo, t.categoria_falha, n.anonimizada_em IS NOT NULL
+		FROM notificacoes n JOIN tentativas t ON t.notificacao_id = n.id WHERE n.id = $1`, id).
+		Scan(&l.Email, &l.Telefone, &l.Dados, &l.Status, &l.Motivo, &l.Categoria, &l.Anonimizada)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return l
+}
+
+func rodarRetencao(t *testing.T, pool *pgxpool.Pool, dias int) int {
+	t.Helper()
+	uc := aplicacao.RetencaoUseCase{
+		Repo:  postgres.Repositorio{Pool: pool, ChaveOptOut: chaveOptOutTeste},
+		Prazo: time.Duration(dias) * 24 * time.Hour, Log: slog.New(slog.NewTextHandler(io.Discard, nil)),
+	}
+	n, err := uc.Rodar(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return n
+}
+
+func TestT57_NotificacaoFinalizadaAlemDoPrazoEAnonimizada(t *testing.T) {
+	pool := banco(t)
+	id := finalizada(t, pool, "k-57", "entregue", 31)
+	antes := retencaoDe(t, pool, id)
+	if n := rodarRetencao(t, pool, 30); n != 1 {
+		t.Fatalf("anonimizadas = %d", n)
+	}
+	l := retencaoDe(t, pool, id)
+	if l.Email != "" || l.Telefone != "" || l.Dados != "{}" || l.Motivo != "" || !l.Anonimizada {
+		t.Fatalf("depois: %+v", l)
+	}
+	if l.Status != antes.Status || l.Categoria != antes.Categoria {
+		t.Fatalf("histórico de entrega mudou: antes %+v, depois %+v", antes, l)
+	}
+}
+
+func TestT58_NotificacaoDentroDoPrazoNaoMuda(t *testing.T) {
+	pool := banco(t)
+	id := finalizada(t, pool, "k-58", "entregue", 29)
+	antes := retencaoDe(t, pool, id)
+	rodarRetencao(t, pool, 30)
+	if depois := retencaoDe(t, pool, id); depois != antes {
+		t.Fatalf("antes %+v, depois %+v", antes, depois)
+	}
+}
+
+func TestT59_NotificacaoPendenteNaoEAnonimizada(t *testing.T) {
+	pool := banco(t)
+	id := finalizada(t, pool, "k-59", "pendente", 31)
+	if n := rodarRetencao(t, pool, 30); n != 0 {
+		t.Fatalf("anonimizadas = %d", n)
+	}
+	if l := retencaoDe(t, pool, id); l.Email == "" || l.Anonimizada {
+		t.Fatalf("pendente anonimizada: %+v", l)
+	}
+	if n, _ := (postgres.Repositorio{Pool: pool}).PendentesVencidas(context.Background(), time.Now().Add(-30*24*time.Hour)); n != 1 {
+		t.Fatalf("pendentes vencidas = %d", n)
+	}
+}
+
+func TestT60_PrazoConfiguravel(t *testing.T) {
+	pool := banco(t)
+	id := finalizada(t, pool, "k-60", "falhou", 8)
+	if n := rodarRetencao(t, pool, 30); n != 0 {
+		t.Fatalf("prazo de 30 dias anonimizou %d", n)
+	}
+	if n := rodarRetencao(t, pool, 7); n != 1 || !retencaoDe(t, pool, id).Anonimizada {
+		t.Fatalf("prazo de 7 dias: %d", n)
+	}
+}
+
+func TestT61_RodadaRepetidaEIdempotente(t *testing.T) {
+	pool := banco(t)
+	id := finalizada(t, pool, "k-61", "entregue", 31)
+	rodarRetencao(t, pool, 30)
+	var primeira time.Time
+	_ = pool.QueryRow(context.Background(), `SELECT anonimizada_em FROM notificacoes WHERE id = $1`, id).Scan(&primeira)
+	if n := rodarRetencao(t, pool, 30); n != 0 {
+		t.Fatalf("segunda rodada anonimizou %d", n)
+	}
+	var segunda time.Time
+	_ = pool.QueryRow(context.Background(), `SELECT anonimizada_em FROM notificacoes WHERE id = $1`, id).Scan(&segunda)
+	if !primeira.Equal(segunda) {
+		t.Fatalf("anonimizada_em mudou: %s → %s", primeira, segunda)
+	}
+}
+
+func TestT62_OptOutSobreviveAAnonimizacao(t *testing.T) {
+	pool := banco(t)
+	repo := postgres.Repositorio{Pool: pool, ChaveOptOut: chaveOptOutTeste}
+	ctx := context.Background()
+	_ = repo.RegistrarOptOut(ctx, dominio.CanalSMS, "+5511999998888", "api:sistema-a")
+	finalizada(t, pool, "k-62", "entregue", 31)
+	rodarRetencao(t, pool, 30)
+	oo, err := repo.OptOutsDe(ctx, dominio.Destinatario{Telefone: "+5511999998888"})
+	if err != nil || !oo[dominio.CanalSMS] {
+		t.Fatalf("opt-out depois da retenção = %v err=%v", oo, err)
+	}
+}
+
+func TestT56_ConsultaMostraQuandoFoiAnonimizada(t *testing.T) {
+	pool := banco(t)
+	id := finalizada(t, pool, "k-56", "entregue", 31)
+	repo := postgres.Repositorio{Pool: pool}
+	c, _, _ := repo.ConsultarNotificacao(context.Background(), "sistema-a", id)
+	if c.AnonimizadaEm != nil {
+		t.Fatal("anonimizada_em antes da rodada")
+	}
+	rodarRetencao(t, pool, 30)
+	c, ok, err := repo.ConsultarNotificacao(context.Background(), "sistema-a", id)
+	if err != nil || !ok || c.AnonimizadaEm == nil || len(c.Tentativas) != 1 || c.Status != dominio.NotificacaoEntregue {
+		t.Fatalf("consulta = %+v ok=%v err=%v", c, ok, err)
+	}
+}

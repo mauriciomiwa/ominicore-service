@@ -107,6 +107,29 @@ RX_REACT_ROUTE = re.compile(r"<Route\b[^>]*\bpath=['\"{`]+([^'\"}`]+)")
 
 
 # ------------------------------------------------------------------ util
+RX_ARQ_TESTE = re.compile(r"(^|/)(tests?|__tests__|spec|testdata)/|\.(test|spec)\.[a-z]+$|(^|/)test_[^/]*$|_test\.[a-z]+$")
+
+
+def eh_migration(rel: str, sufixo: str) -> bool:
+    """Arquivo de migration: "migrat" no caminho (migrate, migration, migrations) e código ou .sql.
+    Mesma regra do Sentinel (fixo Migrations) e do verifica-projeto.py."""
+    return "migrat" in rel.lower() and sufixo in EXT_CODIGO | {".sql"}
+
+
+def pastas_migrations(raiz: Path, limite: int = 20) -> list:
+    """Pastas com migrations, relativas à raiz (ignora DOC, dependências e build)."""
+    achadas = []
+    for f in arquivos(raiz):
+        r = f.relative_to(raiz).as_posix()
+        if eh_migration(r, f.suffix):
+            d = f.parent.relative_to(raiz).as_posix()
+            if d not in achadas:
+                achadas.append(d)
+                if len(achadas) >= limite:
+                    break
+    return achadas
+
+
 def arquivos(raiz: Path):
     for dirpath, dirnames, filenames in os.walk(raiz):
         dirnames[:] = sorted(d for d in dirnames if d not in IGNORAR_DIRS and not d.startswith(".")
@@ -283,7 +306,7 @@ def inventariar(raiz: Path):
             inv["infra"]["ci"].append(r)
         elif f.suffix in (".hcl", ".nomad") and re.search(r'^\s*job\s+"', ler(f) or "", re.M):
             inv["infra"]["nomad"].append(r)
-        if "migration" in r.lower() and f.suffix in EXT_CODIGO | {".sql"}:
+        if eh_migration(r, f.suffix):
             d = f.parent.relative_to(raiz).as_posix()
             if d not in inv["dados"]["migrations"]:
                 inv["dados"]["migrations"].append(d)
@@ -324,6 +347,11 @@ def inventariar(raiz: Path):
             for m in RX_IMPORT_PY.finditer(t):
                 alvos.append((m.group(1) or m.group(2)).replace(".", "/"))
         imports[r] = alvos
+
+        # arquivo de teste entra no grafo de módulos, mas não nos fatos: rotas,
+        # endpoints, chamadas, filas, crons e variáveis de um teste são fixtures
+        if RX_ARQ_TESTE.search(r):
+            continue
 
         consts = {m.group(1): m.group(3) for m in RX_CONST_STR.finditer(t)}
 

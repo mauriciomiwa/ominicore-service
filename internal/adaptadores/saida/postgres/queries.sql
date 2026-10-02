@@ -67,7 +67,7 @@ SET status = sqlc.arg(status),
 WHERE id = sqlc.arg(id);
 
 -- name: ConsultarNotificacao :one
-SELECT id, template_id, status, criada_em, atualizada_em
+SELECT id, template_id, status, criada_em, atualizada_em, anonimizada_em
 FROM notificacoes
 WHERE id = $1 AND sistema_origem = $2;
 
@@ -76,4 +76,46 @@ SELECT canal, numero, status, categoria_falha, criada_em, atualizada_em
 FROM tentativas
 WHERE notificacao_id = $1
 ORDER BY id;
+
+
+-- name: RegistrarOptOut :execrows
+INSERT INTO opt_outs (canal, contato_hmac, origem) VALUES ($1, $2, $3)
+ON CONFLICT (canal, contato_hmac) DO NOTHING;
+
+-- name: RemoverOptOut :execrows
+DELETE FROM opt_outs WHERE canal = $1 AND contato_hmac = $2;
+
+-- name: InserirEventoOptOut :exec
+INSERT INTO opt_out_eventos (canal, contato_hmac, acao, por) VALUES ($1, $2, $3, $4);
+
+-- name: CanaisEmOptOut :many
+-- o HMAC inclui o Canal, então cada hash casa com um só Canal
+SELECT canal FROM opt_outs WHERE contato_hmac = ANY(sqlc.arg(hmacs)::bytea[]);
+
+-- Anonimiza até `lote` Notificações finalizadas criadas antes de `antes` (REQ-19):
+-- SKIP LOCKED não disputa com a fila; Notificação com Tentativa pendente fica.
+-- name: AnonimizarLote :many
+WITH alvo AS (
+    SELECT n.id
+    FROM notificacoes n
+    WHERE n.anonimizada_em IS NULL
+      AND n.criada_em < sqlc.arg(antes)
+      AND n.status IN ('enviada', 'entregue', 'falhou')
+      AND NOT EXISTS (SELECT 1 FROM tentativas t WHERE t.notificacao_id = n.id AND t.status = 'pendente')
+    ORDER BY n.criada_em
+    LIMIT sqlc.arg(lote)
+    FOR UPDATE OF n SKIP LOCKED
+), motivos AS (
+    UPDATE tentativas SET motivo = ''
+    WHERE notificacao_id IN (SELECT id FROM alvo) AND motivo <> ''
+)
+UPDATE notificacoes n
+SET destinatario_email = '', destinatario_telefone = '', dados = '{}'::jsonb, anonimizada_em = now()
+FROM alvo
+WHERE n.id = alvo.id
+RETURNING n.id;
+
+-- name: ContarPendentesVencidas :one
+SELECT count(*) FROM notificacoes
+WHERE anonimizada_em IS NULL AND criada_em < $1 AND status = 'pendente';
 

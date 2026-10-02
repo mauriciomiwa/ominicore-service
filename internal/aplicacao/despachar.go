@@ -25,7 +25,13 @@ func (uc DespacharUseCase) ProcessarProxima(ctx context.Context) (bool, error) {
 	if err != nil || !ok {
 		return false, err
 	}
-	resultado := uc.enviar(ctx, res)
+	resultado, consultouProvedor := uc.enviar(ctx, res)
+	if consultouProvedor && resultado.Categoria == dominio.FalhaOptOut { // STOP no Provedor (REQ-16)
+		canal := res.Tentativa.Canal
+		if err := uc.Repo.RegistrarOptOut(ctx, canal, res.Notificacao.Destinatario.Contato(canal), "provedor:"+string(canal)); err != nil {
+			return true, fmt.Errorf("registrar opt-out do provedor: %w", err)
+		}
+	}
 	decisao := uc.Router.Decidir(res.Tentativa, res.Notificacao, resultado)
 	if err := res.Concluir(ctx, decisao, resultado); err != nil {
 		return true, fmt.Errorf("concluir tentativa %d: %w", res.Tentativa.ID, err)
@@ -40,21 +46,25 @@ func (uc DespacharUseCase) ProcessarProxima(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-func (uc DespacharUseCase) enviar(ctx context.Context, res portas.TentativaReservada) dominio.ResultadoEnvio {
+// enviar devolve o resultado e se o Provedor chegou a ser chamado.
+func (uc DespacharUseCase) enviar(ctx context.Context, res portas.TentativaReservada) (dominio.ResultadoEnvio, bool) {
 	n, canal := res.Notificacao, res.Tentativa.Canal
+	if n.Destinatario.OptOut[canal] { // Opt-out depois do pedido: não chama o Provedor (REQ-17)
+		return dominio.ResultadoEnvio{Tipo: dominio.FalhaDefinitiva, Motivo: "opt-out", Categoria: dominio.FalhaOptOut}, false
+	}
 	remetente, ok := uc.Remetentes[canal]
 	if !ok {
-		return dominio.ResultadoEnvio{Tipo: dominio.FalhaDefinitiva, Motivo: "canal sem provedor configurado: " + string(canal)}
+		return dominio.ResultadoEnvio{Tipo: dominio.FalhaDefinitiva, Motivo: "canal sem provedor configurado: " + string(canal)}, false
 	}
 	tpl, err := uc.Repo.BuscarTemplate(ctx, n.TemplateID)
 	if err != nil {
-		return dominio.ResultadoEnvio{Tipo: dominio.FalhaDefinitiva, Motivo: err.Error()}
+		return dominio.ResultadoEnvio{Tipo: dominio.FalhaDefinitiva, Motivo: err.Error()}, false
 	}
 	conteudo, err := tpl.Preencher(canal, n.Dados)
 	if err != nil {
-		return dominio.ResultadoEnvio{Tipo: dominio.FalhaDefinitiva, Motivo: err.Error()}
+		return dominio.ResultadoEnvio{Tipo: dominio.FalhaDefinitiva, Motivo: err.Error()}, false
 	}
-	return remetente.Enviar(ctx, n.Destinatario.Contato(canal), conteudo)
+	return remetente.Enviar(ctx, n.Destinatario.Contato(canal), conteudo), true
 }
 
 func descreverProxima(p *dominio.ProximaTentativa) string {

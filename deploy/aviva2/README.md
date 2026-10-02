@@ -37,6 +37,14 @@ ssh -i ~/.ssh/aviva2.0.pem ubuntu@44.209.101.158 'sudo podman ps --filter name=o
 — isto é, o login `jwt` no OpenBao, a leitura dos segredos e a conexão com o
 Aurora deram certo.
 
+## Chave do Opt-out — não rotacionar
+
+`kv/<prefixo>/optout` guarda a chave do HMAC dos contatos em Opt-out (RN-8,
+REQ-18). O OminiCore não guarda o contato em claro, então **trocar a chave faz
+todos os Opt-outs pararem de valer** — as pessoas voltariam a receber. O
+`configurar-openbao.sh` cria a chave uma vez e nunca a sobrescreve; incluí-la
+nos snapshots do OpenBao (`openbao-snapshot.timer`) é o backup dela.
+
 ## Rollback
 
 `./deploy/aviva2/publicar.sh hml --voltar` troca pelo binário anterior. As

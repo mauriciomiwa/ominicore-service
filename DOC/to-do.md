@@ -20,6 +20,10 @@ ficam no `System/backlog-mvp.md` (cada uma é uma change do OpenSpec); furos de 
 - [ ] Token permanente de System User e `phone_number_id` em `kv/<prefixo>/whatsapp` (dono).
 - [ ] Revisar a versão da Graph API fixada no adaptador antes da data de desativação da Meta.
 
+## Dados
+- [ ] Backup do Aurora `db-zillionvf-prod` tem só 2 dias de retenção (`../flip/aws/runbook-migracao-aurora-us-east-1.md`): os Opt-outs (`opt_outs`) não podem ser perdidos — decidir retenção maior ou dump próprio do schema `ominicore` (dono).
+- [ ] Conferir se a migração do Aurora para us-east-1 já aconteceu antes do primeiro deploy (muda host e latência).
+
 ## Repositório (GitHub)
 - [ ] Criar o repositório no GitHub (org/nome a definir) e fazer o primeiro push.
 - [ ] Ligar Dependabot alerts, security updates, grouped updates e allow auto-merge.

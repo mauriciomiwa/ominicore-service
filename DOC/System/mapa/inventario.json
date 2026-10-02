@@ -1,5 +1,5 @@
 {
- "gerado_em": "2026-09-29T19:48:17",
+ "gerado_em": "2026-10-02T20:36:09",
  "raiz": "ominicore",
  "stack": [
   {
@@ -15,7 +15,7 @@
    "importa": []
   },
   "internal": {
-   "arquivos": 45,
+   "arquivos": 48,
    "importa": []
   },
   "migrations": {
@@ -40,52 +40,80 @@
    "tipo": "openapi"
   },
   {
+   "metodo": "POST",
+   "path": "/v1/opt-outs",
+   "arquivo": "api/openapi.yaml",
+   "linha": 0,
+   "tipo": "openapi"
+  },
+  {
+   "metodo": "DELETE",
+   "path": "/v1/opt-outs",
+   "arquivo": "api/openapi.yaml",
+   "linha": 0,
+   "tipo": "openapi"
+  },
+  {
    "metodo": "GET",
    "path": "/healthz",
    "arquivo": "internal/adaptadores/entrada/http/servidor.go",
-   "linha": 38,
+   "linha": 39,
    "tipo": "go"
   },
   {
    "metodo": "POST",
    "path": "/v1/notificacoes",
    "arquivo": "internal/adaptadores/entrada/http/servidor.go",
-   "linha": 39,
+   "linha": 40,
    "tipo": "go"
   },
   {
    "metodo": "GET",
    "path": "/v1/notificacoes/{id}",
    "arquivo": "internal/adaptadores/entrada/http/servidor.go",
-   "linha": 40,
+   "linha": 41,
+   "tipo": "go"
+  },
+  {
+   "metodo": "POST",
+   "path": "/v1/opt-outs",
+   "arquivo": "internal/adaptadores/entrada/http/servidor.go",
+   "linha": 42,
+   "tipo": "go"
+  },
+  {
+   "metodo": "DELETE",
+   "path": "/v1/opt-outs",
+   "arquivo": "internal/adaptadores/entrada/http/servidor.go",
+   "linha": 43,
    "tipo": "go"
   },
   {
    "metodo": "POST",
    "path": "/webhooks/sendgrid",
    "arquivo": "internal/adaptadores/entrada/webhooks/webhooks.go",
-   "linha": 49,
+   "linha": 55,
    "tipo": "go"
   },
   {
    "metodo": "POST",
    "path": "/webhooks/twilio",
    "arquivo": "internal/adaptadores/entrada/webhooks/webhooks.go",
-   "linha": 50,
+   "linha": 56,
    "tipo": "go"
   },
   {
    "metodo": "GET",
    "path": "/webhooks/whatsapp",
    "arquivo": "internal/adaptadores/entrada/webhooks/webhooks.go",
-   "linha": 51,
+   "linha": 57,
    "tipo": "go"
   },
   {
    "metodo": "POST",
    "path": "/webhooks/whatsapp",
    "arquivo": "internal/adaptadores/entrada/webhooks/webhooks.go",
-   "linha": 52,
+   "linha": 58,
    "tipo": "go"
   }
  ],
@@ -152,7 +180,7 @@
    "migrations"
   ],
   "schemas": [],
-  "sql": 7
+  "sql": 9
  },
  "infra": {
   "docker": [],

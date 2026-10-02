@@ -4,6 +4,9 @@ package dominio
 
 import (
 	"errors"
+	"fmt"
+	"regexp"
+	"strings"
 	"time"
 )
 
@@ -41,6 +44,14 @@ const (
 type Destinatario struct {
 	Email    string
 	Telefone string // E.164
+	// OptOut marca os Canais em que o contato fez Opt-out (RN-8); carregado
+	// pelo repositório, nunca vindo do pedido.
+	OptOut map[Canal]bool
+}
+
+// Disponivel diz se dá para enviar por c: tem contato e não está em Opt-out.
+func (d Destinatario) Disponivel(c Canal) bool {
+	return d.Contato(c) != "" && !d.OptOut[c]
 }
 
 // Contato devolve o contato do Destinatário no Canal, ou "" se não houver.
@@ -55,10 +66,11 @@ func (d Destinatario) Contato(c Canal) string {
 }
 
 // PrimeiroComContato devolve o primeiro Canal da ordem, a partir de inicio,
-// para o qual o Destinatário tem contato (RN-2: Canal sem contato é pulado).
+// disponível para o Destinatário (RN-2: Canal sem contato é pulado; RN-8:
+// Canal em Opt-out também).
 func (d Destinatario) PrimeiroComContato(ordem []Canal, inicio int) (Canal, bool) {
 	for _, c := range ordem[min(inicio, len(ordem)):] {
-		if d.Contato(c) != "" {
+		if d.Disponivel(c) {
 			return c, true
 		}
 	}
@@ -94,4 +106,28 @@ var (
 	ErrVariavelFaltando    = errors.New("variável faltando")
 	ErrSemContato          = errors.New("destinatário sem contato para os canais")
 	ErrCanalSemVersao      = errors.New("canal sem versão no template")
+	ErrContatoInvalido     = errors.New("contato inválido para o canal")
 )
+
+var reE164 = regexp.MustCompile(`^\+[1-9]\d{7,14}$`)
+
+// NormalizarContato põe o contato na forma canônica do Opt-out (REQ-18):
+// e-mail sem espaços e em minúsculas; telefone em E.164 (já validado).
+// Canal desconhecido, e-mail sem @ ou telefone fora do E.164 = erro.
+func NormalizarContato(c Canal, contato string) (string, error) {
+	contato = strings.TrimSpace(contato)
+	switch c {
+	case CanalEmail:
+		e := strings.ToLower(contato)
+		if at := strings.IndexByte(e, '@'); at <= 0 || at == len(e)-1 || strings.ContainsAny(e, " <>") {
+			return "", fmt.Errorf("%w: e-mail", ErrContatoInvalido)
+		}
+		return e, nil
+	case CanalSMS, CanalWhatsApp:
+		if !reE164.MatchString(contato) {
+			return "", fmt.Errorf("%w: telefone fora do E.164", ErrContatoInvalido)
+		}
+		return contato, nil
+	}
+	return "", fmt.Errorf("%w: canal %q desconhecido", ErrContatoInvalido, c)
+}

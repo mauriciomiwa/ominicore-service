@@ -100,6 +100,54 @@ paths:
           $ref: "#/components/responses/Problema"
         "500":
           $ref: "#/components/responses/Problema"
+  /v1/opt-outs:
+    post:
+      operationId: registrarOptOut
+      summary: Registrar o Opt-out de um contato num Canal
+      description: |
+        Vale para toda a casa (qualquer Sistema de origem) e não expira (RN-8).
+        Idempotente. O contato vai no corpo, nunca na URL; o OminiCore guarda
+        só um HMAC dele.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OptOut"
+            example:
+              canal: sms
+              contato: "+5511999998888"
+      responses:
+        "204":
+          description: Opt-out registrado (ou já existia).
+        "400":
+          $ref: "#/components/responses/Problema"
+        "401":
+          $ref: "#/components/responses/Problema"
+        "500":
+          $ref: "#/components/responses/Problema"
+    delete:
+      operationId: removerOptOut
+      summary: Remover o Opt-out (voltar a receber)
+      description: |
+        Única forma de remover um Opt-out; o histórico guarda qual Sistema de
+        origem removeu e quando. A lista de supressão do próprio Provedor
+        (SendGrid, STOP do Twilio) pode continuar bloqueando. Idempotente.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OptOut"
+      responses:
+        "204":
+          description: Opt-out removido (ou não existia).
+        "400":
+          $ref: "#/components/responses/Problema"
+        "401":
+          $ref: "#/components/responses/Problema"
+        "500":
+          $ref: "#/components/responses/Problema"
 components:
   securitySchemes:
     keycloak:
@@ -181,6 +229,10 @@ components:
         atualizada_em:
           type: string
           format: date-time
+        anonimizada_em:
+          type: string
+          format: date-time
+          description: Quando contato, dados e motivo foram apagados pela retenção (RN-9); ausente = ainda não.
         tentativas:
           type: array
           items:
@@ -196,13 +248,24 @@ components:
                 enum: [pendente, enviada, entregue, lida, falhou]
               categoria_falha:
                 type: string
-                enum: [contato_invalido, recusado_pelo_provedor, retentativas_esgotadas]
+                enum: [contato_invalido, recusado_pelo_provedor, retentativas_esgotadas, opt_out]
               criada_em:
                 type: string
                 format: date-time
               atualizada_em:
                 type: string
                 format: date-time
+    OptOut:
+      type: object
+      additionalProperties: false
+      required: [canal, contato]
+      properties:
+        canal:
+          type: string
+          enum: [email, sms, whatsapp]
+        contato:
+          type: string
+          description: E-mail (Canal email) ou telefone E.164 (Canais sms e whatsapp).
     Problema:
       type: object
       required: [status, title]

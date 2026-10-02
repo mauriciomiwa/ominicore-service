@@ -35,6 +35,10 @@ SG_PUB=$(openssl ecparam -name prime256v1 -genkey -noout 2>/dev/null | openssl e
 "${BAO[@]}" kv put kv/ominicore/webhooks sendgrid_chave_publica="$SG_PUB" \
   twilio_auth_token="local-invalido" meta_app_secret="local-invalido" meta_verify_token="local-verify" >/dev/null
 
+# Opt-out: chave do HMAC dos contatos (só local; em hml/prod é permanente).
+"${BAO[@]}" kv get kv/ominicore/optout >/dev/null 2>&1 || \
+  "${BAO[@]}" kv put kv/ominicore/optout chave="$(openssl rand -hex 32)" >/dev/null
+
 echo ">> auth jwt com o Keycloak local (ADR 0002 — o mesmo desenho de hml/prod)"
 "${BAO[@]}" auth enable jwt >/dev/null 2>&1 || true
 # JWKS pelo backchannel (rede do compose); o iss dos tokens é o host público localhost:8081

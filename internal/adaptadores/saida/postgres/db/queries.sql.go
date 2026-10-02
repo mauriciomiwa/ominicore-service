@@ -10,6 +10,55 @@ import (
 	"time"
 )
 
+const anonimizarLote = `-- name: AnonimizarLote :many
+WITH alvo AS (
+    SELECT n.id
+    FROM notificacoes n
+    WHERE n.anonimizada_em IS NULL
+      AND n.criada_em < $1
+      AND n.status IN ('enviada', 'entregue', 'falhou')
+      AND NOT EXISTS (SELECT 1 FROM tentativas t WHERE t.notificacao_id = n.id AND t.status = 'pendente')
+    ORDER BY n.criada_em
+    LIMIT $2
+    FOR UPDATE OF n SKIP LOCKED
+), motivos AS (
+    UPDATE tentativas SET motivo = ''
+    WHERE notificacao_id IN (SELECT id FROM alvo) AND motivo <> ''
+)
+UPDATE notificacoes n
+SET destinatario_email = '', destinatario_telefone = '', dados = '{}'::jsonb, anonimizada_em = now()
+FROM alvo
+WHERE n.id = alvo.id
+RETURNING n.id
+`
+
+type AnonimizarLoteParams struct {
+	Antes time.Time
+	Lote  int32
+}
+
+// Anonimiza até `lote` Notificações finalizadas criadas antes de `antes` (REQ-19):
+// SKIP LOCKED não disputa com a fila; Notificação com Tentativa pendente fica.
+func (q *Queries) AnonimizarLote(ctx context.Context, arg AnonimizarLoteParams) ([]string, error) {
+	rows, err := q.db.Query(ctx, anonimizarLote, arg.Antes, arg.Lote)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const aplicarAviso = `-- name: AplicarAviso :exec
 UPDATE tentativas
 SET status = $1,
@@ -120,6 +169,31 @@ func (q *Queries) BuscarTemplate(ctx context.Context, id string) ([]BuscarTempla
 	return items, nil
 }
 
+const canaisEmOptOut = `-- name: CanaisEmOptOut :many
+SELECT canal FROM opt_outs WHERE contato_hmac = ANY($1::bytea[])
+`
+
+// o HMAC inclui o Canal, então cada hash casa com um só Canal
+func (q *Queries) CanaisEmOptOut(ctx context.Context, hmacs [][]byte) ([]string, error) {
+	rows, err := q.db.Query(ctx, canaisEmOptOut, hmacs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var canal string
+		if err := rows.Scan(&canal); err != nil {
+			return nil, err
+		}
+		items = append(items, canal)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const concluirTentativa = `-- name: ConcluirTentativa :exec
 UPDATE tentativas
 SET status = $2, motivo = $3, id_provedor = $4, categoria_falha = $5, atualizada_em = now()
@@ -146,7 +220,7 @@ func (q *Queries) ConcluirTentativa(ctx context.Context, arg ConcluirTentativaPa
 }
 
 const consultarNotificacao = `-- name: ConsultarNotificacao :one
-SELECT id, template_id, status, criada_em, atualizada_em
+SELECT id, template_id, status, criada_em, atualizada_em, anonimizada_em
 FROM notificacoes
 WHERE id = $1 AND sistema_origem = $2
 `
@@ -157,11 +231,12 @@ type ConsultarNotificacaoParams struct {
 }
 
 type ConsultarNotificacaoRow struct {
-	ID           string
-	TemplateID   string
-	Status       string
-	CriadaEm     time.Time
-	AtualizadaEm time.Time
+	ID            string
+	TemplateID    string
+	Status        string
+	CriadaEm      time.Time
+	AtualizadaEm  time.Time
+	AnonimizadaEm *time.Time
 }
 
 func (q *Queries) ConsultarNotificacao(ctx context.Context, arg ConsultarNotificacaoParams) (ConsultarNotificacaoRow, error) {
@@ -173,8 +248,42 @@ func (q *Queries) ConsultarNotificacao(ctx context.Context, arg ConsultarNotific
 		&i.Status,
 		&i.CriadaEm,
 		&i.AtualizadaEm,
+		&i.AnonimizadaEm,
 	)
 	return i, err
+}
+
+const contarPendentesVencidas = `-- name: ContarPendentesVencidas :one
+SELECT count(*) FROM notificacoes
+WHERE anonimizada_em IS NULL AND criada_em < $1 AND status = 'pendente'
+`
+
+func (q *Queries) ContarPendentesVencidas(ctx context.Context, criadaEm time.Time) (int64, error) {
+	row := q.db.QueryRow(ctx, contarPendentesVencidas, criadaEm)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const inserirEventoOptOut = `-- name: InserirEventoOptOut :exec
+INSERT INTO opt_out_eventos (canal, contato_hmac, acao, por) VALUES ($1, $2, $3, $4)
+`
+
+type InserirEventoOptOutParams struct {
+	Canal       string
+	ContatoHmac []byte
+	Acao        string
+	Por         string
+}
+
+func (q *Queries) InserirEventoOptOut(ctx context.Context, arg InserirEventoOptOutParams) error {
+	_, err := q.db.Exec(ctx, inserirEventoOptOut,
+		arg.Canal,
+		arg.ContatoHmac,
+		arg.Acao,
+		arg.Por,
+	)
+	return err
 }
 
 const inserirNotificacao = `-- name: InserirNotificacao :exec
@@ -271,6 +380,25 @@ func (q *Queries) ListarTentativas(ctx context.Context, notificacaoID string) ([
 	return items, nil
 }
 
+const registrarOptOut = `-- name: RegistrarOptOut :execrows
+INSERT INTO opt_outs (canal, contato_hmac, origem) VALUES ($1, $2, $3)
+ON CONFLICT (canal, contato_hmac) DO NOTHING
+`
+
+type RegistrarOptOutParams struct {
+	Canal       string
+	ContatoHmac []byte
+	Origem      string
+}
+
+func (q *Queries) RegistrarOptOut(ctx context.Context, arg RegistrarOptOutParams) (int64, error) {
+	result, err := q.db.Exec(ctx, registrarOptOut, arg.Canal, arg.ContatoHmac, arg.Origem)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const reivindicarChave = `-- name: ReivindicarChave :one
 INSERT INTO idempotencia (sistema_origem, chave, notificacao_id, expira_em)
 VALUES ($1, $2, gen_random_uuid(), now() + interval '24 hours')
@@ -292,6 +420,23 @@ func (q *Queries) ReivindicarChave(ctx context.Context, arg ReivindicarChavePara
 	var notificacao_id string
 	err := row.Scan(&notificacao_id)
 	return notificacao_id, err
+}
+
+const removerOptOut = `-- name: RemoverOptOut :execrows
+DELETE FROM opt_outs WHERE canal = $1 AND contato_hmac = $2
+`
+
+type RemoverOptOutParams struct {
+	Canal       string
+	ContatoHmac []byte
+}
+
+func (q *Queries) RemoverOptOut(ctx context.Context, arg RemoverOptOutParams) (int64, error) {
+	result, err := q.db.Exec(ctx, removerOptOut, arg.Canal, arg.ContatoHmac)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const reservarPorIDProvedor = `-- name: ReservarPorIDProvedor :one

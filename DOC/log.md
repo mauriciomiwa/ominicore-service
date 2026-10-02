@@ -3,6 +3,70 @@
 Registro cronológico de decisões e eventos, mais recente no topo. Decisão sem
 registro vira suposição de alguém daqui a seis meses.
 
+Entradas antigas: `log/arquivo-AAAA.md` (`tools/arquiva_log.py`).
+
+## 2026-10-02 — Entrega: change `05-retencao` arquivada — MVP completo
+- Arquivada em `openspec/changes/archive/2026-10-02-05-retencao/`; spec
+  `notificacoes` sincronizada: REQ-14 modificado (`anonimizada_em`) e REQ-19
+  (anonimização depois do prazo). Cobre RN-9. T-56 a T-62 passando.
+- **Todas as fatias do backlog do MVP entregues** (1 a 6): RN-1 a RN-5, RN-7,
+  RN-8 e RN-9 cobertas por REQ-1 a REQ-19 e T-1 a T-62. Ficam "depois": RN-6
+  (respostas do Destinatário) e RN-10 (janela de horário e agendamento).
+- Falta para produção: deploy em hml pelo runbook (etapas do dono) e validação
+  real dos Provedores (to-do).
+
+## 2026-10-02 — Fatia 5 (`05-retencao`) implementada: 15/15
+- Migration 00007 (`anonimizada_em`, índice parcial); `AnonimizarLote` numa
+  query (CTE com `FOR UPDATE OF n SKIP LOCKED`, limpa `motivo` das Tentativas e
+  contato/`dados` da Notificação); rodada no worker no boot e a cada 1 h, lotes
+  de 1.000 até esvaziar; pendentes vencidas viram alerta (só contagem).
+  `OMINICORE_RETENCAO_DIAS` (padrão 30) validado no boot do worker.
+  `anonimizada_em` na consulta e no contrato.
+- `make itest` passa a usar o socket do contexto ativo do docker CLI: o
+  runtime trocou para o Colima e o testcontainers não lê contextos.
+- Verde: `go test -race`, `make itest` 30/30 (Postgres 17 no Colima), lint,
+  `sqlc diff`, contrato, `openspec validate --strict`, rastreabilidade.
+  T-56 a T-62 passando. Sentinel: aprovado.
+
+## 2026-10-02 — Sabatina da fatia 05 fechada; change `05-retencao` aberta
+- Decidido (recomendações aceitas): anonimizar (não apagar) — contato, `dados`
+  e `motivo` saem; status, Canais, categoria e horários ficam, com
+  `anonimizada_em`; prazo global `OMINICORE_RETENCAO_DIAS` (padrão 30); só
+  Notificação finalizada (pendente vira alerta no log); rodada no worker a cada
+  1 h em lotes de 1.000; `GET` continua e mostra `anonimizada_em` (REQ-14
+  modificado); Aviso de status atrasado continua aplicado.
+- RN-9 detalhada; backlog da fatia 5 atualizado. Change com REQ-19, T-56 a T-62.
+
+## 2026-10-02 — `Infra/infraestrutura.md` criado (checagem nova das ferramentas SDD)
+- Stack, onde roda, bancos e recursos de hml e prod, a partir de `AMBIENTES.md`,
+  da stack e do runbook do Aurora no `flip` (PostgreSQL 15.15; backup com 2 dias
+  de retenção). Risco anotado no `to-do.md`: 2 dias é pouco para os Opt-outs.
+
+## 2026-10-02 — Entrega: change `04-opt-out` arquivada
+- Arquivada em `openspec/changes/archive/2026-10-02-04-opt-out/`; spec
+  `notificacoes` sincronizada: REQ-14 modificado (categoria `opt_out`), REQ-15
+  (API), REQ-16 (sinais do Provedor), REQ-17 (Canal pulado), REQ-18 (só HMAC).
+  Cobre RN-8. T-45 a T-55 passando.
+
+## 2026-09-30 — Fatia 4 (`04-opt-out`) implementada: 21/21
+- `Destinatario.Disponivel` (tem contato e não está em Opt-out) no mesmo ponto
+  que já pulava Canal sem contato: pedido, fallback e falha tardia respeitam o
+  Opt-out sem mudar o router; o worker confere de novo antes de chamar o
+  Provedor (categoria `opt_out`).
+- `POST`/`DELETE /v1/opt-outs` (contato no corpo); SendGrid `unsubscribe`/
+  `spamreport` e Twilio 21610 registram Opt-out; Twilio 21211 passa a marcar
+  `contato_invalido`. Migration 00006 com `opt_outs` (PK `(contato_hmac, canal)`,
+  corrigida na revisão para a busca por hmac usar o índice) e `opt_out_eventos`.
+- HMAC-SHA256(chave, canal|contato normalizado); chave de `kv/<prefixo>/optout`
+  com mínimo de 32 caracteres no boot; `configurar-openbao.sh` cria uma vez e
+  nunca sobrescreve; runbook: "não rotacionar". T-55 prova que outra chave não
+  enxerga o Opt-out.
+- Verde: `go test -race`, `make itest` 24/24, lint, `sqlc diff`, contrato,
+  `openspec validate --strict`, rastreabilidade. T-45 a T-55 passando.
+- Sentinel: aprovado com ressalvas — qualquer Sistema de origem pode remover o
+  Opt-out de outro (decidido; fica no histórico); o evento do SendGrid precisa
+  trazer `email` (validar em hml).
+
 ## 2026-09-29 — Sabatina da fatia 04 fechada; change `04-opt-out` aberta
 - Decidido (recomendações aceitas): Opt-out por API e pelos sinais do Provedor
   (SendGrid unsubscribe/spamreport, Twilio 21610); vale para toda a casa, por
@@ -157,46 +221,3 @@ registro vira suposição de alguém daqui a seis meses.
   porque o host público tem allowlist) e `OMINICORE_BAO_PREFIXO` (isola hml de
   prod no mesmo OpenBao), com testes.
 
-## 2026-09-28 — Fatia 1 (`01-enviar-email`) implementada, verificação parcial
-- Código hexagonal em Go 1.27 (módulo `ominicore`): domínio, casos de uso
-  SendMessage/Despachar, adaptadores HTTP, worker, Postgres (pgx + sqlc + goose,
-  fila `SKIP LOCKED`), SendGrid, Keycloak (JWT/JWKS com cache Redis e releitura
-  limitada a 1/min), OpenBao (falha fechada), logger `slog` com redação.
-- Dependência nova além da sabatina: `golang-jwt/jwt/v5` (a mesma do aviva-back).
-- Verde: `go test -race ./...`, `golangci-lint` (0 issues), `govulncheck`,
-  `sqlc diff`, `redocly lint`, `openspec validate --strict`, rastreabilidade.
-  Passando: T-1 a T-6, T-8, T-10, T-12, T-13, T-14 (unitários/fakes).
-- **Não verificado:** T-7, T-9, T-11 e as versões Postgres de T-4/T-10/T-12
-  estão escritos mas pulam — sem runtime de containers (VM do Podman quebrada,
-  Docker parado). `compose` local e login `jwt` no OpenBao nunca rodaram.
-  Tarefas correspondentes ficaram desmarcadas no `tasks.md`.
-- Imagens locais fixadas nas versões do aviva2.0 (Keycloak 26.3, OpenBao 2.6.3,
-  Redis 7.4). `Infra/AMBIENTES.md` criado (só local preenchido).
-
-## 2026-09-28 — Kickoff
-- Estrutura DOC/ criada (scaffold, porte: padrao — produto com vários
-  Sistemas de origem, vida longa e dados pessoais; não multi-tenant nem
-  multi-app). `openspec init --tools claude,agents` (OpenSpec 1.13.2).
-- **Inventário:** pasta greenfield (vazia). Local: `go1.27.1 darwin/arm64`,
-  `openspec`, `docker`; CLI `bao` ausente. Infra da casa em
-  `../flip/infra/aviva2.0/`: host EC2 arm64 com quadlets Podman (Traefik,
-  Keycloak, OpenBao raft + unseal KMS, Redis) na rede `aviva`; Keycloak e
-  aviva-back usam o Aurora `db-zillionvf-prod` (sa-east-1), um schema por app.
-  Molde de deploy: `../flip/aviva-back/deploy/aviva2/publicar.sh`.
-- **Negócio (Rodada 1):** serviço interno de notificações; fallback pela Ordem
-  de Canais do pedido/Template, retry só em Falha temporária; webhooks do MVP =
-  só status; ~100 mil/dia, entrega > 98%, 1ª Tentativa < 5 s; retenção de 30
-  dias configurável; credenciais só no OpenBao; MVP com Email + SMS (WhatsApp
-  depois); Templates no OminiCore; Chave de idempotência obrigatória (24 h);
-  Opt-out no OminiCore; janela de horário/agendamento depois. RN-1 a RN-10.
-- **Desenvolvimento (Rodada 2):** Go 1.27 hexagonal; auth dos Sistemas de
-  origem pelo Keycloak existente (realm `ominicore`, `client_credentials`, JWT
-  por JWKS); entrada só REST, fila no Postgres (ADR 0001), Redis para rate
-  limit e cache; Podman — quadlets no aviva2.0 com binário compilado, local
-  `podman compose` (Nomad descartado); só `/webhooks/*` público (ADR 0003);
-  schema `ominicore` no Aurora `new_aviva`; login no OpenBao via JWT do
-  Keycloak (ADR 0002); `slog` + Prometheus; retry 3× (5 s/30 s/2 min);
-  `net/http`, `pgx`+`sqlc`, `goose`, `go-redis`, `testcontainers-go`,
-  OpenAPI primeiro, GitHub Actions + Dependabot.
-- Backlog: 5 fatias + trilha de infraestrutura. Aberta só a change
-  `01-enviar-email` (REQ-1 a REQ-6, T-1 a T-14); as demais dependem dela.

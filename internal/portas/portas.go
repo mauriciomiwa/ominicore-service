@@ -52,6 +52,16 @@ type MessageRepositoryPort interface {
 	ReservarPorIDProvedor(ctx context.Context, idProvedor string) (a AvisoReservado, ok bool, err error)
 	// ConsultarNotificacao devolve a Notificação só se for do Sistema de origem.
 	ConsultarNotificacao(ctx context.Context, sistemaOrigem, id string) (c Consulta, ok bool, err error)
+	// OptOutsDe diz em quais Canais os contatos do Destinatário fizeram Opt-out.
+	OptOutsDe(ctx context.Context, d dominio.Destinatario) (map[dominio.Canal]bool, error)
+	// RegistrarOptOut e RemoverOptOut são idempotentes e guardam quem fez (REQ-15).
+	RegistrarOptOut(ctx context.Context, c dominio.Canal, contato, por string) error
+	RemoverOptOut(ctx context.Context, c dominio.Canal, contato, por string) error
+	// AnonimizarLote anonimiza até lote Notificações finalizadas criadas antes
+	// de antes (REQ-19) e devolve quantas; PendentesVencidas conta as que
+	// passaram do prazo ainda pendentes (só para o alerta).
+	AnonimizarLote(ctx context.Context, antes time.Time, lote int) (int, error)
+	PendentesVencidas(ctx context.Context, antes time.Time) (int, error)
 }
 
 // AvisoReservado é a Tentativa travada para aplicar um Aviso de status.
@@ -66,12 +76,13 @@ type AvisoReservado struct {
 // Consulta é a visão da Notificação para o Sistema de origem (REQ-14): sem
 // contato do Destinatário nem texto do motivo.
 type Consulta struct {
-	ID           string
-	TemplateID   string
-	Status       dominio.StatusNotificacao
-	CriadaEm     time.Time
-	AtualizadaEm time.Time
-	Tentativas   []TentativaConsultada
+	ID            string
+	TemplateID    string
+	Status        dominio.StatusNotificacao
+	CriadaEm      time.Time
+	AtualizadaEm  time.Time
+	AnonimizadaEm *time.Time // nil = ainda não anonimizada (REQ-14, REQ-19)
+	Tentativas    []TentativaConsultada
 }
 
 // TentativaConsultada é uma Tentativa na Consulta.

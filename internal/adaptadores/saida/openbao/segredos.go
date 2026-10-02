@@ -17,6 +17,7 @@ type Segredos struct {
 	Twilio            map[string]string // <mount>/<prefixo>/twilio: CamposTwilio
 	WhatsApp          map[string]string // <mount>/<prefixo>/whatsapp: CamposWhatsApp
 	Webhooks          map[string]string // <mount>/<prefixo>/webhooks: CamposWebhooks
+	ChaveOptOut       string            // <mount>/<prefixo>/optout: chave (HMAC dos contatos, permanente)
 }
 
 // CamposWebhooks validam a assinatura dos Avisos de status (REQ-12).
@@ -79,9 +80,13 @@ func Carregar(ctx context.Context, cfg Config) (Segredos, error) {
 	if err != nil {
 		return Segredos{}, err
 	}
+	oo, err := ler(ctx, cli, mount, prefixo+"/optout", "chave")
+	if err != nil {
+		return Segredos{}, err
+	}
 	return Segredos{
 		PostgresDSN: pg["dsn"], SendGridAPIKey: sg["api_key"], SendGridRemetente: sg["remetente"],
-		Twilio: tw, WhatsApp: wa, Webhooks: wh,
+		Twilio: tw, WhatsApp: wa, Webhooks: wh, ChaveOptOut: oo["chave"],
 	}, nil
 }
 

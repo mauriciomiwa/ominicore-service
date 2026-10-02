@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -67,7 +68,10 @@ func run(ctx context.Context, args []string, env func(string) string, saida io.W
 		return err
 	}
 	defer pool.Close()
-	repo := postgres.Repositorio{Pool: pool}
+	if len(seg.ChaveOptOut) < 32 {
+		return fmt.Errorf("%w: chave de opt-out com menos de 32 caracteres", openbao.ErrOpenBao)
+	}
+	repo := postgres.Repositorio{Pool: pool, ChaveOptOut: []byte(seg.ChaveOptOut)}
 	switch args[0] {
 	case "migrate":
 		return postgres.Migrar(ctx, pool, cfg.Schema)
@@ -95,6 +99,7 @@ type config struct {
 	WhatsAppURL   string
 	Schema        string // search_path no Postgres: ominicore (prod) ou ominicore_hml
 	WebhookURL    string // origem pública dos webhooks (https://notify-hml.flipapi.com.br); vazia no local
+	RetencaoDias  string // OMINICORE_RETENCAO_DIAS, padrão 30 (RN-9)
 }
 
 func lerConfig(env func(string) string) config {
@@ -126,6 +131,7 @@ func lerConfig(env func(string) string) config {
 		WhatsAppURL:   env("OMINICORE_WHATSAPP_URL"),
 		Schema:        padrao("OMINICORE_DB_SCHEMA", postgres.SchemaPadrao),
 		WebhookURL:    strings.TrimRight(env("OMINICORE_WEBHOOK_URL"), "/"),
+		RetencaoDias:  padrao("OMINICORE_RETENCAO_DIAS", "30"),
 	}
 }
 
@@ -177,6 +183,7 @@ func rodarAPI(ctx context.Context, cfg config, seg openbao.Segredos, repo postgr
 			Auth:      keycloak.NovoComBackchannel(cfg.KCEmissor, cfg.realmInterno(), cfg.KCPublico, redis.Cache{Cliente: rdb}),
 			Enviar:    aplicacao.SendMessageUseCase{Repo: repo},
 			Consultar: aplicacao.ConsultarUseCase{Repo: repo},
+			OptOut:    aplicacao.OptOutUseCase{Repo: repo},
 			Webhooks: webhooks.Webhooks{
 				Cred: webhooks.Credenciais{
 					SendGridChavePublica: chaveSG, TwilioAuthToken: seg.Webhooks["twilio_auth_token"],
@@ -184,6 +191,7 @@ func rodarAPI(ctx context.Context, cfg config, seg openbao.Segredos, repo postgr
 					URLPublica: cfg.WebhookURL,
 				},
 				Receptor: aplicacao.ReceiveMessageUseCase{Repo: repo, Log: log},
+				OptOut:   aplicacao.OptOutUseCase{Repo: repo},
 				Log:      log,
 			},
 			Log: log,
@@ -219,7 +227,13 @@ func rodarWorker(ctx context.Context, cfg config, seg openbao.Segredos, repo pos
 		},
 		Log: log,
 	}
-	log.Info("worker no ar", "versao", version)
+	dias, err := strconv.Atoi(cfg.RetencaoDias)
+	if err != nil || dias < 1 {
+		return fmt.Errorf("OMINICORE_RETENCAO_DIAS inválido: %q (inteiro ≥ 1)", cfg.RetencaoDias)
+	}
+	retencao := aplicacao.RetencaoUseCase{Repo: repo, Prazo: time.Duration(dias) * 24 * time.Hour, Log: log}
+	go worker.Retencao{Executor: retencao, Log: log}.Rodar(ctx)
+	log.Info("worker no ar", "versao", version, "retencao_dias", dias)
 	worker.Worker{Despachante: uc, Log: log}.Rodar(ctx)
 	return nil
 }

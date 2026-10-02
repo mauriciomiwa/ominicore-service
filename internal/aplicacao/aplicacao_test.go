@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"strings"
 	"testing"
+	"time"
 
 	"ominicore/internal/aplicacao"
 	"ominicore/internal/dominio"
@@ -226,5 +227,64 @@ func TestReceberAplicaIgnoraEDesconhece(t *testing.T) {
 	}
 	if s := repo.StatusNotificacao(repo.Historico()[0].NotificacaoID); s != dominio.NotificacaoEntregue {
 		t.Fatalf("notificação = %s", s)
+	}
+}
+
+type contaEnvios struct{ n int }
+
+func (c *contaEnvios) Enviar(context.Context, string, dominio.ConteudoCanal) dominio.ResultadoEnvio {
+	c.n++
+	return dominio.ResultadoEnvio{Tipo: dominio.Aceito, IDProvedor: "x"}
+}
+
+func TestT53_OptOutEntreOPedidoEOEnvio(t *testing.T) {
+	repo := memoria.Novo()
+	p := pedido()
+	p.Destinatario.Telefone = "+5511999998888"
+	p.Canais = []dominio.Canal{dominio.CanalSMS, dominio.CanalEmail}
+	if _, err := (aplicacao.SendMessageUseCase{Repo: repo}).Pedir(context.Background(), p); err != nil {
+		t.Fatal(err)
+	}
+	// o Opt-out chega depois do pedido e antes do worker
+	if err := (aplicacao.OptOutUseCase{Repo: repo}).Registrar(context.Background(), dominio.CanalSMS, "+5511999998888", "sistema-a"); err != nil {
+		t.Fatal(err)
+	}
+	sms, email := &contaEnvios{}, &contaEnvios{}
+	uc := aplicacao.DespacharUseCase{
+		Repo: repo, Log: slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Remetentes: map[dominio.Canal]portas.MessageSenderPort{dominio.CanalSMS: sms, dominio.CanalEmail: email},
+	}
+	if _, err := uc.ProcessarProxima(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	h := repo.Historico()
+	if sms.n != 0 || len(h) != 2 || h[0].Status != dominio.TentativaFalhou || h[0].Categoria != dominio.FalhaOptOut || h[1].Canal != dominio.CanalEmail {
+		t.Fatalf("envios SMS = %d, histórico = %+v", sms.n, h)
+	}
+}
+
+func TestRetencaoEmMemoriaSoAnonimizaFinalizadasForaDoPrazo(t *testing.T) {
+	repo := memoria.Novo()
+	ctx := context.Background()
+	p := pedido()
+	if _, err := (aplicacao.SendMessageUseCase{Repo: repo}).Pedir(ctx, p); err != nil {
+		t.Fatal(err)
+	}
+	p.ChaveIdempotencia = "abc-2"
+	if _, err := (aplicacao.SendMessageUseCase{Repo: repo}).Pedir(ctx, p); err != nil { // fica pendente
+		t.Fatal(err)
+	}
+	repo.MarcarAceita(0, "msg-1")
+	repo.Envelhecer(31 * 24 * time.Hour)
+	uc := aplicacao.RetencaoUseCase{Repo: repo, Prazo: 30 * 24 * time.Hour, Log: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	if n, err := uc.Rodar(ctx); err != nil || n != 1 {
+		t.Fatalf("1ª rodada: %d %v", n, err)
+	}
+	if n, _ := uc.Rodar(ctx); n != 0 {
+		t.Fatalf("2ª rodada anonimizou %d", n)
+	}
+	id := repo.Historico()[0].NotificacaoID
+	if n := repo.Notificacoes[id]; n.Destinatario.Email != "" || len(n.Dados) != 0 {
+		t.Fatalf("não anonimizou: %+v", n)
 	}
 }

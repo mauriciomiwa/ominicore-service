@@ -26,6 +26,23 @@ type Notificaco struct {
 	CriadaEm             time.Time
 	AtualizadaEm         time.Time
 	DestinatarioTelefone string
+	AnonimizadaEm        *time.Time
+}
+
+type OptOut struct {
+	Canal        string
+	ContatoHmac  []byte
+	Origem       string
+	RegistradoEm time.Time
+}
+
+type OptOutEvento struct {
+	ID          int64
+	Canal       string
+	ContatoHmac []byte
+	Acao        string
+	Por         string
+	Em          time.Time
 }
 
 type Template struct {

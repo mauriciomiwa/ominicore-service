@@ -347,7 +347,7 @@ TEMPLATE_HTML = r"""<meta charset="utf-8">
   .st-em-curso .st { color: var(--g-1); border-color: var(--g-1); }
   .st-a-fazer .st { color: var(--ink-3); }
   .estado { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; }
-  .area-h h2, #situacao > h2, #visao-geral > h2, #fatos > h2 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.015em; }
+  .area-h h2, #situacao > h2, #infraestrutura > h2, #visao-geral > h2, #fatos > h2 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.015em; }
 
   .md { display: grid; gap: 12px; min-width: 0; color: var(--ink); }
   .md > * { margin: 0; }
@@ -395,6 +395,7 @@ TEMPLATE_HTML = r"""<meta charset="utf-8">
     <input class="filtro" id="filtro" type="search" placeholder="ex.: rota, tela, integração" autocomplete="off">
     <ul class="nav-top">
       <li><a href="#situacao">Situação do projeto</a></li>
+      {{NAV_INFRA}}
       <li><a href="#visao-geral">Visão geral</a></li>
       <li><a href="#fatos">Fatos do inventário</a></li>
     </ul>
@@ -404,6 +405,8 @@ TEMPLATE_HTML = r"""<meta charset="utf-8">
 
   <main>
     {{SITUACAO}}
+
+    {{INFRA}}
 
     <section id="visao-geral">
       <h2>Visão geral</h2>
@@ -513,7 +516,17 @@ stats = [("áreas", len(areas))] + [c for c in _contagens if c[1]] + \
 # parou), backlog + openspec/changes (o que foi concluído, está em curso, falta) e
 # to-do.md (aonde é preciso voltar). Nada disso é escrito à mão aqui.
 DOC_DIR = MAPA.resolve().parent.parent
-RAIZ = next((c for c in [DOC_DIR, *DOC_DIR.parents] if (c / "openspec").is_dir() or (c / ".git").exists()), DOC_DIR.parent)
+def _raiz_do_repo(doc_dir: Path) -> Path:
+    """Sobe da DOC até o repositório (para no primeiro .git; nunca lê fora dele)."""
+    for c in [doc_dir, *doc_dir.parents]:
+        if (c / ".git").exists():
+            return c
+        if (c / "openspec").is_dir():
+            return c
+    return doc_dir.parent
+
+
+RAIZ = _raiz_do_repo(DOC_DIR)
 CHANGES = RAIZ / "openspec" / "changes"
 
 
@@ -600,6 +613,22 @@ if TODO:
                     f'<div class="md"><ul>{todo_html}</ul></div>')
 situacao.append('</section>')
 SITUACAO = "".join(situacao)
+
+# Infraestrutura (stack, onde roda, bancos de hml e prod): Infra/infraestrutura.md
+INFRA_F = next((DOC_DIR / n / "infraestrutura.md" for n in ("Infra", "infra")
+                if (DOC_DIR / n / "infraestrutura.md").is_file()), None)
+if INFRA_F:
+    _, inf = sem_titulo(INFRA_F.read_text(encoding="utf-8", errors="replace"))
+    inf = re.sub(r"^\s*>.*\n(>.*\n)*", "", inf.lstrip("\n"))  # nota do modelo
+    n_def = inf.split("## Detectado no repositório")[0].count("A DEFINIR")  # mesma regra do checa_projeto
+    aviso_inf = (f'<p class="aviso">{n_def} campo(s) ainda "A DEFINIR".</p>' if n_def else "")
+    INFRA = (f'<section id="infraestrutura"><h2>Infraestrutura</h2><p class="sub">De '
+             f'<code>{html.escape(INFRA_F.relative_to(DOC_DIR).as_posix())}</code>: stack, onde roda e onde estão os '
+             f'dados de cada ambiente.</p>{aviso_inf}<div class="md">{render(inf)}</div></section>')
+else:
+    INFRA = ('<section id="infraestrutura"><h2>Infraestrutura</h2><p class="vazio">Sem <code>Infra/infraestrutura.md</code>: '
+             'peça ao Claude "documente a infraestrutura (stack, onde roda, bancos de hml e prod) com a skill ambientes".</p></section>')
+NAV_INFRA = '<li><a href="#infraestrutura">Infraestrutura</a></li>'
 if FATIAS:
     stats.insert(0, ("fatias concluídas", f"{n_ok}/{len(FATIAS)}"))
 
@@ -651,6 +680,7 @@ stats_html = "".join(f'<span><b>{v}</b> {k}</span>' for k, v in stats)
 TEMPLATE = TEMPLATE_HTML
 out = (TEMPLATE.replace("{{NAV}}", "".join(nav)).replace("{{CARDS}}", cards)
        .replace("{{VISAO}}", render(visao_corpo)).replace("{{SECOES}}", secoes).replace("{{SITUACAO}}", SITUACAO)
+       .replace("{{INFRA}}", INFRA).replace("{{NAV_INFRA}}", NAV_INFRA)
        .replace("{{STATS}}", stats_html).replace("{{DATA}}", inv["gerado_em"][:10])
        .replace("{{MODULOS}}", html.escape(modulos_mermaid))
        .replace("{{DETALHE_ROTAS}}", DETALHE_ROTAS).replace("{{DETALHE_ENDPOINTS}}", DETALHE_ENDPOINTS)

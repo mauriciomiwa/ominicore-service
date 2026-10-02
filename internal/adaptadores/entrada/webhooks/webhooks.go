@@ -37,10 +37,16 @@ type Credenciais struct {
 	URLPublica string
 }
 
+// RegistradorOptOut registra o descadastro avisado pelo Provedor (REQ-16).
+type RegistradorOptOut interface {
+	RegistrarPeloProvedor(ctx context.Context, c dominio.Canal, contato, provedor string) error
+}
+
 // Webhooks liga as rotas /webhooks/* ao Receptor.
 type Webhooks struct {
 	Cred     Credenciais
 	Receptor Receptor
+	OptOut   RegistradorOptOut // nil = descadastro do Provedor ignorado
 	Log      *slog.Logger
 }
 

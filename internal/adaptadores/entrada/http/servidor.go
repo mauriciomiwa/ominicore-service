@@ -27,6 +27,7 @@ type Servidor struct {
 	Auth      Autenticador
 	Enviar    aplicacao.SendMessageUseCase
 	Consultar aplicacao.ConsultarUseCase
+	OptOut    aplicacao.OptOutUseCase
 	// Webhooks registra /webhooks/* (públicos, assinados pelo Provedor); nil = sem rotas.
 	Webhooks interface{ Registrar(*http.ServeMux) }
 	Log      *slog.Logger
@@ -38,6 +39,8 @@ func (s Servidor) Handler() http.Handler {
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) })
 	mux.Handle("POST /v1/notificacoes", s.autenticar(http.HandlerFunc(s.pedirNotificacao)))
 	mux.Handle("GET /v1/notificacoes/{id}", s.autenticar(http.HandlerFunc(s.consultarNotificacao)))
+	mux.Handle("POST /v1/opt-outs", s.autenticar(http.HandlerFunc(s.optOut(s.OptOut.Registrar))))
+	mux.Handle("DELETE /v1/opt-outs", s.autenticar(http.HandlerFunc(s.optOut(s.OptOut.Remover))))
 	if s.Webhooks != nil {
 		s.Webhooks.Registrar(mux)
 	}
@@ -181,12 +184,13 @@ type tentativaJSON struct {
 }
 
 type consultaJSON struct {
-	ID           string          `json:"id"`
-	TemplateID   string          `json:"template_id"`
-	Status       string          `json:"status"`
-	CriadaEm     time.Time       `json:"criada_em"`
-	AtualizadaEm time.Time       `json:"atualizada_em"`
-	Tentativas   []tentativaJSON `json:"tentativas"`
+	ID            string          `json:"id"`
+	TemplateID    string          `json:"template_id"`
+	Status        string          `json:"status"`
+	CriadaEm      time.Time       `json:"criada_em"`
+	AtualizadaEm  time.Time       `json:"atualizada_em"`
+	AnonimizadaEm *time.Time      `json:"anonimizada_em,omitempty"`
+	Tentativas    []tentativaJSON `json:"tentativas"`
 }
 
 // consultarNotificacao (REQ-14): só o dono; nunca contato nem texto do motivo.
@@ -209,7 +213,8 @@ func (s Servidor) consultarNotificacao(w http.ResponseWriter, r *http.Request) {
 	}
 	resp := consultaJSON{
 		ID: consulta.ID, TemplateID: consulta.TemplateID, Status: string(consulta.Status),
-		CriadaEm: consulta.CriadaEm, AtualizadaEm: consulta.AtualizadaEm, Tentativas: []tentativaJSON{},
+		CriadaEm: consulta.CriadaEm, AtualizadaEm: consulta.AtualizadaEm, AnonimizadaEm: consulta.AnonimizadaEm,
+		Tentativas: []tentativaJSON{},
 	}
 	for _, t := range consulta.Tentativas {
 		resp.Tentativas = append(resp.Tentativas, tentativaJSON{
@@ -218,4 +223,31 @@ func (s Servidor) consultarNotificacao(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	escreverJSON(w, http.StatusOK, resp)
+}
+
+// optOut atende POST e DELETE /v1/opt-outs (REQ-15): contato no corpo, nunca na
+// URL (não vai para log); idempotente; 204.
+func (s Servidor) optOut(acao func(context.Context, dominio.Canal, string, string) error) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var p struct {
+			Canal   string `json:"canal"`
+			Contato string `json:"contato"`
+		}
+		dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<10))
+		dec.DisallowUnknownFields()
+		if err := dec.Decode(&p); err != nil {
+			problema(w, http.StatusBadRequest, "pedido inválido", "JSON com canal e contato")
+			return
+		}
+		err := acao(r.Context(), dominio.Canal(p.Canal), p.Contato, r.Context().Value(chaveOrigem{}).(string))
+		switch {
+		case errors.Is(err, dominio.ErrContatoInvalido):
+			problema(w, http.StatusBadRequest, "pedido inválido", err.Error())
+		case err != nil:
+			s.Log.ErrorContext(r.Context(), "opt-out falhou", "erro", err.Error())
+			problema(w, http.StatusInternalServerError, "erro interno", "tente de novo")
+		default:
+			w.WriteHeader(http.StatusNoContent)
+		}
+	}
 }

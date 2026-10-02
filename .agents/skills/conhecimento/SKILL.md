@@ -41,6 +41,7 @@ na `DOC/`: mora no OpenSpec, em `openspec/` na raiz do repositório — o
 | o que o sistema faz hoje (REQ, cenários) | `openspec/specs/<capacidade>/spec.md` (ou `openspec show <capacidade> --type spec`) |
 | o que está mudando agora | `openspec/changes/<change>/` (ou `openspec list`) |
 | por que uma mudança entregue foi feita | `openspec/changes/archive/<data>-<change>/proposal.md` |
+| stack, onde roda, onde está o banco de hml/prod | `DOC/…/Infra/infraestrutura.md` (identificação do ambiente: `Infra/AMBIENTES.md`) |
 | arquitetura, padrões, infra, ambientes, decisões | `DOC/` via `INDEX.md` |
 
 Spec vigente e código divergindo é informação: diga qual dos dois está

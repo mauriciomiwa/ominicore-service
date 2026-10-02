@@ -47,14 +47,17 @@ por API e pelos sinais do Provedor; contato só em HMAC.
 Cobre: RN-8 (REQ-15 a REQ-18; REQ-14 modificado)
 Depende de: Fatias 2 e 3
 Pronto quando: testes dos REQ-15 a REQ-18 passando e change arquivada.
+**Entregue em 2026-10-02** (`openspec/changes/archive/2026-10-02-04-opt-out/`).
 
 ### Fatia 5 — Retenção de 30 dias
 Change: `05-retencao`
 Valor: conteúdo e contato do Destinatário ficam ilegíveis após o prazo
-(padrão 30 dias, configurável); o Opt-out (só HMAC) não expira.
-Cobre: RN-9 (REQ-19)
-Depende de: Fatia 1
-Pronto quando: testes do REQ-19 passando e change arquivada.
+(padrão 30 dias, global e configurável) nas Notificações finalizadas; o
+histórico de entrega fica; o Opt-out (só HMAC) não expira.
+Cobre: RN-9 (REQ-19; REQ-14 modificado)
+Depende de: Fatias 1, 3 e 4
+Pronto quando: testes do REQ-19 e do REQ-14 modificado passando e change arquivada.
+**Entregue em 2026-10-02** (`openspec/changes/archive/2026-10-02-05-retencao/`).
 
 ### Fatia 6 — WhatsApp por Modelo aprovado
 Change: `06-whatsapp`

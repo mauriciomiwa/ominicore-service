@@ -202,3 +202,27 @@ func TestDecidirAvisoFalhaTardia(t *testing.T) {
 		t.Fatalf("Notificação entregue não reabre: %+v", a)
 	}
 }
+
+func TestOptOutTornaCanalIndisponivel(t *testing.T) {
+	d := Destinatario{Email: "ana@exemplo.com", Telefone: "+5511999998888", OptOut: map[Canal]bool{CanalSMS: true}}
+	if d.Disponivel(CanalSMS) || !d.Disponivel(CanalEmail) || !d.Disponivel(CanalWhatsApp) {
+		t.Fatalf("disponível: sms=%v email=%v whatsapp=%v", d.Disponivel(CanalSMS), d.Disponivel(CanalEmail), d.Disponivel(CanalWhatsApp))
+	}
+	if c, ok := d.PrimeiroComContato([]Canal{CanalSMS, CanalEmail}, 0); !ok || c != CanalEmail {
+		t.Fatalf("primeiro = %s", c)
+	}
+}
+
+func TestNormalizarContato(t *testing.T) {
+	if got, err := NormalizarContato(CanalEmail, "  Ana@Exemplo.COM "); err != nil || got != "ana@exemplo.com" {
+		t.Fatalf("e-mail: %q %v", got, err)
+	}
+	for _, c := range []struct {
+		canal   Canal
+		contato string
+	}{{CanalEmail, "sem-arroba"}, {CanalEmail, "@x.com"}, {CanalSMS, "11 99999-8888"}, {"telegram", "x"}} {
+		if _, err := NormalizarContato(c.canal, c.contato); !errors.Is(err, ErrContatoInvalido) {
+			t.Errorf("%s %q aceito", c.canal, c.contato)
+		}
+	}
+}

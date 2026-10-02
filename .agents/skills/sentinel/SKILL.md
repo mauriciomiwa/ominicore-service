@@ -17,6 +17,18 @@ regra e o arquivo exato em cada achado (`goldrules.md`, `Padroes/…`,
 `openspec/specs/…`, `openspec/changes/<change>/…`). Sem `DOC/`/goldrules:
 audite pelos princípios gerais e avise que não há padrão documentado.
 
+## Antes de ler: o que o script já prova
+
+Unidade de auditoria = o **diff da tarefa** (`git diff`), mais o contexto que
+ele exigir (a função inteira, o chamador, o teste). Não releia o que não mudou.
+
+Com as garantias SDD, rode **uma vez** `python3 <DOC>/tools/checa_projeto.py .`
+e use a saída como achado, citando a linha: ela já prova T-n sem teste,
+`openspec validate`, Dependabot (9), chave sem par hml/prod (11), mapa
+desatualizado (12) e imagem/segredo em job Nomad. Não refaça isso lendo
+arquivos. O script não julga design, nomes, resiliência nem anti-padrões
+(2, 3, 6, 9, 10): esses continuam na leitura do diff, sem atalho.
+
 ## Formato
 
 ```
