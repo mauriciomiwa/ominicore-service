@@ -28,7 +28,7 @@ _Evitar_: canal inativo, canal off, canal sem provedor
 
 **Provedor**:
 Empresa externa que executa o envio de um Canal (SendGrid para Email, Twilio
-para SMS; Meta ou UltraMsg para WhatsApp, um por ambiente).
+para SMS; Meta, UltraMsg ou Z-API para WhatsApp, um por ambiente).
 _Evitar_: canal, gateway
 
 **Ordem de Canais**:

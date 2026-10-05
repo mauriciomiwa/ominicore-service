@@ -86,6 +86,14 @@ Cobre: RN-4 (REQ-6, REQ-10 e REQ-11 modificados, REQ-21)
 Depende de: Fatia 7
 Pronto quando: T-70 a T-81 passando e change arquivada.
 
+### Fatia 9 — WhatsApp pela Z-API
+Change: `09-whatsapp-zapi`
+Valor: a Z-API vira um terceiro Provedor do WhatsApp, escolhido por ambiente
+no cofre, enviando o texto da versão WhatsApp como o UltraMsg.
+Cobre: RN-4 (REQ-6, REQ-10, REQ-11 e REQ-21 modificados)
+Depende de: Fatia 8
+Pronto quando: T-82 a T-91 passando e change arquivada.
+
 ## Trilha de infraestrutura (não é fatia)
 
 Deploy no aviva2.0 (quadlets `ominicore-api` e `ominicore-worker`, rota
