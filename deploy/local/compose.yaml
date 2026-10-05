@@ -5,7 +5,7 @@ name: ominicore
 
 services:
   postgres:
-    image: docker.io/library/postgres:17-alpine
+    image: docker.io/library/postgres:18-alpine
     environment:
       POSTGRES_DB: ominicore
       POSTGRES_USER: ominicore
