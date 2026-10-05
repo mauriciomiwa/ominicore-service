@@ -21,7 +21,8 @@ type PedidoNotificacao struct {
 
 // SendMessageUseCase aceita pedidos de Notificação (REQ-2, REQ-3).
 type SendMessageUseCase struct {
-	Repo portas.MessageRepositoryPort
+	Repo       portas.MessageRepositoryPort
+	Desligados map[dominio.Canal]bool // Canais sem credenciais no ambiente (REQ-20)
 }
 
 // Pedir valida o pedido contra o Template e registra a Notificação com a
@@ -49,8 +50,12 @@ func (uc SendMessageUseCase) Pedir(ctx context.Context, p PedidoNotificacao) (po
 		return portas.Registro{}, err
 	}
 	p.Destinatario.OptOut = optOut
+	p.Destinatario.Desligados = uc.Desligados
 	primeiro, ok := p.Destinatario.PrimeiroComContato(ordem, 0)
 	if !ok {
+		if c, desligado := p.Destinatario.PrimeiroDesligado(ordem); desligado {
+			return portas.Registro{}, dominio.CanalIndisponivel{Canal: c}
+		}
 		return portas.Registro{}, dominio.ErrSemContato
 	}
 	return uc.Repo.RegistrarNotificacao(ctx, portas.NovaNotificacao{

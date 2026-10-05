@@ -58,7 +58,11 @@ não enxerga o schema `ominicore`, e nenhum dos dois enxerga os schemas alheios.
   `kv/<prefixo>/twilio` — API Key + Messaging Service, `kv/<prefixo>/whatsapp` —
   token de System User + `phone_number_id`, `kv/<prefixo>/webhooks` — chave pública
   do SendGrid, Auth Token do Twilio, App Secret e verify token da Meta,
-  `kv/<prefixo>/optout` — chave do HMAC dos Opt-outs, **permanente**, uma por ambiente);
+  `kv/<prefixo>/optout` — chave do HMAC dos Opt-outs, **permanente**, uma por ambiente).
+  WhatsApp é opcional: sem `kv/<prefixo>/whatsapp` o Canal fica desligado (REQ-20)
+  e os campos da Meta em `webhooks` não são exigidos; com o caminho, os quatro
+  campos são obrigatórios. Liga-se com `configurar-openbao.sh <amb> --so-whatsapp`
+  e reinício de api e worker. Conferir o estado: log de boot "whatsapp desligado";
   client secret do Keycloak (`ominicore-app`) como podman secret no host (ADR 0002).
 - **Quem pode ler/escrever valor de prod:** escrever — só o dono (Mauricio
   Miwa), com token de admin do OpenBao; ler — só o app, pela role `jwt` presa

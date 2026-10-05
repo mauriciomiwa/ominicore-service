@@ -15,15 +15,21 @@ type Segredos struct {
 	SendGridAPIKey    string            // <mount>/<prefixo>/sendgrid: api_key
 	SendGridRemetente string            // <mount>/<prefixo>/sendgrid: remetente
 	Twilio            map[string]string // <mount>/<prefixo>/twilio: CamposTwilio
-	WhatsApp          map[string]string // <mount>/<prefixo>/whatsapp: CamposWhatsApp
+	WhatsApp          map[string]string // <mount>/<prefixo>/whatsapp: CamposWhatsApp; nil = Canal desligado
+	WhatsAppLigado    bool              // o caminho existe: Canal WhatsApp ligado (REQ-20)
 	Webhooks          map[string]string // <mount>/<prefixo>/webhooks: CamposWebhooks
 	ChaveOptOut       string            // <mount>/<prefixo>/optout: chave (HMAC dos contatos, permanente)
 }
 
 // CamposWebhooks validam a assinatura dos Avisos de status (REQ-12).
-var CamposWebhooks = []string{"sendgrid_chave_publica", "twilio_auth_token", "meta_app_secret", "meta_verify_token"}
+var CamposWebhooks = []string{"sendgrid_chave_publica", "twilio_auth_token"}
+
+// CamposWebhooksMeta são exigidos em <mount>/<prefixo>/webhooks só com o Canal
+// WhatsApp ligado (REQ-6, REQ-20).
+var CamposWebhooksMeta = []string{"meta_app_secret", "meta_verify_token"}
 
 // CamposWhatsApp são os campos exigidos em <mount>/<prefixo>/whatsapp (REQ-10).
+// Sem o caminho, o Canal fica desligado; com ele incompleto, o boot falha.
 var CamposWhatsApp = []string{"token", "phone_number_id"}
 
 // CamposTwilio são os campos exigidos em <mount>/<prefixo>/twilio (REQ-7).
@@ -46,7 +52,8 @@ type Config struct {
 // ErrOpenBao marca qualquer falha de acesso ao cofre: o processo não inicia.
 var ErrOpenBao = errors.New("openbao indisponível ou acesso negado")
 
-// Carregar entra no OpenBao e lê todos os segredos; falta de qualquer um é erro.
+// Carregar entra no OpenBao e lê todos os segredos; falta de qualquer um é
+// erro, salvo o caminho inteiro do WhatsApp, que só desliga o Canal.
 func Carregar(ctx context.Context, cfg Config) (Segredos, error) {
 	cli, err := entrar(ctx, cfg)
 	if err != nil {
@@ -73,10 +80,18 @@ func Carregar(ctx context.Context, cfg Config) (Segredos, error) {
 		return Segredos{}, err
 	}
 	wa, err := ler(ctx, cli, mount, prefixo+"/whatsapp", CamposWhatsApp...)
+	waLigado := err == nil
+	if errors.Is(err, bao.ErrSecretNotFound) {
+		wa, err = nil, nil
+	}
 	if err != nil {
 		return Segredos{}, err
 	}
-	wh, err := ler(ctx, cli, mount, prefixo+"/webhooks", CamposWebhooks...)
+	camposWH := CamposWebhooks
+	if waLigado {
+		camposWH = append(append([]string{}, CamposWebhooks...), CamposWebhooksMeta...)
+	}
+	wh, err := ler(ctx, cli, mount, prefixo+"/webhooks", camposWH...)
 	if err != nil {
 		return Segredos{}, err
 	}
@@ -86,7 +101,7 @@ func Carregar(ctx context.Context, cfg Config) (Segredos, error) {
 	}
 	return Segredos{
 		PostgresDSN: pg["dsn"], SendGridAPIKey: sg["api_key"], SendGridRemetente: sg["remetente"],
-		Twilio: tw, WhatsApp: wa, Webhooks: wh, ChaveOptOut: oo["chave"],
+		Twilio: tw, WhatsApp: wa, WhatsAppLigado: waLigado, Webhooks: wh, ChaveOptOut: oo["chave"],
 	}, nil
 }
 

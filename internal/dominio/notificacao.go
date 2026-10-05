@@ -47,11 +47,25 @@ type Destinatario struct {
 	// OptOut marca os Canais em que o contato fez Opt-out (RN-8); carregado
 	// pelo repositório, nunca vindo do pedido.
 	OptOut map[Canal]bool
+	// Desligados marca os Canais sem credenciais no ambiente (REQ-20);
+	// preenchido pelo caso de uso, nunca persistido.
+	Desligados map[Canal]bool
 }
 
-// Disponivel diz se dá para enviar por c: tem contato e não está em Opt-out.
+// Disponivel diz se dá para enviar por c: tem contato, não está em Opt-out e
+// o Canal não está desligado.
 func (d Destinatario) Disponivel(c Canal) bool {
-	return d.Contato(c) != "" && !d.OptOut[c]
+	return d.Contato(c) != "" && !d.OptOut[c] && !d.Desligados[c]
+}
+
+// PrimeiroDesligado devolve o primeiro Canal da ordem que está desligado.
+func (d Destinatario) PrimeiroDesligado(ordem []Canal) (Canal, bool) {
+	for _, c := range ordem {
+		if d.Desligados[c] {
+			return c, true
+		}
+	}
+	return "", false
 }
 
 // Contato devolve o contato do Destinatário no Canal, ou "" se não houver.
@@ -107,7 +121,17 @@ var (
 	ErrSemContato          = errors.New("destinatário sem contato para os canais")
 	ErrCanalSemVersao      = errors.New("canal sem versão no template")
 	ErrContatoInvalido     = errors.New("contato inválido para o canal")
+	ErrCanalIndisponivel   = errors.New("canal indisponível")
 )
+
+// CanalIndisponivel recusa o pedido sem Canal disponível em que algum Canal
+// pedido está desligado (REQ-20); errors.Is casa com ErrCanalIndisponivel.
+type CanalIndisponivel struct{ Canal Canal }
+
+func (e CanalIndisponivel) Error() string { return "canal " + string(e.Canal) + " indisponível" }
+
+// Is liga o erro ao sentinela ErrCanalIndisponivel.
+func (e CanalIndisponivel) Is(alvo error) bool { return alvo == ErrCanalIndisponivel }
 
 var reE164 = regexp.MustCompile(`^\+[1-9]\d{7,14}$`)
 

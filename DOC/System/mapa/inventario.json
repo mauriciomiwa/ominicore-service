@@ -1,5 +1,5 @@
 {
- "gerado_em": "2026-10-02T20:36:09",
+ "gerado_em": "2026-10-05T08:39:14",
  "raiz": "ominicore",
  "stack": [
   {
@@ -15,7 +15,7 @@
    "importa": []
   },
   "internal": {
-   "arquivos": 48,
+   "arquivos": 49,
    "importa": []
   },
   "migrations": {
@@ -92,28 +92,28 @@
    "metodo": "POST",
    "path": "/webhooks/sendgrid",
    "arquivo": "internal/adaptadores/entrada/webhooks/webhooks.go",
-   "linha": 55,
+   "linha": 57,
    "tipo": "go"
   },
   {
    "metodo": "POST",
    "path": "/webhooks/twilio",
    "arquivo": "internal/adaptadores/entrada/webhooks/webhooks.go",
-   "linha": 56,
+   "linha": 58,
    "tipo": "go"
   },
   {
    "metodo": "GET",
    "path": "/webhooks/whatsapp",
    "arquivo": "internal/adaptadores/entrada/webhooks/webhooks.go",
-   "linha": 57,
+   "linha": 60,
    "tipo": "go"
   },
   {
    "metodo": "POST",
    "path": "/webhooks/whatsapp",
    "arquivo": "internal/adaptadores/entrada/webhooks/webhooks.go",
-   "linha": 58,
+   "linha": 61,
    "tipo": "go"
   }
  ],

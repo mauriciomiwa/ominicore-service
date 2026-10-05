@@ -21,9 +21,10 @@ const (
 
 // ReceiveMessageUseCase aplica Avisos de status (REQ-12, REQ-13).
 type ReceiveMessageUseCase struct {
-	Repo   portas.MessageRepositoryPort
-	Router dominio.NotificationRouter
-	Log    *slog.Logger
+	Repo       portas.MessageRepositoryPort
+	Desligados map[dominio.Canal]bool // a falha tardia pula esses Canais (REQ-20)
+	Router     dominio.NotificationRouter
+	Log        *slog.Logger
 }
 
 // Receber aplica o aviso só se ele fizer a Tentativa avançar.
@@ -40,6 +41,7 @@ func (uc ReceiveMessageUseCase) Receber(ctx context.Context, a dominio.AvisoStat
 		res.Liberar(ctx)
 		return AvisoIgnorado, nil
 	}
+	res.Notificacao.Destinatario.Desligados = uc.Desligados
 	atualizacao := uc.Router.DecidirAviso(res.Tentativa, res.Notificacao, a)
 	if err := res.Aplicar(ctx, atualizacao); err != nil {
 		return AvisoIgnorado, fmt.Errorf("aplicar aviso na tentativa %d: %w", res.Tentativa.ID, err)

@@ -60,7 +60,7 @@ o binário, só aditivas. Quem pode escrever em prod: só o dono (`AMBIENTES.md`
 | Fila / broker | tabela `tentativas` (`ominicore_hml`) | tabela `tentativas` (`ominicore`) | sem broker (ADR 0001) |
 | Cache | Redis do aviva2.0 (`redis:6379`, `requirepass`) | o mesmo | só JWKS; chave inclui o realm |
 | Storage de arquivos | — | — | não usa |
-| Serviços externos | SendGrid, Twilio e Meta em sandbox | contas de produção | credenciais em `kv/<prefixo>/{sendgrid,twilio,whatsapp,webhooks}` |
+| Serviços externos | SendGrid, Twilio e Meta em sandbox | contas de produção | credenciais em `kv/<prefixo>/{sendgrid,twilio,whatsapp,webhooks}`; `whatsapp` opcional (sem ele o Canal fica desligado) |
 | Identidade e cofre | Keycloak realm `ominicore-hml`; OpenBao `kv/ominicore-hml/*` | realm `ominicore`; `kv/ominicore/*` | Keycloak e OpenBao da casa, no mesmo host |
 | Observabilidade | `slog` JSON no journald | idem | sem métricas/alerta ainda |
 

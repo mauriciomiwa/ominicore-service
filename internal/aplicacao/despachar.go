@@ -15,6 +15,7 @@ import (
 type DespacharUseCase struct {
 	Repo       portas.MessageRepositoryPort
 	Remetentes map[dominio.Canal]portas.MessageSenderPort
+	Desligados map[dominio.Canal]bool // o fallback pula esses Canais (REQ-20)
 	Router     dominio.NotificationRouter
 	Log        *slog.Logger
 }
@@ -25,6 +26,7 @@ func (uc DespacharUseCase) ProcessarProxima(ctx context.Context) (bool, error) {
 	if err != nil || !ok {
 		return false, err
 	}
+	res.Notificacao.Destinatario.Desligados = uc.Desligados
 	resultado, consultouProvedor := uc.enviar(ctx, res)
 	if consultouProvedor && resultado.Categoria == dominio.FalhaOptOut { // STOP no Provedor (REQ-16)
 		canal := res.Tentativa.Canal

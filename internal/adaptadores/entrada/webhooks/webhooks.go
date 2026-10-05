@@ -44,18 +44,22 @@ type RegistradorOptOut interface {
 
 // Webhooks liga as rotas /webhooks/* ao Receptor.
 type Webhooks struct {
-	Cred     Credenciais
-	Receptor Receptor
-	OptOut   RegistradorOptOut // nil = descadastro do Provedor ignorado
-	Log      *slog.Logger
+	Cred Credenciais
+	// WhatsAppLigado registra as rotas da Meta; desligado, elas respondem 404 (REQ-20).
+	WhatsAppLigado bool
+	Receptor       Receptor
+	OptOut         RegistradorOptOut // nil = descadastro do Provedor ignorado
+	Log            *slog.Logger
 }
 
 // Registrar põe as rotas no mux.
 func (w Webhooks) Registrar(mux *http.ServeMux) {
 	mux.HandleFunc("POST /webhooks/sendgrid", w.sendgrid)
 	mux.HandleFunc("POST /webhooks/twilio", w.twilio)
-	mux.HandleFunc("GET /webhooks/whatsapp", w.verificarMeta)
-	mux.HandleFunc("POST /webhooks/whatsapp", w.whatsapp)
+	if w.WhatsAppLigado {
+		mux.HandleFunc("GET /webhooks/whatsapp", w.verificarMeta)
+		mux.HandleFunc("POST /webhooks/whatsapp", w.whatsapp)
+	}
 }
 
 // ChavePublicaSendGrid aceita a chave do painel em PEM ou em base64 (DER).

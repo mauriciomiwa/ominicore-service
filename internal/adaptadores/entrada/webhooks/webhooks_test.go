@@ -53,10 +53,11 @@ func novo(t *testing.T) *ambiente {
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	mux := http.NewServeMux()
 	webhooks.Webhooks{
-		Cred:     webhooks.Credenciais{SendGridChavePublica: pub, TwilioAuthToken: authToken, MetaAppSecret: appSecret, MetaVerifyToken: verifyToken, URLPublica: urlPublica},
-		Receptor: aplicacao.ReceiveMessageUseCase{Repo: a.repo, Log: log},
-		OptOut:   aplicacao.OptOutUseCase{Repo: a.repo},
-		Log:      log,
+		WhatsAppLigado: true,
+		Cred:           webhooks.Credenciais{SendGridChavePublica: pub, TwilioAuthToken: authToken, MetaAppSecret: appSecret, MetaVerifyToken: verifyToken, URLPublica: urlPublica},
+		Receptor:       aplicacao.ReceiveMessageUseCase{Repo: a.repo, Log: log},
+		OptOut:         aplicacao.OptOutUseCase{Repo: a.repo},
+		Log:            log,
 	}.Registrar(mux)
 	a.h = mux
 	return a
@@ -265,5 +266,27 @@ func TestT49_DescadastroNoSendGridRegistraOptOutDeEmail(t *testing.T) {
 	a.sendgrid(t, `[{"event":"unsubscribe","email":"cid@exemplo.com"}]`, false)
 	if cid, _ := a.repo.OptOutsDe(context.Background(), dominio.Destinatario{Email: "cid@exemplo.com"}); cid[dominio.CanalEmail] {
 		t.Fatal("descadastro sem assinatura foi registrado")
+	}
+}
+
+func TestT69_WebhookDaMetaComOCanalDesligado(t *testing.T) {
+	repo := memoria.Novo()
+	mux := http.NewServeMux()
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	webhooks.Webhooks{ // WhatsAppLigado = false; o cofre não tem as credenciais da Meta
+		Cred:     webhooks.Credenciais{TwilioAuthToken: authToken, URLPublica: urlPublica},
+		Receptor: aplicacao.ReceiveMessageUseCase{Repo: repo, Log: log},
+		Log:      log,
+	}.Registrar(mux)
+	a := &ambiente{repo: repo, h: mux}
+	a.aceita(t, []dominio.Canal{dominio.CanalWhatsApp}, "wamid.1")
+	verif := a.enviar(httptest.NewRequest(http.MethodGet, "/webhooks/whatsapp?hub.mode=subscribe&hub.verify_token=&hub.challenge=12345", nil))
+	aviso := a.enviar(httptest.NewRequest(http.MethodPost, "/webhooks/whatsapp",
+		strings.NewReader(`{"entry":[{"changes":[{"value":{"statuses":[{"id":"wamid.1","status":"delivered"}]}}]}]}`)))
+	if verif.Code != http.StatusNotFound || aviso.Code != http.StatusNotFound {
+		t.Fatalf("verificação = %d, aviso = %d; quero 404", verif.Code, aviso.Code)
+	}
+	if h := repo.Historico(); h[0].Status != dominio.TentativaEnviada {
+		t.Fatalf("tentativa mudou: %+v", h[0])
 	}
 }

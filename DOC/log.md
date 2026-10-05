@@ -5,6 +5,32 @@ registro vira suposição de alguém daqui a seis meses.
 
 Entradas antigas: `log/arquivo-AAAA.md` (`tools/arquiva_log.py`).
 
+## 2026-10-05 — Entrega: change `07-whatsapp-opcional` arquivada
+- Arquivada em `openspec/changes/archive/2026-10-05-07-whatsapp-opcional/`; specs
+  sincronizadas: `segredos` REQ-6 modificado (T-63, T-64) e `notificacoes` REQ-20
+  (Canal desligado, T-65 a T-69). Cobre RN-4 e RN-9. T-63 a T-69 passando.
+- O deploy em hml não depende mais da conta Meta.
+
+## 2026-10-05 — Fatia 7 (`07-whatsapp-opcional`) implementada: 21/21
+- Sem `kv/<prefixo>/whatsapp` o Canal fica desligado (`Segredos.WhatsAppLigado`;
+  campos `meta_*` exigidos só com ele ligado); `Destinatario.Desligados` entra em
+  `Disponivel` (pedido, fallback e falha tardia); recusa `CanalIndisponivel` →
+  422; rotas da Meta só registradas com o Canal ligado; worker sem Remetente.
+- `configurar-openbao.sh`: "[s/N]", `--so-whatsapp` e `kv patch` em `webhooks`
+  (preserva `meta_*`). Runbook, AMBIENTES, infraestrutura e mapa atualizados.
+- Verde: `go test -race`, `make itest` 30/30, lint, contrato, `openspec validate
+  --strict`, rastreabilidade. T-63 a T-69 passando. Sentinel: aprovado com
+  ressalvas (sem `shellcheck` local; script não rodado contra OpenBao real).
+
+## 2026-10-05 — Decisão: WhatsApp opcional para o core ir ao ar (change `07-whatsapp-opcional`)
+- Sabatina fechada: sem `kv/<prefixo>/whatsapp` o Canal fica desligado (caminho
+  incompleto segue erro de boot); pedido só com Canais desligados → 422 "canal
+  whatsapp indisponível", Canal desligado pulado na ordem e no fallback;
+  `/webhooks/whatsapp` → 404; `configurar-openbao.sh` com "[s/N]" e `--so-whatsapp`.
+- Escopo só isto; decisões abertas do `to-do.md` ficam para depois do tráfego real.
+- RN-4 ajustada, termo "Canal desligado" no glossário, Fatia 7 no backlog.
+  Change proposta: REQ-6 modificado, REQ-20, T-63 a T-69.
+
 ## 2026-10-02 — Entrega: change `05-retencao` arquivada — MVP completo
 - Arquivada em `openspec/changes/archive/2026-10-02-05-retencao/`; spec
   `notificacoes` sincronizada: REQ-14 modificado (`anonimizada_em`) e REQ-19
@@ -195,29 +221,4 @@ Entradas antigas: `log/arquivo-AAAA.md` (`tools/arquiva_log.py`).
   REQ-5), `segredos` (REQ-6). Cobre RN-1, RN-3 (Email), RN-7 e RN-9
   (credenciais); RN-2 parcial (falha encerra; retry/fallback na fatia 02).
 - T-1 a T-14 passando (`System/plano-de-testes.md`).
-
-## 2026-09-29 — Fatia 1 verificada contra serviços reais (30/30)
-- Docker ligado: `make itest` 7/7 contra Postgres 17 (T-4, T-7 com 10 reenvios
-  concorrentes, T-9, T-10, T-11 ~0,65 s, T-12, janela de 24 h).
-- Ambiente local de ponta a ponta (`COMPOSE="docker compose" make compose-up`):
-  token real do Keycloak → 202; mesma chave → mesmo id + `Idempotent-Replayed`;
-  sem token → 401; worker enviou (SendGrid falso local, para não chamar a API
-  real) e gravou `enviada`.
-- Login `jwt` no OpenBao via Keycloak (ADR 0002) provado: `ominicore-app` entra
-  e lê `kv/ominicore/*`; `sistema-local` é recusado (`aud` ≠ `openbao`).
-- Achados só visíveis rodando, corrigidos: arquivo de realm precisa do nome do
-  realm (`ominicore-realm.json`); `bound_claims` só entra como JSON; OpenBao
-  valida o JWKS ao gravar (retry no bootstrap); Redis local na 6380 (6379 é de
-  outro projeto); `make itest` prefere o Docker; audience mapper `openbao` no
-  client `ominicore-app` (hml/prod devem espelhar).
-
-## 2026-09-29 — Contrato de ambientes (`Infra/AMBIENTES.md`) fechado
-- Dono aceitou as recomendações: realms `ominicore`/`ominicore-hml` em
-  `auth.flipapi.com.br`; webhooks em `notify(-hml).flipapi.com.br/webhooks/*`;
-  API interna `ominicore-api(-hml):8080`; schema `ominicore_hml` no mesmo
-  Aurora; cofre `kv/ominicore-hml/*` × `kv/ominicore/*`; só o dono escreve
-  segredo de prod; hml só com dado sintético; promove-se o mesmo binário.
-- Código: `OMINICORE_KC_URL` (JWKS e token pelo backchannel `http://keycloak:8080`,
-  porque o host público tem allowlist) e `OMINICORE_BAO_PREFIXO` (isola hml de
-  prod no mesmo OpenBao), com testes.
 

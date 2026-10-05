@@ -21,7 +21,7 @@ depois do prazo de retenção (RN-9).
 | `POST /v1/notificacoes` | — (API; contrato em `api/openapi.yaml`) | `internal/adaptadores/entrada/http/servidor.go:34` |
 | `GET /healthz` | — (healthcheck do quadlet) | `internal/adaptadores/entrada/http/servidor.go:33` |
 | `GET /v1/notificacoes/{id}` | — (consulta do dono, REQ-14) | `internal/adaptadores/entrada/http/servidor.go` |
-| `POST /webhooks/{sendgrid,twilio,whatsapp}`, `GET /webhooks/whatsapp` | — (públicos, Aviso de status assinado, REQ-12) | `internal/adaptadores/entrada/webhooks/` |
+| `POST /webhooks/{sendgrid,twilio,whatsapp}`, `GET /webhooks/whatsapp` | — (públicos, Aviso de status assinado, REQ-12; as rotas da Meta só existem com o WhatsApp ligado, senão 404 — REQ-20) | `internal/adaptadores/entrada/webhooks/` |
 | `POST`/`DELETE /v1/opt-outs` | — (Opt-out por contato + Canal, REQ-15) | `internal/adaptadores/entrada/http/servidor.go` |
 | worker (fila no Postgres) | — | `internal/adaptadores/entrada/worker/worker.go` |
 | worker (retenção, a cada 1 h) | — | `internal/adaptadores/entrada/worker/retencao.go` |
