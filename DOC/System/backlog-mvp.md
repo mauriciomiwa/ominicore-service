@@ -78,6 +78,14 @@ Depende de: Fatias 3 e 6
 Pronto quando: T-63 a T-69 passando e change arquivada.
 **Entregue em 2026-10-05** (`openspec/changes/archive/2026-10-05-07-whatsapp-opcional/`).
 
+### Fatia 8 — WhatsApp pelo UltraMsg
+Change: `08-whatsapp-ultramsg`
+Valor: o WhatsApp vai ao ar sem a conta Meta, por texto livre pelo UltraMsg;
+o Provedor do WhatsApp é escolhido por ambiente no cofre.
+Cobre: RN-4 (REQ-6, REQ-10 e REQ-11 modificados, REQ-21)
+Depende de: Fatia 7
+Pronto quando: T-70 a T-81 passando e change arquivada.
+
 ## Trilha de infraestrutura (não é fatia)
 
 Deploy no aviva2.0 (quadlets `ominicore-api` e `ominicore-worker`, rota

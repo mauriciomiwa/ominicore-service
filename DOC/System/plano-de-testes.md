@@ -8,7 +8,7 @@ haver dois lugares a manter. Tipo: **Exemplo** (caso concreto) ou
 **Propriedade** (invariante). Status: pendente / escrito (não rodado) /
 passando.
 
-T-1 a T-62 vigentes desde 2026-10-02 e T-63 a T-69 desde 2026-10-05 (`openspec/specs/{autenticacao-origem,notificacoes,segredos}`).
+T-1 a T-62 vigentes desde 2026-10-02 e T-63 a T-69 desde 2026-10-05 (`openspec/specs/{autenticacao-origem,notificacoes,segredos}`); T-70 a T-81 na change ativa `08-whatsapp-ultramsg`.
 
 Nome do teste em Go cita o T-n: `func TestT7_ReenvioComAMesmaChaveNaoDuplica(t *testing.T)`.
 Unitários com fakes (`internal/testes/`: repositório em memória, realm JWT,
@@ -87,3 +87,15 @@ rode com `make itest` (Docker Desktop, Colima ou Podman: usa o socket do context
 | T-67 | Exemplo | `internal/aplicacao/desligado_test.go` | passando |
 | T-68 | Exemplo | `internal/aplicacao/desligado_test.go` | passando |
 | T-69 | Exemplo | `internal/adaptadores/entrada/webhooks/webhooks_test.go` | passando |
+| T-70 | Exemplo | `internal/adaptadores/saida/openbao/segredos_test.go` · `cmd/ominicore/main_test.go` | passando (change 08 ativa) |
+| T-71 | Exemplo | `internal/adaptadores/saida/openbao/segredos_test.go` | passando (change 08 ativa) |
+| T-72 | Exemplo | `internal/adaptadores/saida/openbao/segredos_test.go` | passando (change 08 ativa) |
+| T-73 | Exemplo | `internal/adaptadores/saida/ultramsg/ultramsg_test.go` · `internal/adaptadores/entrada/worker/worker_test.go` · `internal/integracao/integracao_test.go` (Postgres) | passando (fake e Postgres; formato real da resposta a conferir em hml) |
+| T-74 | Exemplo | `internal/adaptadores/saida/ultramsg/ultramsg_test.go` · `internal/adaptadores/entrada/worker/worker_test.go` | passando (change 08 ativa) |
+| T-75 | Exemplo | `internal/adaptadores/saida/ultramsg/ultramsg_test.go` · `internal/adaptadores/entrada/worker/worker_test.go` | passando (change 08 ativa) |
+| T-76 | Exemplo | `internal/adaptadores/saida/ultramsg/ultramsg_test.go` · `internal/adaptadores/entrada/worker/worker_test.go` | passando (change 08 ativa) |
+| T-77 | Exemplo | `internal/adaptadores/saida/ultramsg/ultramsg_test.go` · `internal/adaptadores/entrada/worker/worker_test.go` | passando (change 08 ativa) |
+| T-78 | Exemplo | `internal/aplicacao/provedor_whatsapp_test.go` · `internal/adaptadores/entrada/http/servidor_test.go` | passando (change 08 ativa) |
+| T-79 | Exemplo | `internal/aplicacao/provedor_whatsapp_test.go` | passando (change 08 ativa) |
+| T-80 | Exemplo | `internal/aplicacao/provedor_whatsapp_test.go` | passando (change 08 ativa) |
+| T-81 | Exemplo | `cmd/ominicore/main_test.go` | passando (change 08 ativa) |

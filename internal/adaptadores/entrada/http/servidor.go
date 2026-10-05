@@ -154,7 +154,8 @@ func (s Servidor) responderErro(w http.ResponseWriter, r *http.Request, err erro
 		problema(w, http.StatusUnprocessableEntity, "template inexistente", err.Error())
 	case errors.Is(err, dominio.ErrCanalIndisponivel):
 		problema(w, http.StatusUnprocessableEntity, "canal indisponível", err.Error())
-	case errors.Is(err, dominio.ErrVariavelFaltando), errors.Is(err, dominio.ErrSemContato), errors.Is(err, dominio.ErrCanalSemVersao):
+	case errors.Is(err, dominio.ErrVariavelFaltando), errors.Is(err, dominio.ErrSemContato), errors.Is(err, dominio.ErrCanalSemVersao),
+		errors.Is(err, dominio.ErrVersaoWhatsAppSemForma):
 		problema(w, http.StatusUnprocessableEntity, "pedido incompleto", err.Error())
 	default:
 		s.Log.ErrorContext(r.Context(), "pedido de notificação falhou", "erro", err.Error())

@@ -226,3 +226,28 @@ func TestNormalizarContato(t *testing.T) {
 		}
 	}
 }
+
+func TestProvedorWhatsAppServeSoASuaForma(t *testing.T) {
+	soModelo := ConteudoCanal{ModeloAprovado: "boas_vindas", Idioma: "pt_BR"}
+	soTexto := ConteudoCanal{Corpo: "Olá {{nome}}"}
+	if WhatsAppMeta.Servir(soModelo) != nil || WhatsAppUltraMsg.Servir(soTexto) != nil {
+		t.Fatal("recusou a forma do próprio Provedor")
+	}
+	if err := WhatsAppUltraMsg.Servir(soModelo); !errors.Is(err, ErrVersaoWhatsAppSemForma) || err.Error() != "versão whatsapp sem texto" {
+		t.Fatalf("ultramsg sem texto: %v", err)
+	}
+	if err := WhatsAppMeta.Servir(soTexto); !errors.Is(err, ErrVersaoWhatsAppSemForma) || err.Error() != "versão whatsapp sem modelo aprovado" {
+		t.Fatalf("meta sem modelo: %v", err)
+	}
+}
+
+func TestLerProvedorWhatsApp(t *testing.T) {
+	for s, quero := range map[string]ProvedorWhatsApp{"": WhatsAppMeta, "meta": WhatsAppMeta, "ultramsg": WhatsAppUltraMsg} {
+		if p, err := LerProvedorWhatsApp(s); err != nil || p != quero {
+			t.Fatalf("%q → %q, %v", s, p, err)
+		}
+	}
+	if _, err := LerProvedorWhatsApp("zapi"); !errors.Is(err, ErrProvedorWhatsAppDesconhecido) {
+		t.Fatalf("erro = %v", err)
+	}
+}

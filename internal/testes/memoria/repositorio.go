@@ -40,7 +40,7 @@ func Novo() *Repositorio {
 	}
 }
 
-// BoasVindas espelha o seed das migrations 00002, 00003 e 00004.
+// BoasVindas espelha o seed das migrations 00002, 00003, 00004 e 00008.
 func BoasVindas() dominio.Template {
 	return dominio.Template{
 		ID:          "boas-vindas",
@@ -48,7 +48,7 @@ func BoasVindas() dominio.Template {
 		Conteudos: map[dominio.Canal]dominio.ConteudoCanal{
 			dominio.CanalEmail:    {Assunto: "Bem-vindo, {{nome}}", Corpo: "Olá {{nome}}, sua conta está pronta."},
 			dominio.CanalSMS:      {Corpo: "Olá {{nome}}, sua conta está pronta."},
-			dominio.CanalWhatsApp: {ModeloAprovado: "boas_vindas", Idioma: "pt_BR", Parametros: []string{"nome"}},
+			dominio.CanalWhatsApp: {Corpo: "Olá {{nome}}, sua conta está pronta.", ModeloAprovado: "boas_vindas", Idioma: "pt_BR", Parametros: []string{"nome"}},
 		},
 	}
 }
@@ -346,4 +346,11 @@ func (r *Repositorio) Envelhecer(d time.Duration) {
 		no.CriadaEm = no.CriadaEm.Add(-d)
 		r.Notificacoes[id] = no
 	}
+}
+
+// IDProvedor devolve o id do Provedor guardado na Tentativa i ("" se não aceita).
+func (r *Repositorio) IDProvedor(i int) string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.idProvedor[i]
 }

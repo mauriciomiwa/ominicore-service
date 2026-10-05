@@ -7,10 +7,10 @@ import (
 	"strings"
 )
 
-// ConteudoCanal é a versão do Template para um Canal. No WhatsApp o texto mora
-// na Meta: a versão referencia o Modelo aprovado (nome + idioma) e Parametros
-// lista, na ordem de {{1}}, {{2}}…, as variáveis do Template (REQ-11); depois
-// de Preencher, Parametros traz os valores.
+// ConteudoCanal é a versão do Template para um Canal. No WhatsApp ela tem uma
+// ou as duas formas (REQ-11): para a Meta, o Modelo aprovado (nome + idioma) e
+// Parametros, que lista, na ordem de {{1}}, {{2}}…, as variáveis do Template
+// (depois de Preencher, os valores); para o UltraMsg, o texto em Corpo.
 type ConteudoCanal struct {
 	Assunto        string
 	Corpo          string

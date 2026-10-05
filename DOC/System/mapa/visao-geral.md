@@ -21,7 +21,7 @@ graph LR
   APP & DESP --> PG[(Postgres ominicore)]
   DESP --> SG[SendGrid]
   DESP --> TW[Twilio]
-  DESP --> WA[Meta WhatsApp]
+  DESP --> WA[Meta ou UltraMsg WhatsApp]
   API --> KC[Keycloak JWKS]
   API --> RD[(Redis: cache JWKS)]
   API & W --> BAO[OpenBao: segredos no boot]
@@ -34,7 +34,7 @@ Camadas: `internal/dominio` (sem dependência externa) · `internal/aplicacao` e
 ## Áreas
 | Área | O que faz | Entradas (rotas/endpoints) | Depende de |
 |---|---|---|---|
-| [Envio](envio.md) | pedido de Notificação por Template e despacho por Email, SMS e WhatsApp, com Retentativa e fallback | `POST`/`GET /v1/notificacoes`, `/webhooks/*`, worker | Keycloak, OpenBao, Postgres, Redis, SendGrid, Twilio, Meta |
+| [Envio](envio.md) | pedido de Notificação por Template e despacho por Email, SMS e WhatsApp, com Retentativa e fallback | `POST`/`GET /v1/notificacoes`, `/webhooks/*`, worker | Keycloak, OpenBao, Postgres, Redis, SendGrid, Twilio, Meta, UltraMsg |
 
 ## Integrações externas
 | Sistema | Como é chamado | Onde |
@@ -44,6 +44,7 @@ Camadas: `internal/dominio` (sem dependência externa) · `internal/aplicacao` e
 | SendGrid | `POST /v3/mail/send` | `internal/adaptadores/saida/sendgrid/sendgrid.go` |
 | Twilio | `POST .../Messages.json` (API Key) | `internal/adaptadores/saida/twilio/twilio.go` |
 | Meta (WhatsApp) | `POST /v26.0/{phone_number_id}/messages` (Bearer) | `internal/adaptadores/saida/whatsapp/whatsapp.go` |
+| UltraMsg (WhatsApp) | `POST /{instance_id}/messages/chat` (token no corpo) | `internal/adaptadores/saida/ultramsg/ultramsg.go` |
 | Postgres | pgx + sqlc | `internal/adaptadores/saida/postgres/` |
 | Redis | cache do JWKS | `internal/adaptadores/saida/redis/cache.go` |
 

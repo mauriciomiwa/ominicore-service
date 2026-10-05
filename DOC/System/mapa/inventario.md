@@ -1,6 +1,6 @@
 # Inventário do código — ominicore
 
-> GERADO por `tools/mapeia_projeto.py` em 2026-10-05T08:39:14. Não edite: rode o script de novo.
+> GERADO por `tools/mapeia_projeto.py` em 2026-10-05T11:02:25. Não edite: rode o script de novo.
 > A interpretação (o que cada área faz, fluxos, RN candidatas) está nas outras páginas desta pasta.
 
 ## Stack
@@ -14,13 +14,13 @@
 ```mermaid
 graph LR
   cmd["cmd (2)"]
-  internal["internal (49)"]
+  internal["internal (54)"]
   migrations["migrations (1)"]
 ```
 
 | Módulo | Arquivos | Importa |
 |---|---|---|
-| `internal` | 49 | — |
+| `internal` | 54 | — |
 | `cmd` | 2 | — |
 | `migrations` | 1 | — |
 
@@ -37,10 +37,10 @@ graph LR
 | DELETE | `/v1/opt-outs` | `internal/adaptadores/entrada/http/servidor.go`:43 |
 | POST | `/v1/opt-outs` | `api/openapi.yaml` (contrato) |
 | POST | `/v1/opt-outs` | `internal/adaptadores/entrada/http/servidor.go`:42 |
-| POST | `/webhooks/sendgrid` | `internal/adaptadores/entrada/webhooks/webhooks.go`:57 |
-| POST | `/webhooks/twilio` | `internal/adaptadores/entrada/webhooks/webhooks.go`:58 |
-| GET | `/webhooks/whatsapp` | `internal/adaptadores/entrada/webhooks/webhooks.go`:60 |
-| POST | `/webhooks/whatsapp` | `internal/adaptadores/entrada/webhooks/webhooks.go`:61 |
+| POST | `/webhooks/sendgrid` | `internal/adaptadores/entrada/webhooks/webhooks.go`:58 |
+| POST | `/webhooks/twilio` | `internal/adaptadores/entrada/webhooks/webhooks.go`:59 |
+| GET | `/webhooks/whatsapp` | `internal/adaptadores/entrada/webhooks/webhooks.go`:61 |
+| POST | `/webhooks/whatsapp` | `internal/adaptadores/entrada/webhooks/webhooks.go`:62 |
 
 ## Chamadas HTTP de saída (2)
 
@@ -49,7 +49,7 @@ graph LR
 | POST | `/protocol/openid-connect/token` | `internal/adaptadores/saida/keycloak/token.go:17` |
 | POST | `/v3/mail/send` | `internal/adaptadores/saida/sendgrid/sendgrid.go:78` |
 
-## Variáveis de ambiente lidas no código (12)
+## Variáveis de ambiente lidas no código (15)
 
 | Variável | Declarada em .env* | Onde é lida |
 |---|---|---|
@@ -63,14 +63,17 @@ graph LR
 | `TWILIO_API_KEY_SECRET` | **não** | `deploy/local/bootstrap.sh` |
 | `TWILIO_API_KEY_SID` | **não** | `deploy/local/bootstrap.sh` |
 | `TWILIO_MESSAGING_SERVICE_SID` | **não** | `deploy/local/bootstrap.sh` |
+| `ULTRAMSG_INSTANCE_ID` | **não** | `deploy/local/bootstrap.sh` |
+| `ULTRAMSG_TOKEN` | **não** | `deploy/local/bootstrap.sh` |
 | `WHATSAPP_PHONE_NUMBER_ID` | **não** | `deploy/local/bootstrap.sh` |
+| `WHATSAPP_PROVEDOR` | **não** | `deploy/local/bootstrap.sh` |
 | `WHATSAPP_TOKEN` | **não** | `deploy/local/bootstrap.sh` |
 
 ## Dados
 
 - Migrations: `migrations`
 - Schemas/modelos: —
-- Arquivos .sql: 9
+- Arquivos .sql: 10
 
 ## Infra
 

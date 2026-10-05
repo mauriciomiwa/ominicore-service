@@ -5,6 +5,29 @@ registro vira suposição de alguém daqui a seis meses.
 
 Entradas antigas: `log/arquivo-AAAA.md` (`tools/arquiva_log.py`).
 
+## 2026-10-05 — Fatia 8 (`08-whatsapp-ultramsg`) implementada: 31/32
+- `dominio.ProvedorWhatsApp` (`meta`/`ultramsg`, `Servir`); cofre lê `provedor`
+  (ausente = meta) e exige os campos de cada um; adaptador `saida/ultramsg`
+  (form, 4096 runas, classificação tolerante, `sent:"false"` = definitiva);
+  recusa 422 pela forma no pedido; rotas da Meta só com `provedor=meta`
+  (`MetaLigada`); migration 00008 (texto do `boas-vindas`).
+- Verde: `go test -race`, `make itest` 31/31, lint, contrato, `openspec validate
+  --strict`, rastreabilidade. T-70 a T-81 passando. Sentinel: aprovado com
+  ressalvas (sem `shellcheck`; formato real da resposta do UltraMsg pendente —
+  tarefa 5.2, depende da instância de trial).
+
+## 2026-10-05 — Decisão: WhatsApp pelo UltraMsg (change `08-whatsapp-ultramsg`)
+- Sabatina fechada: Meta e UltraMsg convivem, um por ambiente, pelo campo
+  `provedor` em `kv/<prefixo>/whatsapp` (ausente = `meta`); UltraMsg envia o
+  texto da versão WhatsApp (até 4096); versão sem a forma do Provedor ativo →
+  422; sem Aviso de status do UltraMsg (Tentativa fica enviada, webhook 404);
+  Opt-out de WhatsApp só pela API; instância e número distintos em hml e prod.
+- O cliente aceitou o risco do gateway não oficial (ADR 0004).
+- Formato da resposta do UltraMsg não documentado: classificação tolerante,
+  conferir com a instância de trial antes do deploy.
+- RN-4 reescrita, glossário ("Provedor"), Fatia 8 no backlog. REQ-6/10/11
+  modificados, REQ-21, T-70 a T-81.
+
 ## 2026-10-05 — Entrega: change `07-whatsapp-opcional` arquivada
 - Arquivada em `openspec/changes/archive/2026-10-05-07-whatsapp-opcional/`; specs
   sincronizadas: `segredos` REQ-6 modificado (T-63, T-64) e `notificacoes` REQ-20

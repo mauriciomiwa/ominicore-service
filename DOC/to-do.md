@@ -15,6 +15,9 @@ ficam no `System/backlog-mvp.md` (cada uma é uma change do OpenSpec); furos de 
 - [ ] Decidir se envio duplicado na janela de queda (Provedor aceitou, commit falhou) é aceitável: hoje o despacho é "pelo menos uma vez".
 - [ ] Caminho do módulo Go (`ominicore` → `github.com/<org>/ominicore`) quando o repositório existir.
 
+## Fatia 08 — WhatsApp por UltraMsg (change `08-whatsapp-ultramsg`, 31/32; auditada em 2026-10-05: aprovado com ressalvas)
+- [x] Auditar com a sentinel todo o diff de código da change (hoje em `internal/adaptadores/saida/openbao/`, `internal/adaptadores/saida/ultramsg/` e `internal/dominio/`, e crescendo) quando a implementação fechar, e registrar o veredito. É trabalho em curso de outra sessão: auditar no meio da escrita não vale (o veredito se amarra ao conteúdo atual).
+
 ## Fatia 06 — WhatsApp
 Não bloqueia o deploy (Fatia 7): sem estes itens o core sobe com o WhatsApp
 desligado; para ligar, `configurar-openbao.sh <amb> --so-whatsapp`.

@@ -27,6 +27,7 @@ import (
 	"ominicore/internal/adaptadores/saida/redis"
 	"ominicore/internal/adaptadores/saida/sendgrid"
 	"ominicore/internal/adaptadores/saida/twilio"
+	"ominicore/internal/adaptadores/saida/ultramsg"
 	"ominicore/internal/adaptadores/saida/whatsapp"
 	"ominicore/internal/aplicacao"
 	"ominicore/internal/dominio"
@@ -99,6 +100,7 @@ type config struct {
 	SendGridURL   string
 	TwilioURL     string
 	WhatsAppURL   string
+	UltraMsgURL   string
 	Schema        string // search_path no Postgres: ominicore (prod) ou ominicore_hml
 	WebhookURL    string // origem pública dos webhooks (https://notify-hml.flipapi.com.br); vazia no local
 	RetencaoDias  string // OMINICORE_RETENCAO_DIAS, padrão 30 (RN-9)
@@ -131,6 +133,7 @@ func lerConfig(env func(string) string) config {
 		SendGridURL:   env("OMINICORE_SENDGRID_URL"),
 		TwilioURL:     env("OMINICORE_TWILIO_URL"),
 		WhatsAppURL:   env("OMINICORE_WHATSAPP_URL"),
+		UltraMsgURL:   env("OMINICORE_ULTRAMSG_URL"),
 		Schema:        padrao("OMINICORE_DB_SCHEMA", postgres.SchemaPadrao),
 		WebhookURL:    strings.TrimRight(env("OMINICORE_WEBHOOK_URL"), "/"),
 		RetencaoDias:  padrao("OMINICORE_RETENCAO_DIAS", "30"),
@@ -183,7 +186,7 @@ func rodarAPI(ctx context.Context, cfg config, seg openbao.Segredos, repo postgr
 		Addr: cfg.Endereco,
 		Handler: entradahttp.Servidor{
 			Auth:      keycloak.NovoComBackchannel(cfg.KCEmissor, cfg.realmInterno(), cfg.KCPublico, redis.Cache{Cliente: rdb}),
-			Enviar:    aplicacao.SendMessageUseCase{Repo: repo, Desligados: canaisDesligados(seg)},
+			Enviar:    aplicacao.SendMessageUseCase{Repo: repo, Desligados: canaisDesligados(seg), ProvedorWhatsApp: seg.ProvedorWhatsApp},
 			Consultar: aplicacao.ConsultarUseCase{Repo: repo},
 			OptOut:    aplicacao.OptOutUseCase{Repo: repo},
 			Webhooks: webhooks.Webhooks{
@@ -192,10 +195,10 @@ func rodarAPI(ctx context.Context, cfg config, seg openbao.Segredos, repo postgr
 					MetaAppSecret: seg.Webhooks["meta_app_secret"], MetaVerifyToken: seg.Webhooks["meta_verify_token"],
 					URLPublica: cfg.WebhookURL,
 				},
-				WhatsAppLigado: seg.WhatsAppLigado,
-				Receptor:       aplicacao.ReceiveMessageUseCase{Repo: repo, Desligados: canaisDesligados(seg), Log: log},
-				OptOut:         aplicacao.OptOutUseCase{Repo: repo},
-				Log:            log,
+				MetaLigada: metaLigada(seg),
+				Receptor:   aplicacao.ReceiveMessageUseCase{Repo: repo, Desligados: canaisDesligados(seg), Log: log},
+				OptOut:     aplicacao.OptOutUseCase{Repo: repo},
+				Log:        log,
 			},
 			Log: log,
 		}.Handler(),
@@ -245,8 +248,12 @@ func canaisDesligados(seg openbao.Segredos) map[dominio.Canal]bool {
 	return map[dominio.Canal]bool{dominio.CanalWhatsApp: true}
 }
 
-// anunciarCanais registra no boot quais Canais ficaram desligados (T-63).
+// anunciarCanais registra no boot quais Canais ficaram desligados (T-63) e o
+// Provedor do WhatsApp ligado, sem credencial (T-70).
 func anunciarCanais(log *slog.Logger, seg openbao.Segredos) {
+	if seg.WhatsAppLigado {
+		log.Info("whatsapp ligado: "+string(seg.ProvedorWhatsApp), "canal", dominio.CanalWhatsApp, "provedor", seg.ProvedorWhatsApp)
+	}
 	for c := range canaisDesligados(seg) {
 		log.Info(string(c)+" desligado", "canal", c, "motivo", "sem credenciais no openbao")
 	}
@@ -259,12 +266,24 @@ func remetentes(cfg config, seg openbao.Segredos) map[dominio.Canal]portas.Messa
 		dominio.CanalEmail: sendgrid.Novo(cfg.SendGridURL, seg.SendGridAPIKey, seg.SendGridRemetente),
 		dominio.CanalSMS:   remetenteSMS(cfg, seg),
 	}
-	if seg.WhatsAppLigado {
+	switch {
+	case !seg.WhatsAppLigado:
+	case seg.ProvedorWhatsApp == dominio.WhatsAppUltraMsg:
+		r[dominio.CanalWhatsApp] = ultramsg.Novo(cfg.UltraMsgURL, ultramsg.Credenciais{
+			InstanceID: seg.WhatsApp["instance_id"], Token: seg.WhatsApp["token"],
+		})
+	default:
 		r[dominio.CanalWhatsApp] = whatsapp.Novo(cfg.WhatsAppURL, whatsapp.Credenciais{
 			Token: seg.WhatsApp["token"], PhoneNumberID: seg.WhatsApp["phone_number_id"],
 		})
 	}
 	return r
+}
+
+// metaLigada: as rotas da Meta só existem com o WhatsApp ligado pela Meta
+// (REQ-20, REQ-21).
+func metaLigada(seg openbao.Segredos) bool {
+	return seg.WhatsAppLigado && seg.ProvedorWhatsApp == dominio.WhatsAppMeta
 }
 
 // remetenteSMS pede o Aviso de status ao Twilio quando há URL pública (REQ-12).

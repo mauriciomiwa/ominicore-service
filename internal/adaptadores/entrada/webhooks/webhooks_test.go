@@ -53,11 +53,11 @@ func novo(t *testing.T) *ambiente {
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	mux := http.NewServeMux()
 	webhooks.Webhooks{
-		WhatsAppLigado: true,
-		Cred:           webhooks.Credenciais{SendGridChavePublica: pub, TwilioAuthToken: authToken, MetaAppSecret: appSecret, MetaVerifyToken: verifyToken, URLPublica: urlPublica},
-		Receptor:       aplicacao.ReceiveMessageUseCase{Repo: a.repo, Log: log},
-		OptOut:         aplicacao.OptOutUseCase{Repo: a.repo},
-		Log:            log,
+		MetaLigada: true,
+		Cred:       webhooks.Credenciais{SendGridChavePublica: pub, TwilioAuthToken: authToken, MetaAppSecret: appSecret, MetaVerifyToken: verifyToken, URLPublica: urlPublica},
+		Receptor:   aplicacao.ReceiveMessageUseCase{Repo: a.repo, Log: log},
+		OptOut:     aplicacao.OptOutUseCase{Repo: a.repo},
+		Log:        log,
 	}.Registrar(mux)
 	a.h = mux
 	return a
@@ -273,7 +273,7 @@ func TestT69_WebhookDaMetaComOCanalDesligado(t *testing.T) {
 	repo := memoria.Novo()
 	mux := http.NewServeMux()
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	webhooks.Webhooks{ // WhatsAppLigado = false; o cofre não tem as credenciais da Meta
+	webhooks.Webhooks{ // MetaLigada = false; o cofre não tem as credenciais da Meta
 		Cred:     webhooks.Credenciais{TwilioAuthToken: authToken, URLPublica: urlPublica},
 		Receptor: aplicacao.ReceiveMessageUseCase{Repo: repo, Log: log},
 		Log:      log,

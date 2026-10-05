@@ -45,18 +45,19 @@ type RegistradorOptOut interface {
 // Webhooks liga as rotas /webhooks/* ao Receptor.
 type Webhooks struct {
 	Cred Credenciais
-	// WhatsAppLigado registra as rotas da Meta; desligado, elas respondem 404 (REQ-20).
-	WhatsAppLigado bool
-	Receptor       Receptor
-	OptOut         RegistradorOptOut // nil = descadastro do Provedor ignorado
-	Log            *slog.Logger
+	// MetaLigada registra as rotas da Meta: só com o WhatsApp ligado pela Meta;
+	// desligado ou pelo UltraMsg, elas respondem 404 (REQ-20, REQ-21).
+	MetaLigada bool
+	Receptor   Receptor
+	OptOut     RegistradorOptOut // nil = descadastro do Provedor ignorado
+	Log        *slog.Logger
 }
 
 // Registrar põe as rotas no mux.
 func (w Webhooks) Registrar(mux *http.ServeMux) {
 	mux.HandleFunc("POST /webhooks/sendgrid", w.sendgrid)
 	mux.HandleFunc("POST /webhooks/twilio", w.twilio)
-	if w.WhatsAppLigado {
+	if w.MetaLigada {
 		mux.HandleFunc("GET /webhooks/whatsapp", w.verificarMeta)
 		mux.HandleFunc("POST /webhooks/whatsapp", w.whatsapp)
 	}

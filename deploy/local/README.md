@@ -53,11 +53,15 @@ TWILIO_MESSAGING_SERVICE_SID=...` antes do `./deploy/local/bootstrap.sh`.
 | `OMINICORE_WEBHOOK_URL` | — | origem pública dos webhooks (`https://notify-hml.flipapi.com.br`); vazia no local: SMS sem `StatusCallback` e webhook do Twilio recusado |
 | `OMINICORE_RETENCAO_DIAS` | `30` | prazo de retenção: Notificação finalizada é anonimizada depois disso (RN-9) |
 | `OMINICORE_WHATSAPP_URL` | `https://graph.facebook.com` | trocar só em teste (versão da Graph API fixada no adaptador) |
+| `OMINICORE_ULTRAMSG_URL` | `https://api.ultramsg.com` | trocar só em teste (UltraMsg falso) |
 
 Segredos no OpenBao: `kv/<prefixo>/postgres` (`dsn`), `kv/<prefixo>/sendgrid`
 (`api_key`, `remetente`), `kv/<prefixo>/twilio` (`account_sid`, `api_key_sid`,
-`api_key_secret`, `messaging_service_sid`), `kv/<prefixo>/whatsapp` (`token`,
-`phone_number_id`; opcional — sem ele o Canal WhatsApp fica desligado) e
+`api_key_secret`, `messaging_service_sid`), `kv/<prefixo>/whatsapp` (`provedor` — `meta`,
+padrão, ou `ultramsg`; Meta: `token`, `phone_number_id`; UltraMsg: `instance_id`,
+`token`; opcional — sem ele o Canal WhatsApp fica desligado; no
+`bootstrap.sh`, `WHATSAPP_PROVEDOR=ultramsg` com `ULTRAMSG_INSTANCE_ID` e
+`ULTRAMSG_TOKEN`) e
 `kv/<prefixo>/webhooks` (`sendgrid_chave_publica`, `twilio_auth_token` e, com o
-WhatsApp ligado, `meta_app_secret`, `meta_verify_token`) e `kv/<prefixo>/optout`
+WhatsApp ligado pela Meta, `meta_app_secret`, `meta_verify_token`) e `kv/<prefixo>/optout`
 (`chave` do HMAC dos Opt-outs — permanente, ver `deploy/aviva2/README.md`). Endereços de hml e prod: `DOC/Infra/AMBIENTES.md`.
