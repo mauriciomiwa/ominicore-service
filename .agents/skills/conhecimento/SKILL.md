@@ -43,6 +43,7 @@ na `DOC/`: mora no OpenSpec, em `openspec/` na raiz do repositório — o
 | por que uma mudança entregue foi feita | `openspec/changes/archive/<data>-<change>/proposal.md` |
 | stack, onde roda, onde está o banco de hml/prod | `DOC/…/Infra/infraestrutura.md` (identificação do ambiente: `Infra/AMBIENTES.md`) |
 | arquitetura, padrões, infra, ambientes, decisões | `DOC/` via `INDEX.md` |
+| ideia ou teoria (não é regra nem plano) | `DOC/…/brainstorm.md` (`B-n`) — cite como ideia em aberto; nunca aja a partir dela sem pedido |
 
 Spec vigente e código divergindo é informação: diga qual dos dois está
 desatualizado (e ofereça abrir a change) em vez de escolher um em silêncio.
@@ -73,8 +74,9 @@ Cada arquivo lido custa contexto na conversa inteira. Por isso:
    a partir dele, citando o arquivo usado.
 2. **Pergunta sobre OUTRO software/projeto** → use a **memória compartilhada**:
    chame `kb_search(q, match_count)` (MCP do Supabase, PostgREST ou
-   `tools/memoria/query.py`). Responda a partir dos trechos e cite a `source_url`.
-   Ver `System/memoria-compartilhada.md`. **Se nenhum desses canais estiver
+   `tools/memoria/query.py`). Responda a partir dos trechos e cite a `source_url`
+   (configuração em `System/memoria-compartilhada.md`, quando o projeto tiver).
+   **Se nenhum desses canais estiver
    disponível na sessão** (MCP desconectado, script ausente), diga isso ao
    usuário e siga para o passo 3 — não invente resultado de memória.
 3. **Não achou em lugar nenhum?** Diga que não está documentado e ofereça
@@ -82,16 +84,15 @@ Cada arquivo lido custa contexto na conversa inteira. Por isso:
 4. **Fato do mundo atual** → use as fontes oficiais de `Padroes/fontes-externas.md`
    antes de uma busca genérica. Versão instalada = manifesto, não web.
 5. **Fale a língua do projeto.** Havendo `Negocio/glossario.md`, responda com
-   os termos dele (nunca os de "Evitar") — é o que deixa a resposta curta e
-   sem ambiguidade. Se a pergunta usar um termo que conflita com o glossário,
-   aponte antes de responder ("no glossário, 'conta' é o Usuário; você quis
-   dizer Cliente?").
+   os termos dele (nunca os de "Evitar"); termo da pergunta que conflita com o
+   glossário, aponte antes de responder. Regras do glossário:
+   `novo-projeto-sdd/references/glossario-e-decisoes.md`.
 
 ## Manutenção
 
 Ao criar ou mover um doc relevante, atualize `DOC/INDEX.md` para a regra
 "repositório primeiro" continuar eficaz. Requisito técnico novo não vira doc
 na `DOC/`: vira change no OpenSpec. Termo do domínio decidido numa conversa
-entra no glossário na hora; decisão difícil de reverter, surpreendente e com
-alternativa real vira `System/decisoes/NNNN-titulo.md` (formatos e regras na
-skill `novo-projeto-sdd`, seção de glossário e decisões).
+entra no glossário na hora; decisão que passa no critério de ADR vira
+`System/decisoes/NNNN-titulo.md`. Critério e formatos:
+`novo-projeto-sdd/references/glossario-e-decisoes.md`.

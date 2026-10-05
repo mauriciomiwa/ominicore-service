@@ -17,12 +17,16 @@ Comportamento:
   - NUNCA sobrescreve um dependabot.yml existente: sem --check, reporta e sai.
   - --check compara ecossistemas/diretorios detectados com os declarados no
     arquivo. Diretorio com manifesto e sem cobertura = furo.
+  - Diretorio com bun.lock (e seus workspaces sem lockfile proprio) e so do
+    ecossistema bun; o mesmo vale para uv.lock sobre o pip.
+  - Workspace npm sem lockfile proprio fica coberto pelo diretorio do lockfile.
   - Parser do YAML existente e raso (regex em package-ecosystem, directory e
     directories). Arquivo muito fora do padrao -> rc 2, confira no olho.
 
 Saida: rc 0 = ok/gerado · 1 = furo de cobertura · 2 = nao deu para avaliar.
 """
 import argparse
+import json
 import re
 import sys
 from pathlib import Path
@@ -55,8 +59,10 @@ REGRAS = [
 ]
 IGNORAR = {".git", "node_modules", "vendor", "target", "build", "dist", ".venv",
            "venv", "__pycache__", ".gradle", ".idea", "bin", "obj", ".next",
-           ".terraform", "Garbage", ".agents"}
+           ".terraform", "Garbage", ".agents", ".claude"}
 PROFUNDIDADE = 4
+# lockfile proprio de um package.json: com ele o diretorio tem gerente proprio
+LOCKS_NPM = ("package-lock.json", "npm-shrinkwrap.json", "yarn.lock", "pnpm-lock.yaml")
 
 
 def detectar(raiz: Path) -> dict:
@@ -85,11 +91,32 @@ def detectar(raiz: Path) -> dict:
                     achados.setdefault(eco, set()).add(rel)
 
     anda(raiz, 0)
+
+    def tem_lock(d: str) -> bool:
+        return any((raiz / d.lstrip("/") / f).exists() for f in LOCKS_NPM)
+
     # uv.lock presente: o pyproject daquele diretorio e do uv, nao do pip
     for d in achados.get("uv", set()):
         achados.get("pip", set()).discard(d)
-    if "pip" in achados and not achados["pip"]:
-        del achados["pip"]
+    # bun.lock presente: o package.json daquele diretorio e dos workspaces abaixo
+    # dele (sem lockfile proprio) e do bun. O npm do Dependabot falha nesses
+    # diretorios ("cannot update bun.lock") — nao emitir.
+    for b in achados.get("bun", set()):
+        base = "" if b == "/" else b
+        for d in list(achados.get("npm", set())):
+            if d == b or (d.startswith(base + "/") and not tem_lock(d)):
+                achados["npm"].discard(d)
+    # workspaces npm: package.json sem lockfile proprio abaixo de um diretorio
+    # npm com lockfile e coberto por ele. Declarar o workspace a parte faz o
+    # Dependabot mexer so no package.json dele, sem o lock da raiz -> npm ci falha.
+    for r in [d for d in achados.get("npm", set()) if tem_lock(d)]:
+        base = "" if r == "/" else r
+        for d in list(achados.get("npm", set())):
+            if d != r and d.startswith(base + "/") and not tem_lock(d):
+                achados["npm"].discard(d)
+    for eco in ("pip", "npm"):
+        if eco in achados and not achados[eco]:
+            del achados[eco]
     if (raiz / ".github" / "workflows").is_dir():
         achados.setdefault("github-actions", set()).add("/")
     return achados
@@ -161,12 +188,32 @@ def coberto(d: str, declarados: set) -> bool:
     return False
 
 
+def checar(raiz: Path, alvo: Path, achados: dict) -> dict:
+    """Cobertura do dependabot.yml: {rc, furos: [{ecossistema, diretorio}], sobras, sem_arquivo, nao_avaliado}."""
+    res = {"rc": 0, "furos": [], "sobras": [], "sem_arquivo": False, "nao_avaliado": False,
+           "ecossistemas": sorted(achados), "arquivo": alvo.relative_to(raiz).as_posix()}
+    if not alvo.exists():
+        res["sem_arquivo"] = bool(achados)
+        res["rc"] = 1 if achados else 0
+        return res
+    decl = ler_declarado(alvo.read_text(encoding="utf-8"))
+    if decl is None:
+        res.update(nao_avaliado=True, rc=2)
+        return res
+    res["furos"] = [{"ecossistema": eco, "diretorio": d} for eco, dirs in sorted(achados.items())
+                    for d in sorted(dirs) if not coberto(d, decl.get(eco, set()))]
+    res["sobras"] = sorted(set(decl) - set(achados))
+    res["rc"] = 1 if res["furos"] else 0
+    return res
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("raiz")
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--stdout", action="store_true")
+    ap.add_argument("--json", action="store_true", help="com --check: resultado em JSON (para outros scripts)")
     a = ap.parse_args()
 
     raiz = Path(a.raiz).resolve()
@@ -183,32 +230,26 @@ def main():
         return 0
 
     if a.check:
-        if not alvo.exists():
-            if achados:
-                print(f"FURO: {alvo.relative_to(raiz)} nao existe e ha manifestos: "
-                      + ", ".join(sorted(achados)))
-                print("      gere com: python3 dependabot_config.py <raiz>")
-                return 1
+        res = checar(raiz, alvo, achados)
+        if a.json:
+            print(json.dumps(res, ensure_ascii=False))
+            return res["rc"]
+        if res["sem_arquivo"]:
+            print(f"FURO: {res['arquivo']} nao existe e ha manifestos: " + ", ".join(res["ecossistemas"]))
+            print("      gere com: python3 dependabot_config.py <raiz>")
+        elif not alvo.exists():
             print("OK: sem manifestos e sem dependabot.yml (greenfield).")
-            return 0
-        decl = ler_declarado(alvo.read_text(encoding="utf-8"))
-        if decl is None:
+        elif res["nao_avaliado"]:
             print(f"NAO AVALIADO: {alvo.name} fora do formato esperado — confira no olho.")
-            return 2
-        furos = []
-        for eco, dirs in sorted(achados.items()):
-            for d in sorted(dirs):
-                if not coberto(d, decl.get(eco, set())):
-                    furos.append(f"{eco} em {d}")
-        sobras = sorted(set(decl) - set(achados))
-        for f in furos:
-            print(f"FURO: manifesto sem cobertura no dependabot.yml — {f}")
-        for s in sobras:
-            print(f"AVISO: '{s}' declarado mas nenhum manifesto detectado "
-                  f"(profundidade {PROFUNDIDADE}) — sobra ou manifesto fora do alcance.")
-        if not furos:
-            print(f"OK: {len(achados)} ecossistema(s) detectado(s), todos cobertos.")
-        return 1 if furos else 0
+        else:
+            for f in res["furos"]:
+                print(f"FURO: manifesto sem cobertura no dependabot.yml — {f['ecossistema']} em {f['diretorio']}")
+            for s_ in res["sobras"]:
+                print(f"AVISO: '{s_}' declarado mas nenhum manifesto detectado "
+                      f"(profundidade {PROFUNDIDADE}) — sobra ou manifesto fora do alcance.")
+            if not res["furos"]:
+                print(f"OK: {len(achados)} ecossistema(s) detectado(s), todos cobertos.")
+        return res["rc"]
 
     if alvo.exists():
         print(f"JA EXISTE: {alvo} — nada foi sobrescrito. Use --check para conferir cobertura.")

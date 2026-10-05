@@ -33,6 +33,9 @@ Exit 0 = sem furos; 1 = furos; 2 = nao conseguiu parsear o essencial.
 Nao substitui `openspec validate` (formato); este script confere a CADEIA.
 """
 import argparse
+import contextlib
+import io
+import json
 import re
 import sys
 from pathlib import Path
@@ -354,7 +357,19 @@ def main():
     ap.add_argument("doc")
     ap.add_argument("--openspec", default=None)
     ap.add_argument("--prefixo", default=None)
+    ap.add_argument("--json", action="store_true", help="resultado em JSON (para outros scripts); mesmo exit code")
     args = ap.parse_args()
+    if not args.json:
+        return validar(args, {})
+    saida = {}
+    with contextlib.redirect_stdout(io.StringIO()):
+        rc = validar(args, saida)
+    print(json.dumps({"rc": rc, **saida}, ensure_ascii=False))
+    return rc
+
+
+def validar(args, saida: dict) -> int:
+    """Valida e devolve o exit code; em `saida` deixa furos, alertas, avisos, contagens e o resultado."""
 
     doc = Path(args.doc)
     if not doc.is_dir():
@@ -437,6 +452,14 @@ def main():
             alertas.append(f"{t} esta nas specs mas nao no plano-de-testes.md.")
 
     # relatorio
+    saida.update(modo=modo, rns=len(rn_definidos), reqs=len(res["efetivos"]),
+                 furos=list(erros), alertas=list(alertas), avisos=list(avisos))
+
+    def fim(rc, msg):
+        print(f"\nResultado: {msg}")
+        saida["resultado"] = msg
+        return rc
+
     print("=== Validacao de rastreabilidade RN -> REQ -> teste ===")
     print(f"Modo: {modo} | RNs definidos: {len(rn_definidos)} | REQ efetivos: {len(res['efetivos'])}"
           + (f" (vigentes: {res['n_vigentes']}, em deltas de changes ativas: {res['n_deltas']})" if modo == "openspec" else ""))
@@ -448,17 +471,16 @@ def main():
     if not erros and not alertas and not avisos:
         print("\nCadeia integra: todo REQ tem RN e cenario de teste; backlog consistente.")
     if erros:
-        print(f"\nResultado: {len(erros)} furo(s). Registre no to-do.md o que nao for corrigir agora.")
-        return 1
+        return fim(1, f"{len(erros)} furo(s). Registre no to-do.md o que nao for corrigir agora.")
     if res["efetivos"] and not rn_definidos:
-        print("\nResultado: ha REQ mas nenhum RN verificavel (especificacao-negocio.md ausente ou sem RN-n) — "
-              "cadeia NAO verificada; faca a checagem manual e diga isso no relato.")
-        return 2
+        return fim(2, "ha REQ mas nenhum RN verificavel (especificacao-negocio.md ausente ou sem RN-n) — "
+                      "cadeia NAO verificada; faca a checagem manual e diga isso no relato.")
+    if modo == "openspec" and not f_espec and not f_backlog and not res["todos_ids"]:
+        # DOC honesta sem RN, REQ nem fatias (template vazio apagado): nada a rastrear, nao e falha de parse
+        return fim(0, "nada a rastrear ainda — sem RN, REQ nem fatias.")
     if avisos and not res["efetivos"] and not rn_definidos:
-        print("\nResultado: nao consegui parsear o essencial — faca a checagem manual e diga isso no relato.")
-        return 2
-    print(f"\nResultado: sem furos bloqueantes ({len(alertas)} alerta(s)).")
-    return 0
+        return fim(2, "nao consegui parsear o essencial — faca a checagem manual e diga isso no relato.")
+    return fim(0, f"sem furos bloqueantes ({len(alertas)} alerta(s)).")
 
 
 if __name__ == "__main__":

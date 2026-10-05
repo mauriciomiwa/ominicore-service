@@ -26,8 +26,8 @@ e `openspec/` (comportamento). Antes de responder, planejar ou escrever código:
 | sabatina | antes de abrir change, mudança grande ou de arquitetura; "me sabatine" | `.agents/skills/sabatina/` |
 | sentinel | escrever, revisar, refatorar ou concluir código; avaliar PR | `.agents/skills/sentinel/` |
 | ambientes | deploy, migration, script com efeito, hml/prod, variável ou segredo | `.agents/skills/ambientes/` |
-| nomad-worker | job Nomad, `.hcl`, Vault, Consul (quando o projeto tiver) | `.agents/skills/nomad-worker/` |
 | OpenSpec | nova funcionalidade ou mudança de comportamento | `/opsx:*` (`openspec-*` em `.agents/skills/`) |
+| novo-projeto-sdd | kickoff, DOC/, OpenSpec, auditar garantias, mapear o código | `.agents/skills/novo-projeto-sdd/` |
 
 ## Garantias — o que barra, independentemente da IA lembrar
 

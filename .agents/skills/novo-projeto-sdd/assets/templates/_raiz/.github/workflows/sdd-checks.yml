@@ -1,0 +1,35 @@
+# Checagens SDD — instalado pela skill novo-projeto-sdd.
+# Marque o job "checagens" como obrigatorio na protecao da branch principal:
+# sem isso o CI avisa mas nao barra. A sentinel NAO roda aqui: ela e cobrada no
+# git local (pre-commit e hook Stop do Claude Code), sem API.
+name: sdd-checks
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  checagens:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: OpenSpec CLI
+        run: npm install -g @fission-ai/openspec@latest
+      - name: Checagens SDD (rastreabilidade, OpenSpec, T-n nos testes, Dependabot, ambientes, Nomad)
+        env:
+          OPENSPEC_TELEMETRY: "0"
+          OPENSPEC_NO_UPDATE_CHECK: "1"
+        run: python3 {{DOC_REL}}/tools/checa_projeto.py . --modo ci

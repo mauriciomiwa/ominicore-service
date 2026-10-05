@@ -17,7 +17,7 @@ Uso:
 
 O que confere, por skill:
   estrutura       DOC/INDEX.md, AGENTS.md, CLAUDE.md, .agents/skills/ com as
-                  skills da casa (e nomad-worker quando há job Nomad),
+                  skills da casa (e nomad-worker em projeto da DKM com job Nomad),
                   openspec/config.yaml com o contexto da casa, comandos /opsx,
                   garantias instaladas (pre-commit, CI, hooks do Claude)
   novo-projeto-sdd  valida_rastreabilidade.py por projeto, openspec validate
@@ -48,8 +48,18 @@ from pathlib import Path
 
 AQUI = Path(__file__).resolve().parent
 SKILLS_CASA = ("conhecimento", "sentinel", "ambientes", "sabatina", "passagem")
+# scripts das garantias que viajam para <DOC>/tools/ (scaffold, sync e verificação usam esta lista)
+TOOLS = ("valida_rastreabilidade.py", "dependabot_config.py", "checa_projeto.py", "sdd_hooks.py",
+         "mapeia_projeto.py", "mapa_html.py", "registro_log.py", "arquiva_log.py", "diff_ambientes.py")
+
+
+def scripts_tools(skills: Path) -> dict:
+    """Nome -> fonte de cada script de TOOLS; `skills` é a pasta com as skills irmãs."""
+    aqui = Path(__file__).resolve().parent
+    return {n: (skills / "ambientes" / "scripts" / n if n == "diff_ambientes.py" else aqui / n) for n in TOOLS}
 IGNORAR_DIRS = {".git", "node_modules", ".venv", "venv", "__pycache__", "dist", "build",
-                "target", ".next", ".idea", ".vscode", "vendor", ".sdd", ".gradle"}
+                "target", ".next", ".idea", ".vscode", "vendor", ".sdd", ".gradle",
+                ".claude"}  # worktrees do Claude Code: cópia do repo inteiro (jobs e testes em dobro)
 RE_TESTE_ARQ = re.compile(
     r"(^|/)(tests?|__tests__|spec|specs|e2e|it)/|(^|/)test_[^/]+$|_test\.[a-z]+$|"
     r"\.(test|spec)\.[a-z]+$|Tests?\.(java|kt|cs|scala)$|_spec\.rb$", re.I)
@@ -100,9 +110,12 @@ def run(cmd, cwd=None, timeout=300):
         return 99, str(e)
 
 
-def arquivos(raiz: Path):
+def arquivos(raiz: Path, sem_skills: bool = False):
+    """sem_skills: pula pastas de skill (com SKILL.md), cujos .hcl, Dockerfile e
+    .env são exemplo — a cópia em .agents/skills/ não é infra do projeto."""
     for dirpath, dirnames, filenames in os.walk(raiz):
-        dirnames[:] = [d for d in dirnames if d not in IGNORAR_DIRS]
+        dirnames[:] = [d for d in dirnames if d not in IGNORAR_DIRS
+                       and not (sem_skills and (Path(dirpath) / d / "SKILL.md").is_file())]
         for f in filenames:
             yield Path(dirpath) / f
 
@@ -134,7 +147,18 @@ EXT_AUDITAVEL = EXT_CODIGO - {".feature", ".robot"} | {
 NOMES_AUDITAVEIS = {"Dockerfile", "Makefile", "Jenkinsfile", "Containerfile"}
 
 
+# arquivos que sustentam as próprias garantias: mudar um deles desliga ou afrouxa a checagem,
+# então passam pela sentinel qualquer que seja a extensão e o .sentinelignore não os tira
+GARANTIAS_AUDITAVEIS = (".githooks/", ".claude/settings.json", ".sentinelignore", ".github/workflows/sdd-checks.yml")
+
+
+def e_garantia(p: str) -> bool:
+    return p.startswith(GARANTIAS_AUDITAVEIS)
+
+
 def e_codigo_auditavel(p: str) -> bool:
+    if p and e_garantia(p):
+        return True
     if not p or p.startswith(EXCLUI_AUDITORIA):
         return False
     nome = p.rsplit("/", 1)[-1]
@@ -172,35 +196,52 @@ def ignorado_sentinel(p: str, padroes) -> bool:
     return False
 
 
-def arquivos_alterados(raiz: Path, escopo: str = "trabalho"):
+def hooks_path_ok(raiz: Path, hp: str) -> bool:
+    """core.hooksPath aponta para um .githooks com pre-commit. Worktree do Claude Code
+    herda o caminho absoluto do checkout principal (<principal>/.githooks): vale também."""
+    hp = hp.strip()
+    if not hp:
+        return False
+    alvo = Path(hp) if Path(hp).is_absolute() else raiz / hp
+    return alvo.name == ".githooks" and (alvo / "pre-commit").is_file()
+
+
+def arquivos_alterados(raiz: Path, escopo: str = "trabalho", todos: bool = False):
     """{caminho: blob-sha} dos arquivos de código alterados.
 
     escopo "trabalho": tudo o que não foi commitado (índice + árvore + não rastreados),
     com o conteúdo da árvore. escopo "staged": só o que vai no commit, com o conteúdo
-    do índice. Arquivo removido = "REMOVIDO". None quando não é repositório git."""
+    do índice. Arquivo removido = "REMOVIDO". None quando não é repositório git.
+    todos=True: qualquer arquivo alterado fora do .sdd/ (ferramenta, config, doc) —
+    só para registrar o veredito; o gate continua só com o código auditável."""
     rc, _ = run(["git", "rev-parse", "--is-inside-work-tree"], cwd=raiz, timeout=20)
     if rc != 0:
         return None
     out = {}
     ignorar = padroes_sentinel(raiz)
+
+    def entra(p):
+        if todos:
+            return bool(p) and not p.startswith(".sdd/")
+        return e_codigo_auditavel(p) and (e_garantia(p) or not ignorado_sentinel(p, ignorar))
+
     if escopo == "staged":
         rc, nomes = run(["git", "diff", "--cached", "--name-only", "-z", "--diff-filter=ACMRTD"],
                         cwd=raiz, timeout=60)
         for p in [n for n in nomes.split("\0") if n]:
-            if not e_codigo_auditavel(p) or ignorado_sentinel(p, ignorar):
+            if not entra(p):
                 continue
             rc, ls = run(["git", "ls-files", "-s", "--", p], cwd=raiz, timeout=20)
             out[p] = ls.split()[1] if rc == 0 and ls.strip() else "REMOVIDO"
         return out
     # sem run(): ele faz strip() e comeria o espaço inicial do "XY" da 1ª linha
     try:
-        status = subprocess.run(["git", "status", "--porcelain", "--untracked-files=all"], cwd=raiz,
+        status = subprocess.run(["git", "status", "--porcelain", "-z", "--untracked-files=all"], cwd=raiz,
                                 capture_output=True, text=True, timeout=60).stdout
     except (OSError, subprocess.TimeoutExpired):
         return None
-    for ln in status.splitlines():
-        p = ln[3:].split(" -> ")[-1].strip().strip('"')
-        if not e_codigo_auditavel(p) or ignorado_sentinel(p, ignorar):
+    for p in caminhos_do_status(status):
+        if not entra(p):
             continue
         f = raiz / p
         if f.is_file():
@@ -211,14 +252,49 @@ def arquivos_alterados(raiz: Path, escopo: str = "trabalho"):
     return out
 
 
-def hash_diff(raiz: Path):
-    """Resumo curto do trabalho de código não commitado ("" = nada; None = sem git)."""
-    arqs = arquivos_alterados(raiz)
-    if arqs is None:
-        return None
-    if not arqs:
-        return ""
-    return hashlib.sha1(json.dumps(arqs, sort_keys=True).encode()).hexdigest()[:16]
+def hash_conteudo(conteudo: bytes) -> str:
+    return hashlib.sha256(conteudo).hexdigest()[:16]
+
+
+def copias_editadas(raiz: Path) -> list:
+    """Arquivos que o sync gravou (hash em .agents/skills/.skills-sync.json) e foram editados depois."""
+    try:
+        hashes = json.loads((raiz / ".agents" / "skills" / ".skills-sync.json").read_text(encoding="utf-8")).get("hashes")
+    except (OSError, ValueError, AttributeError):
+        return []
+    if not isinstance(hashes, dict):
+        return []
+    return [rel for rel, h in sorted(hashes.items())
+            if (raiz / rel).is_file() and hash_conteudo((raiz / rel).read_bytes()) != h]
+
+
+def skills_ignoradas_pelo_git(raiz: Path, skills_dir: Path) -> list:
+    """Arquivos das skills em .agents/skills/ que o .gitignore exclui ([] sem git)."""
+    if not skills_dir.is_dir():
+        return []
+    nomes = [f.relative_to(raiz).as_posix() for f in sorted(skills_dir.rglob("*"))
+             if f.is_file() and "__pycache__" not in f.parts and f.name != ".DS_Store"]
+    try:
+        p = subprocess.run(["git", "check-ignore", "--stdin", "-z"], cwd=raiz, input="\0".join(nomes),
+                           capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.SubprocessError):
+        return []
+    return [n for n in p.stdout.split("\0") if n] if p.returncode in (0, 1) else []
+
+
+def caminhos_do_status(status_z: str) -> list:
+    """Caminhos de `git status --porcelain -z`: sem aspas nem escape (nome com acento
+    chega inteiro) e, em rename/cópia, só o destino."""
+    partes, out, i = status_z.split("\0"), [], 0
+    while i < len(partes):
+        ent = partes[i]
+        i += 1
+        if len(ent) < 4:
+            continue
+        out.append(ent[3:])
+        if "R" in ent[:2] or "C" in ent[:2]:
+            i += 1  # o próximo campo é a origem do rename
+    return out
 
 
 def ler_auditorias(raiz: Path):
@@ -265,7 +341,7 @@ def termos_glossario(doc: Path):
 
 # O que a IA lê no começo de toda sessão precisa ficar curto (ver skill passagem).
 LIMITE_AGENTS = 4096        # bytes
-LIMITE_ESTADO = 40          # linhas
+LIMITE_ESTADO = 25          # linhas
 LIMITE_LOG = 15 * 1024      # bytes
 
 
@@ -328,7 +404,7 @@ def checa_estrutura(raiz, docs, rel, modo, fonte):
 
     skills_dir = raiz / ".agents" / "skills"
     esperadas = list(SKILLS_CASA)
-    if jobs_nomad(raiz):
+    if nomad_worker_cabe(raiz):
         esperadas.append("nomad-worker")
     for s in esperadas:
         if not (skills_dir / s / "SKILL.md").is_file():
@@ -337,6 +413,18 @@ def checa_estrutura(raiz, docs, rel, modo, fonte):
         elif texto_agents and s not in texto_agents:
             rel.alerta(area, f"AGENTS.md não cita a skill '{s}' — agentes sem hook podem não saber quando usá-la; "
                              "acrescente a tabela 'Skills do projeto' do template _raiz/AGENTS.md.")
+
+    editadas = copias_editadas(raiz)
+    if editadas:
+        rel.alerta(area, f"{len(editadas)} cópia(s) de skill ou de <DOC>/tools/ editada(s) à mão desde o sync "
+                         f"(ex.: {editadas[0]}) — o próximo sync não as sobrescreve, mas a fonte não tem a "
+                         f"mudança: leve-a para o repositório de skills.")
+
+    ignorados = skills_ignoradas_pelo_git(raiz, skills_dir)
+    if ignorados:
+        rel.alerta(area, f"{len(ignorados)} arquivo(s) de .agents/skills/ ignorado(s) pelo .gitignore — a cópia "
+                         f"versionada da skill fica incompleta para quem clona (ex.: {ignorados[0]}). Acrescente "
+                         f"uma exceção (ex.: !.agents/**/.claude/) em vez de forçar o add.")
 
     # drift das cópias
     if fonte and (fonte / "conhecimento" / "SKILL.md").is_file():
@@ -388,7 +476,7 @@ def checa_estrutura(raiz, docs, rel, modo, fonte):
         rc, hp = run(["git", "config", "--get", "core.hooksPath"], cwd=raiz, timeout=20)
         if not (raiz / ".githooks" / "pre-commit").is_file():
             rel.furo(area, "sem .githooks/pre-commit — re-rode o scaffold.")
-        elif hp.strip() != ".githooks":
+        elif not hooks_path_ok(raiz, hp):
             rel.furo(area, "pre-commit existe mas o git não o usa — rode `git config core.hooksPath .githooks`.")
     wf = raiz / ".github" / "workflows" / "sdd-checks.yml"
     if not wf.is_file():
@@ -518,9 +606,49 @@ def checa_dependencias(raiz, rel, modo):
 
 
 # ------------------------------------------------------------ ambientes
+def skills_padrao(fonte: Path, raiz: Path) -> list:
+    """Skills que vão para <raiz>/.agents/skills/ por padrão (sync, scaffold e verificação).
+
+    No repositório de skills (sync-skills.py ao lado): toda pasta com SKILL.md. Fora
+    dele (skills instaladas no perfil, junto com outras): as da casa e a novo-projeto-sdd.
+    O nomad-worker só vai para projeto da DKM com job Nomad (o padrão é o da casa;
+    fora disso o gatilho é inútil).
+    """
+    if (fonte / "sync-skills.py").is_file():
+        nomes = [d.name for d in sorted(fonte.iterdir()) if (d / "SKILL.md").is_file()]
+    else:
+        nomes = [n for n in SKILLS_CASA + ("novo-projeto-sdd", "nomad-worker") if (fonte / n / "SKILL.md").is_file()]
+    if "nomad-worker" in nomes and not nomad_worker_cabe(raiz):
+        nomes.remove("nomad-worker")
+    return nomes
+
+
+ORG_DKM = "dkmbank-ip"
+SKILLS_SO_DKM = ("nomad-worker",)  # padrão da casa DKM: em outro projeto a skill sai
+
+
+def e_dkm(raiz: Path) -> bool:
+    """Projeto da DKM = remote origin no GitHub da organização (lido do git local, sem rede)."""
+    try:
+        url = subprocess.run(["git", "-C", str(raiz), "remote", "get-url", "origin"],
+                             capture_output=True, text=True, timeout=10).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return re.search(rf"github\.com[:/]{ORG_DKM}/", url, re.I) is not None
+
+
+def nomad_worker_cabe(raiz: Path) -> bool:
+    return e_dkm(raiz) and bool(jobs_nomad(raiz))
+
+
+def sem_linhas_de_skill(texto: str, nomes) -> str:
+    """Tira do AGENTS.md as linhas da tabela de skills dessas skills."""
+    return "\n".join(l for l in texto.split("\n") if not any(l.startswith(f"| {n} |") for n in nomes))
+
+
 def jobs_nomad(raiz: Path):
     out = []
-    for f in arquivos(raiz):
+    for f in arquivos(raiz, sem_skills=True):
         if f.suffix in (".hcl", ".nomad") and "openspec" not in f.parts:
             try:
                 if re.search(r'^\s*job\s+"', f.read_text(encoding="utf-8", errors="replace"), re.M):
@@ -532,7 +660,7 @@ def jobs_nomad(raiz: Path):
 
 def tem_deploy(raiz: Path):
     marcas = ("Dockerfile", "docker-compose.yml", "compose.yml", "compose.yaml")
-    for f in arquivos(raiz):
+    for f in arquivos(raiz, sem_skills=True):
         if f.name in marcas or f.suffix in (".hcl", ".tf", ".nomad"):
             return True
         if "k8s" in f.parts or "helm" in f.parts:
@@ -545,7 +673,7 @@ RE_AMB = re.compile(r"(?<![a-z])(hml|homolog|homologacao|staging|stg)(?![a-z])",
 
 def pares_ambiente(raiz: Path):
     pares = []
-    for f in arquivos(raiz):
+    for f in arquivos(raiz, sem_skills=True):
         if f.suffix not in ("", ".env", ".yaml", ".yml", ".json", ".hcl", ".tf", ".properties") and \
                 not f.name.startswith(".env"):
             continue
@@ -661,8 +789,7 @@ def checa_mapa(raiz, docs, rel, modo):
                                  f"python3 {nome}/tools/mapeia_projeto.py . e escreva System/mapa/visao-geral.md "
                                  "(procedimento em references/mapa-projeto.md da novo-projeto-sdd).")
             continue
-        raiz_proj = raiz if len(docs) == 1 else raiz
-        rc, out = run([sys.executable, str(mapeia), str(raiz_proj), "--saida", str(pasta), "--check"], cwd=raiz)
+        rc, out = run([sys.executable, str(mapeia), str(raiz), "--saida", str(pasta), "--check"], cwd=raiz)
         if rc == 1:
             itens = [l.strip()[2:] for l in out.splitlines() if l.strip().startswith("- ")][:5]
             rel.alerta(area, f"mapa de {nome} desatualizado: " + "; ".join(itens)
@@ -745,7 +872,17 @@ def checa_sentinel(raiz, rel, modo):
                   + ". Rode a skill sentinel sobre o diff e registre: python3 <DOC>/tools/sdd_hooks.py "
                     "auditoria --veredito \"aprovado|aprovado com ressalvas|corrigir antes de concluir\".")
     if not nao and not corrigir:
-        rel.ok(area, f"{len(arqs)} arquivo(s) de código auditado(s) pela sentinel.")
+        rel.ok(area, f"{len(arqs)} arquivo(s) de código auditado(s) pela sentinel." + ignorados_msg(raiz, escopo))
+
+
+def ignorados_msg(raiz: Path, escopo: str) -> str:
+    """Quantos arquivos de código alterados o .sentinelignore tirou da auditoria (para não ficar invisível)."""
+    padroes = padroes_sentinel(raiz)
+    if not padroes:
+        return ""
+    todos = arquivos_alterados(raiz, escopo, todos=True) or {}
+    n = sum(1 for p in todos if e_codigo_auditavel(p) and not e_garantia(p) and ignorado_sentinel(p, padroes))
+    return f" ({n} ignorado(s) pelo .sentinelignore)" if n else ""
 
 
 # ----------------------------------------------------------------- main

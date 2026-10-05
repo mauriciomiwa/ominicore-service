@@ -1,0 +1,64 @@
+# Configuracao OpenSpec do projeto {{PROJETO}} — gerada pela skill novo-projeto-sdd.
+# O bloco "context" e injetado em todo artefato que a IA gera (proposal, specs,
+# design, tasks). Marcador usado pelo scaffold para nao duplicar: sdd-rastreabilidade
+schema: spec-driven
+
+context: |
+  Language: Portuguese (pt-BR)
+  All artifacts must be written in Brazilian Portuguese.
+  Keep OpenSpec structural headings (Purpose, Requirements, Requirement,
+  Scenario, ADDED/MODIFIED/REMOVED/RENAMED), the SHALL/MUST keywords and
+  GIVEN/WHEN/THEN in English — validation relies on them.
+
+  # sdd-rastreabilidade
+  {{MONOREPO_NOTA}}
+  Projeto: {{PROJETO}}. Fonte de verdade do negocio e dos padroes: {{DOC_REL}}/
+  (comece por {{DOC_REL}}/INDEX.md). O porque (RN e criterios de aceite) mora em
+  {{DOC_REL}}/Negocio/especificacao-negocio.md; convencoes em {{DOC_REL}}/Padroes/.
+  Use os termos de {{DOC_REL}}/Negocio/glossario.md (nunca os listados em
+  "Evitar"); termo novo decidido entra la antes da proposta.
+  Cadeia obrigatoria RN -> REQ -> teste, validada por
+  {{DOC_REL}}/tools/valida_rastreabilidade.py:
+  - Todo requisito tem ID global no titulo, nunca reaproveitado:
+    "### Requirement: REQ-<n> <nome curto>".
+  - Logo abaixo, uma frase normativa no estilo EARS com SHALL/MUST
+    ("Quando <evento>, o sistema SHALL <resposta verificavel>.") e a linha
+    "Origem: RN-<n>" (uma ou mais RN).
+  - Todo requisito tem ao menos um cenario com ID de teste:
+    "#### Scenario: T-<n> <nome>". Cada cenario com T-<n> vira um teste
+    automatizado; o nome do teste no codigo cita o T-<n>.
+  - Forma alternativa, por RN: "REQ-<rn>.<k>" e "T-<rn>.<k>" (k = 1, 2, ...
+    dentro da RN); nela o prefixo <rn> deve ser a RN da linha Origem — o
+    validador avisa quando discordam. Nao misture as duas formas num projeto.
+  - Proximo REQ-<n>/T-<n> = maior existente + 1, procurando em
+    openspec/specs/, openspec/changes/ (inclusive archive/) e nos REQ
+    previstos de {{DOC_REL}}/System/backlog-mvp.md.
+  - Uma change = uma fatia vertical de {{DOC_REL}}/System/backlog-mvp.md.
+
+rules:
+  proposal:
+    - "Cite as RN de origem (RN-n) na motivacao. Mudanca sem RN e pergunta ao negocio, nao proposta."
+    - "Uma change entrega uma fatia vertical (valor fim-a-fim), nunca uma camada."
+    - "Se a RN ainda nao existe, proponha acrescenta-la em Negocio/especificacao-negocio.md."
+    - "Antes de propor, feche as decisoes com o usuario (skill sabatina): a proposta nao inventa regra nem caso de borda."
+  specs:
+    - "Siga o formato de ID, Origem e cenario descrito no context."
+    - "Spec e contrato de comportamento: nada de classe, biblioteca ou passo de implementacao."
+    - "Capacidade nova: o delta traz '## Purpose' com uma ou duas frases (50+ caracteres; vira o Purpose da spec no archive e o validate --strict reprova Purpose ausente ou curto)."
+  design:
+    - "Respeite Padroes/stack-tecnologico.md e Padroes/goldrules.md da DOC/ quando existirem."
+    - "Registre em System/decisoes/NNNN-titulo.md so a decisao dificil de reverter, surpreendente sem contexto e com alternativa real (as tres)."
+  tasks:
+    - "Uma tarefa de teste para cada T-n dos cenarios da change."
+    - "Penultima tarefa: rodar tools/valida_rastreabilidade.py sem furo."
+    - "Ultima tarefa: auditoria final do diff completo com a skill sentinel (complementa a auditoria de cada tarefa)."
+
+operations:
+  apply:
+    guidance:
+      - "Antes de marcar uma tarefa de codigo como concluida, audite o diff da tarefa com a skill sentinel."
+      - "Deploy, migration ou script com efeito em ambiente seguem a skill ambientes."
+  archive:
+    guidance:
+      - "Registre a entrega no log.md da DOC/ (data, change, RN/REQ cobertos)."
+      - "Atualize o status dos T-n no System/plano-de-testes.md quando ele existir."

@@ -53,15 +53,16 @@ projeto.
 
 1. **Rastreável:** REQ em `openspec/specs/` ou no delta de uma change ativa, e
    o teste do trecho cita o T-n? Comportamento novo sem delta = spec
-   desatualizada. Mexeu em spec, backlog ou teste: rode
-   `DOC/tools/valida_rastreabilidade.py`.
+   desatualizada (BLOQUEANTE; refactor sem mudança de comportamento não precisa
+   de delta). Mexeu em spec, backlog ou teste: rode
+   `<DOC>/tools/valida_rastreabilidade.py`.
 2. Convenções do projeto (`Padroes/`, stack), sem reinventar.
 3. Clean Code/SOLID/KISS, limites de contexto. **Nomes do glossário**
    (`Negocio/glossario.md`), nunca os de "Evitar" — ALERTA; BLOQUEANTE se mudar
    o sentido. Conceito novo sem termo: sugira.
 4. Sem texto hardcoded (i18n).
 5. Teste no nível certo; tarefa marcada no `tasks.md`; `plano-de-testes.md`
-   atualizado; dependências injetadas (relógio, IO, random).
+   atualizado (quando existir); dependências injetadas (relógio, IO, random).
 6. Resiliência e segurança proporcionais: timeout, retry/circuit breaker em
    rede/IO, entrada validada, nenhum segredo no código.
 7. Build e testes do trecho rodados localmente; o que não der, aponte como
@@ -71,15 +72,17 @@ projeto.
    class, DRY, Demeter, efeito colateral surpresa, recurso aberto, sem
    paginação, log de PII/segredo). Dependência nova justificada, sem CVE e
    **coberta pelo `.github/dependabot.yml`** (senão BLOQUEANTE; confira com
-   `DOC/tools/dependabot_config.py --check`). Detalhe:
+   `<DOC>/tools/dependabot_config.py --check`). Detalhe:
    `references/anti-padroes.md`.
 10. Idempotente onde há retry; contrato não quebrado sem versionar; migration
-    aditiva; log estruturado nos pontos-chave.
+    aditiva ou com plano de volta escrito e testado em hml, e compatível com a
+    versão anterior do código (mesmo critério do checklist de promoção da
+    `ambientes`); log estruturado nos pontos-chave.
 11. **Fronteira de ambiente:** host, URL, namespace ou path de Vault fora do
     código; nada de `if (env === 'prod')` espalhado; nenhum default apontando
-    para prod; fixture sem dado real. **Chave nova sem par no outro ambiente é
-    BLOQUEANTE**, salvo divergência declarada em `DOC/Infra/AMBIENTES.md`.
-    *Executar* deploy ou migration é da skill `ambientes`.
+    para prod; fixture sem dado real. Chave nova sem par no outro ambiente:
+    BLOQUEANTE pela regra de configuração da `ambientes` (Passo 2) — o
+    `checa_projeto` já a acusa. *Executar* deploy ou migration é da `ambientes`.
 12. **Mapa:** criou ou removeu rota, tela, endpoint, chamada externa, fila, cron
     ou variável? Rode `<DOC>/tools/mapeia_projeto.py .` e atualize a página da
     área (sem `System/mapa/`, não se aplica).

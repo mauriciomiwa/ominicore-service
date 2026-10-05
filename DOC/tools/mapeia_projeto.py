@@ -377,6 +377,9 @@ def inventariar(raiz: Path):
                                      "arquivo": r, "linha": linha(t, m.start())})
         # rotas por arquivo (Next/Nuxt)
         mp = re.match(r"^(?:src/)?(pages|app)/(.+)\.(vue|tsx|jsx|ts|js)$", r)
+        # em app/ (Next app router) só page.* é rota; o resto (componente, service do Angular) não
+        if mp and mp.group(1) == "app" and not re.search(r"(^|/)page$", mp.group(2)):
+            mp = None
         if mp and not re.search(r"(^|/)_|/api/|layout\.|loading\.|error\.", mp.group(2)):
             rota = "/" + re.sub(r"(^|/)(index|page)$", "", mp.group(2))
             rota = re.sub(r"\[\.\.\.(\w+)\]", r"*\1", re.sub(r"\[(\w+)\]", r"{\1}", rota))
@@ -582,6 +585,7 @@ def main():
     ap.add_argument("raiz")
     ap.add_argument("--saida", default=None, help="pasta do mapa (default: <DOC>/System/mapa)")
     ap.add_argument("--check", action="store_true")
+    ap.add_argument("--json", action="store_true", help="com --check: resultado em JSON (para outros scripts)")
     args = ap.parse_args()
 
     raiz = Path(args.raiz).resolve()
@@ -604,23 +608,32 @@ def main():
 
     if args.check:
         if not arq_json.is_file():
+            if args.json:
+                print(json.dumps({"rc": 2, "sem_inventario": True, "surgiu": [], "sumiu": []}))
+                return 2
             print(f"Sem inventário salvo em {arq_json.relative_to(raiz) if arq_json.is_relative_to(raiz) else arq_json} — "
                   "gere o mapa primeiro (sem --check).")
             return 2
         salvo = json.loads(arq_json.read_text(encoding="utf-8"))
         novos = sorted(chaves(inv) - chaves(salvo))
         sumiram = sorted(chaves(salvo) - chaves(inv))
-        print(f"=== Mapa × código ({raiz.name}) — inventário salvo em {salvo.get('gerado_em')} ===")
-        for titulo, lista in (("SURGIU no código e não está no mapa", novos), ("SUMIU do código e ainda está no mapa", sumiram)):
-            if lista:
-                print(f"\n[{titulo}] {len(lista)}")
-                for x in lista[:40]:
-                    print(f"  - {x}")
-                if len(lista) > 40:
-                    print(f"  … +{len(lista) - 40}")
+        if args.json:
+            print(json.dumps({"rc": 1 if (novos or sumiram) else 0, "gerado_em": salvo.get("gerado_em"),
+                              "surgiu": novos, "sumiu": sumiram}, ensure_ascii=False))
+        else:
+            print(f"=== Mapa × código ({raiz.name}) — inventário salvo em {salvo.get('gerado_em')} ===")
+            for titulo, lista in (("SURGIU no código e não está no mapa", novos), ("SUMIU do código e ainda está no mapa", sumiram)):
+                if lista:
+                    print(f"\n[{titulo}] {len(lista)}")
+                    for x in lista[:40]:
+                        print(f"  - {x}")
+                    if len(lista) > 40:
+                        print(f"  … +{len(lista) - 40}")
         _log(raiz, "mapeia_projeto-check", 1 if (novos or sumiram) else 0, {"surgiu": len(novos), "sumiu": len(sumiram)},
              [{"nivel": "ALERTA", "etapa": "mapa", "msg": f"surgiu no código: {x}", "comando": "python3 <DOC>/tools/mapeia_projeto.py ."}
               for x in novos[:30]] + [{"nivel": "ALERTA", "etapa": "mapa", "msg": f"sumiu do código: {x}"} for x in sumiram[:30]])
+        if args.json:
+            return 1 if (novos or sumiram) else 0
         if novos or sumiram:
             print("\nResultado: mapa desatualizado — rode mapeia_projeto.py sem --check e revise as páginas afetadas.")
             return 1

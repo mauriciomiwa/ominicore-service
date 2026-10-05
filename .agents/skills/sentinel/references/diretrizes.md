@@ -13,8 +13,8 @@ precisar de critério mais fino.
   documenta (legado: `System/requisitos-ears.md`).
 - **Mudança de comportamento sem change:** código que altera comportamento
   observável sem REQ novo/MODIFIED numa change ativa é spec desatualizada no
-  dia do merge — ALERTA (BLOQUEANTE se mexe em contrato público). Refactor sem
-  mudança de comportamento não precisa de delta (`skip_specs: true`).
+  dia do merge — BLOQUEANTE (nada entra no código sem origem RN → REQ → teste).
+  Refactor sem mudança de comportamento não precisa de delta (`skip_specs: true`).
 - **Leia as convenções do projeto:** `goldrules.md`, `Padroes/` e
   `stack-tecnologico.md`. Não reinvente o que já está padronizado.
 - **Conhecimento externo antes da web:** consulte `fontes-externas.md`; use a
@@ -53,7 +53,7 @@ precisar de critério mais fino.
   contínuo* é do Dependabot, não da sentinela — política em
   `DOC/Infra/seguranca-dependencias.md`. O que a sentinela confere é a
   **cobertura**: manifesto novo (outro diretório ou ecossistema) precisa estar
-  no `.github/dependabot.yml` — rode `DOC/tools/dependabot_config.py <raiz>
+  no `.github/dependabot.yml` — rode `<DOC>/tools/dependabot_config.py <raiz>
   --check` quando existir; furo = BLOQUEANTE (dependência que o Dependabot não
   vê não recebe alerta de CVE).
 - **PR do Dependabot** (autor `dependabot[bot]`): patch/minor elegíveis entram
@@ -71,7 +71,10 @@ precisar de critério mais fino.
 
 - **Idempotência de escrita:** operação que pode ser repetida (retry/reenvio do
   outbox) é segura para repetir — chave de idempotência ou upsert por ID.
-- **Migrations seguras:** aditivas e idempotentes, sem perda de dado.
+- **Migrations seguras:** idempotentes, sem perda de dado, aditivas — ou com
+  plano de volta escrito e testado em hml — e compatíveis com a versão anterior
+  do código (coluna removida ou renomeada vai em duas entregas). Mesmo critério
+  do `checklist-promocao.md` da skill `ambientes`.
 - **Compatibilidade de contrato:** não quebre API/retorno público sem versionar
   ou depreciar.
 - **Observabilidade:** log estruturado com contexto nos pontos-chave (proporcional).
@@ -79,6 +82,8 @@ precisar de critério mais fino.
 ## Entrega
 
 - **Small batch / trunk-based:** lotes pequenos, integração frequente.
-- **CI verde** antes de concluir (build + testes). Deploy manual é exceção.
+- **CI verde** antes de concluir (build + testes). Deploy manual é exceção —
+  e a exceção vale quando declarada: o job Nomad da casa DKM é aplicado à mão,
+  nunca por pipeline (skill `nomad-worker`).
 - **IA propõe, o dev valida:** a IA pode gerar teste/código/doc, mas a revisão e
   a responsabilidade são humanas.

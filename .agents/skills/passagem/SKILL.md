@@ -1,7 +1,7 @@
 ---
 name: passagem
 description: >-
-  Passagem de bastão: reescreve DOC/estado.md (até 40 linhas) com change em
+  Passagem de bastão: reescreve DOC/estado.md (até 25 linhas) com change em
   curso, próximo passo, decisões, bloqueios e arquivos que importam, para o
   próximo chat começar dali. Use SEMPRE ao encerrar a sessão ("vamos parar",
   "continuo amanhã"), com o contexto enchendo ou quando o hook pedir.
@@ -22,7 +22,7 @@ fluxo SDD da casa.
 `estado.md` fica ao lado do `INDEX.md`: `DOC/estado.md` (app único) ou
 `DOC/<projeto>/estado.md` (monorepo, um por projeto). Não existe? Crie.
 
-## Formato (no máximo 40 linhas)
+## Formato (no máximo 25 linhas)
 
 ```md
 # Estado — <projeto>
@@ -53,7 +53,7 @@ Regras:
 - **Próximo passo acionável.** "Rodar `go test ./internal/sdd`" serve;
   "continuar o trabalho" não.
 - **Sem segredo e sem dado pessoal**, como em todo o repositório.
-- Seções sem conteúdo ficam com "—". Passou de 40 linhas? Corte: o excesso é
+- Seções sem conteúdo ficam com "—". Passou de 25 linhas? Corte: o excesso é
   histórico.
 
 ## Ao fazer a passagem
