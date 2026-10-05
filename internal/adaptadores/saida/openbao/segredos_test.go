@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"ominicore/internal/adaptadores/saida/openbao"
+	"ominicore/internal/dominio"
 )
 
 // kvFalso responde o KV v2 só nos caminhos dados; o resto é 404.
@@ -146,6 +147,90 @@ func TestWhatsAppLigadoComTodasAsCredenciais(t *testing.T) {
 	kv["/v1/kv/data/ominicore/webhooks"]["meta_verify_token"] = "v"
 	seg, err := openbao.Carregar(context.Background(), openbao.Config{Endereco: kvFalso(t, kv), Token: "t"})
 	if err != nil || !seg.WhatsAppLigado || seg.WhatsApp["phone_number_id"] != "1" || seg.Webhooks["meta_verify_token"] != "v" {
+		t.Fatalf("segredos = %+v err = %v", seg, err)
+	}
+}
+
+func TestT70_WhatsAppPeloUltraMsgIniciaSemOsSegredosDaMeta(t *testing.T) {
+	kv := cofreSemMeta() // webhooks sem meta_app_secret nem meta_verify_token
+	kv["/v1/kv/data/ominicore/whatsapp"] = map[string]string{"provedor": "ultramsg", "instance_id": "instance1", "token": "tk"}
+	seg, err := openbao.Carregar(context.Background(), openbao.Config{Endereco: kvFalso(t, kv), Token: "t"})
+	if err != nil {
+		t.Fatalf("UltraMsg sem os segredos da Meta não iniciou: %v", err)
+	}
+	if !seg.WhatsAppLigado || seg.ProvedorWhatsApp != dominio.WhatsAppUltraMsg || seg.WhatsApp["instance_id"] != "instance1" || seg.WhatsApp["token"] != "tk" {
+		t.Fatalf("segredos = %+v", seg)
+	}
+}
+
+func TestT71_CredenciaisDoUltraMsgIncompletasImpedemOInicio(t *testing.T) {
+	for campo, whatsapp := range map[string]map[string]string{
+		"instance_id": {"provedor": "ultramsg", "token": "tk"},
+		"token":       {"provedor": "ultramsg", "instance_id": "instance1"},
+	} {
+		t.Run("sem "+campo, func(t *testing.T) {
+			kv := cofreSemMeta()
+			kv["/v1/kv/data/ominicore/whatsapp"] = whatsapp
+			_, err := openbao.Carregar(context.Background(), openbao.Config{Endereco: kvFalso(t, kv), Token: "t"})
+			if !errors.Is(err, openbao.ErrOpenBao) || !strings.Contains(err.Error(), campo) {
+				t.Fatalf("erro = %v, quero ErrOpenBao citando %s", err, campo)
+			}
+		})
+	}
+}
+
+func TestT72_ProvedorDoWhatsAppDesconhecidoImpedeOInicio(t *testing.T) {
+	kv := cofreSemMeta()
+	kv["/v1/kv/data/ominicore/whatsapp"] = map[string]string{"provedor": "twilio", "instance_id": "i", "token": "tk"}
+	_, err := openbao.Carregar(context.Background(), openbao.Config{Endereco: kvFalso(t, kv), Token: "t"})
+	if !errors.Is(err, openbao.ErrOpenBao) || !errors.Is(err, dominio.ErrProvedorWhatsAppDesconhecido) || !strings.Contains(err.Error(), "twilio") {
+		t.Fatalf("erro = %v, quero ErrOpenBao citando o Provedor desconhecido", err)
+	}
+}
+
+func TestT82_WhatsAppPelaZAPIIniciaSemOsSegredosDaMeta(t *testing.T) {
+	kv := cofreSemMeta() // webhooks sem meta_app_secret nem meta_verify_token
+	kv["/v1/kv/data/ominicore/whatsapp"] = map[string]string{"provedor": "zapi", "instance_id": "inst1", "token": "tk"}
+	seg, err := openbao.Carregar(context.Background(), openbao.Config{Endereco: kvFalso(t, kv), Token: "t"})
+	if err != nil {
+		t.Fatalf("Z-API sem client_token nem os segredos da Meta não iniciou: %v", err)
+	}
+	if !seg.WhatsAppLigado || seg.ProvedorWhatsApp != dominio.WhatsAppZAPI || seg.WhatsApp["instance_id"] != "inst1" || seg.WhatsApp["token"] != "tk" {
+		t.Fatalf("segredos = %+v", seg)
+	}
+	kv["/v1/kv/data/ominicore/whatsapp"]["client_token"] = "ct"
+	if seg, err = openbao.Carregar(context.Background(), openbao.Config{Endereco: kvFalso(t, kv), Token: "t"}); err != nil || seg.WhatsApp["client_token"] != "ct" {
+		t.Fatalf("client_token não lido: %+v %v", seg.WhatsApp, err)
+	}
+}
+
+func TestT83_CredenciaisDaZAPIIncompletasImpedemOInicio(t *testing.T) {
+	for campo, whatsapp := range map[string]map[string]string{
+		"instance_id": {"provedor": "zapi", "token": "tk", "client_token": "ct"},
+		"token":       {"provedor": "zapi", "instance_id": "inst1", "client_token": "ct"},
+	} {
+		t.Run("sem "+campo, func(t *testing.T) {
+			kv := cofreSemMeta()
+			kv["/v1/kv/data/ominicore/whatsapp"] = whatsapp
+			_, err := openbao.Carregar(context.Background(), openbao.Config{Endereco: kvFalso(t, kv), Token: "t"})
+			if !errors.Is(err, openbao.ErrOpenBao) || !strings.Contains(err.Error(), campo) {
+				t.Fatalf("erro = %v, quero ErrOpenBao citando %s", err, campo)
+			}
+		})
+	}
+}
+
+func TestT64_ProvedorMetaExplicitoExigeOsCamposDaMeta(t *testing.T) {
+	kv := cofreSemMeta()
+	kv["/v1/kv/data/ominicore/whatsapp"] = map[string]string{"provedor": "meta", "token": "t", "phone_number_id": "1"}
+	_, err := openbao.Carregar(context.Background(), openbao.Config{Endereco: kvFalso(t, kv), Token: "t"})
+	if !errors.Is(err, openbao.ErrOpenBao) || !strings.Contains(err.Error(), "meta_app_secret") {
+		t.Fatalf("erro = %v, quero ErrOpenBao citando meta_app_secret", err)
+	}
+	kv["/v1/kv/data/ominicore/webhooks"]["meta_app_secret"] = "s"
+	kv["/v1/kv/data/ominicore/webhooks"]["meta_verify_token"] = "v"
+	seg, err := openbao.Carregar(context.Background(), openbao.Config{Endereco: kvFalso(t, kv), Token: "t"})
+	if err != nil || seg.ProvedorWhatsApp != dominio.WhatsAppMeta {
 		t.Fatalf("segredos = %+v err = %v", seg, err)
 	}
 }

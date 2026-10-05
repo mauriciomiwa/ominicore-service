@@ -1,0 +1,2 @@
+# só recebe linhas: merge, rebase e stash pop juntam os dois lados sem conflito
+historico.jsonl merge=union

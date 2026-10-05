@@ -1,5 +1,5 @@
 {
- "gerado_em": "2026-10-05T08:39:14",
+ "gerado_em": "2026-10-05T12:03:44",
  "raiz": "ominicore",
  "stack": [
   {
@@ -15,7 +15,7 @@
    "importa": []
   },
   "internal": {
-   "arquivos": 49,
+   "arquivos": 57,
    "importa": []
   },
   "migrations": {
@@ -92,28 +92,28 @@
    "metodo": "POST",
    "path": "/webhooks/sendgrid",
    "arquivo": "internal/adaptadores/entrada/webhooks/webhooks.go",
-   "linha": 57,
+   "linha": 58,
    "tipo": "go"
   },
   {
    "metodo": "POST",
    "path": "/webhooks/twilio",
    "arquivo": "internal/adaptadores/entrada/webhooks/webhooks.go",
-   "linha": 58,
+   "linha": 59,
    "tipo": "go"
   },
   {
    "metodo": "GET",
    "path": "/webhooks/whatsapp",
    "arquivo": "internal/adaptadores/entrada/webhooks/webhooks.go",
-   "linha": 60,
+   "linha": 61,
    "tipo": "go"
   },
   {
    "metodo": "POST",
    "path": "/webhooks/whatsapp",
    "arquivo": "internal/adaptadores/entrada/webhooks/webhooks.go",
-   "linha": 61,
+   "linha": 62,
    "tipo": "go"
   }
  ],
@@ -167,10 +167,28 @@
   "TWILIO_MESSAGING_SERVICE_SID": [
    "deploy/local/bootstrap.sh"
   ],
+  "ULTRAMSG_INSTANCE_ID": [
+   "deploy/local/bootstrap.sh"
+  ],
+  "ULTRAMSG_TOKEN": [
+   "deploy/local/bootstrap.sh"
+  ],
   "WHATSAPP_PHONE_NUMBER_ID": [
    "deploy/local/bootstrap.sh"
   ],
+  "WHATSAPP_PROVEDOR": [
+   "deploy/local/bootstrap.sh"
+  ],
   "WHATSAPP_TOKEN": [
+   "deploy/local/bootstrap.sh"
+  ],
+  "ZAPI_CLIENT_TOKEN": [
+   "deploy/local/bootstrap.sh"
+  ],
+  "ZAPI_INSTANCE_ID": [
+   "deploy/local/bootstrap.sh"
+  ],
+  "ZAPI_TOKEN": [
    "deploy/local/bootstrap.sh"
   ]
  },
@@ -180,7 +198,7 @@
    "migrations"
   ],
   "schemas": [],
-  "sql": 9
+  "sql": 10
  },
  "infra": {
   "docker": [],

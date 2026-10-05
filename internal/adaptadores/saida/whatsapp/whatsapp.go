@@ -87,8 +87,8 @@ func montar(para string, c dominio.ConteudoCanal) mensagem {
 
 // Enviar manda o Modelo aprovado com os parâmetros na ordem.
 func (r Remetente) Enviar(ctx context.Context, para string, c dominio.ConteudoCanal) dominio.ResultadoEnvio {
-	if c.ModeloAprovado == "" {
-		return dominio.ResultadoEnvio{Tipo: dominio.FalhaDefinitiva, Motivo: "versão whatsapp sem modelo aprovado"}
+	if err := dominio.WhatsAppMeta.Servir(c); err != nil {
+		return dominio.ResultadoEnvio{Tipo: dominio.FalhaDefinitiva, Motivo: err.Error()}
 	}
 	corpo, err := json.Marshal(montar(para, c))
 	if err != nil {

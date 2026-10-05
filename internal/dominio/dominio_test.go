@@ -3,6 +3,7 @@ package dominio
 import (
 	"errors"
 	"math/rand/v2"
+	"strings"
 	"testing"
 	"time"
 )
@@ -224,5 +225,44 @@ func TestNormalizarContato(t *testing.T) {
 		if _, err := NormalizarContato(c.canal, c.contato); !errors.Is(err, ErrContatoInvalido) {
 			t.Errorf("%s %q aceito", c.canal, c.contato)
 		}
+	}
+}
+
+func TestProvedorWhatsAppServeSoASuaForma(t *testing.T) {
+	soModelo := ConteudoCanal{ModeloAprovado: "boas_vindas", Idioma: "pt_BR"}
+	soTexto := ConteudoCanal{Corpo: "Olá {{nome}}"}
+	if WhatsAppMeta.Servir(soModelo) != nil || WhatsAppUltraMsg.Servir(soTexto) != nil || WhatsAppZAPI.Servir(soTexto) != nil {
+		t.Fatal("recusou a forma do próprio Provedor")
+	}
+	for _, p := range []ProvedorWhatsApp{WhatsAppUltraMsg, WhatsAppZAPI} {
+		if err := p.Servir(soModelo); !errors.Is(err, ErrVersaoWhatsAppSemForma) || err.Error() != "versão whatsapp sem texto" {
+			t.Fatalf("%s sem texto: %v", p, err)
+		}
+	}
+	if err := WhatsAppMeta.Servir(soTexto); !errors.Is(err, ErrVersaoWhatsAppSemForma) || err.Error() != "versão whatsapp sem modelo aprovado" {
+		t.Fatalf("meta sem modelo: %v", err)
+	}
+}
+
+func TestLerProvedorWhatsApp(t *testing.T) {
+	for s, quero := range map[string]ProvedorWhatsApp{"": WhatsAppMeta, "meta": WhatsAppMeta, "ultramsg": WhatsAppUltraMsg, "zapi": WhatsAppZAPI} {
+		if p, err := LerProvedorWhatsApp(s); err != nil || p != quero {
+			t.Fatalf("%q → %q, %v", s, p, err)
+		}
+	}
+	if _, err := LerProvedorWhatsApp("twilio"); !errors.Is(err, ErrProvedorWhatsAppDesconhecido) {
+		t.Fatalf("erro = %v", err)
+	}
+}
+
+func TestServirTextoLimitaEmCaracteres(t *testing.T) {
+	if err := WhatsAppZAPI.ServirTexto(ConteudoCanal{Corpo: strings.Repeat("ç", LimiteTextoWhatsApp)}); err != nil {
+		t.Fatalf("4096 caracteres multibyte recusados: %v", err)
+	}
+	if err := WhatsAppZAPI.ServirTexto(ConteudoCanal{Corpo: strings.Repeat("ç", LimiteTextoWhatsApp+1)}); err == nil || !strings.Contains(err.Error(), "limite 4096") {
+		t.Fatalf("erro = %v", err)
+	}
+	if err := WhatsAppZAPI.ServirTexto(ConteudoCanal{ModeloAprovado: "m"}); !errors.Is(err, ErrVersaoWhatsAppSemForma) {
+		t.Fatalf("erro = %v", err)
 	}
 }

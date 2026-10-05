@@ -21,10 +21,43 @@ em `ambientes/hml.sh` e `ambientes/prod.sh`.
 | 5b | Cadastrar os webhooks nos painéis: SendGrid Event Webhook → `https://notify-hml.flipapi.com.br/webhooks/sendgrid` (eventos delivered, bounce, dropped; **Signed Event Webhook** ligado); Meta (só com o WhatsApp ligado) → `https://notify-hml.flipapi.com.br/webhooks/whatsapp` com o verify token do passo 4 (campo `messages`). O Twilio não precisa: cada SMS leva a `StatusCallback` | painéis SendGrid e Meta | dono | contas dos Provedores |
 | 6 | Sistemas de origem: `sudo keycloak/criar-sistema-origem.sh hml <client-id>` | host | dono | senha admin do Keycloak |
 
-**Ligar o WhatsApp depois** (conta Meta, número verificado e Modelo `boas_vindas`
-aprovado): `sudo openbao/configurar-openbao.sh hml --so-whatsapp`, reiniciar
-api e worker no host (`sudo systemctl restart ominicore-hml-api.service ominicore-hml-worker.service`; o log de boot deixa de dizer
-`whatsapp desligado`) e cadastrar o webhook da Meta (etapa 5b).
+**Ligar o WhatsApp depois** — `sudo openbao/configurar-openbao.sh hml --so-whatsapp`
+pergunta o Provedor (`meta`, `ultramsg` ou `zapi`); reinicie api e worker no host
+(`sudo systemctl restart ominicore-hml-api.service ominicore-hml-worker.service`)
+e confira o log de boot `whatsapp ligado: <provedor>`.
+
+- **UltraMsg** (gateway não oficial, ADR 0004): uma instância e um número
+  **dedicados por ambiente** (hml nunca usa o número de prod), autenticados por
+  QR no painel do UltraMsg; o script pede `instance_id` e token. Não há webhook
+  a cadastrar: a Tentativa fica `enviada` e `/webhooks/whatsapp` responde 404.
+  Instância desconectada (QR expirado) **não dá erro** — o UltraMsg enfileira e
+  só envia ao reconectar: acompanhe o status da instância no painel. Antes do
+  primeiro envio real, confira o formato da resposta com um `curl` de teste
+  (`DOC/Padroes/fontes-externas.md`).
+- **Z-API** (gateway não oficial, ADR 0004): como no UltraMsg, uma instância e
+  um número **dedicados por ambiente**, autenticados por QR no painel da Z-API;
+  o script pede `instance_id`, o token da instância e, opcional, o
+  **Client-Token** da conta (aba Segurança). Não há webhook a cadastrar: a
+  Tentativa fica `enviada` e `/webhooks/whatsapp` responde 404. Riscos e
+  cuidados:
+  - **Ordem do Client-Token:** grave o `client_token` pelo script, reinicie api
+    e worker e **só então** clique em "Ativar Token" no painel. Ativado antes,
+    todo envio vira Falha definitiva (`null not allowed`) e cai no próximo
+    Canal.
+  - **Token na URL:** a Z-API exige o token da instância no caminho da chamada.
+    O OminiCore não o escreve em log nem no motivo da Tentativa; se ele vazar,
+    gere outro no painel da instância e rode de novo `--so-whatsapp`.
+  - **Falhas depois do aceite não aparecem:** a Z-API responde 200 ao
+    enfileirar; número sem WhatsApp, shadow ban ou instância desconectada só
+    chegariam pelo webhook dela, que não é ouvido. Acompanhe a instância no
+    painel. Antes do primeiro envio real, confira as respostas com um `curl`
+    de teste (`DOC/Padroes/fontes-externas.md`).
+- **Meta** (conta Meta, número verificado e Modelo `boas_vindas` aprovado):
+  o script pede token, `phone_number_id`, App Secret e verify token; depois
+  cadastre o webhook da Meta (etapa 5b).
+- **Trocar de Provedor ou desligar (rollback):** rode de novo `--so-whatsapp`
+  com o outro Provedor, ou apague o caminho
+  (`kv delete kv/<prefixo>/whatsapp`, Canal desligado), e reinicie api e worker.
 
 Para copiar os scripts ao host: `scp -i ~/.ssh/aviva2.0.pem -r deploy/aviva2 ubuntu@44.209.101.158:/tmp/`.
 

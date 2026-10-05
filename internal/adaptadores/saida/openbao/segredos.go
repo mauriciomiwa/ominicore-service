@@ -7,30 +7,44 @@ import (
 	"fmt"
 
 	bao "github.com/openbao/openbao/api/v2"
+
+	"ominicore/internal/dominio"
 )
 
 // Segredos reunidos no boot. Nenhum deles sai daqui para log.
 type Segredos struct {
-	PostgresDSN       string            // <mount>/<prefixo>/postgres: dsn
-	SendGridAPIKey    string            // <mount>/<prefixo>/sendgrid: api_key
-	SendGridRemetente string            // <mount>/<prefixo>/sendgrid: remetente
-	Twilio            map[string]string // <mount>/<prefixo>/twilio: CamposTwilio
-	WhatsApp          map[string]string // <mount>/<prefixo>/whatsapp: CamposWhatsApp; nil = Canal desligado
-	WhatsAppLigado    bool              // o caminho existe: Canal WhatsApp ligado (REQ-20)
-	Webhooks          map[string]string // <mount>/<prefixo>/webhooks: CamposWebhooks
-	ChaveOptOut       string            // <mount>/<prefixo>/optout: chave (HMAC dos contatos, permanente)
+	PostgresDSN       string                   // <mount>/<prefixo>/postgres: dsn
+	SendGridAPIKey    string                   // <mount>/<prefixo>/sendgrid: api_key
+	SendGridRemetente string                   // <mount>/<prefixo>/sendgrid: remetente
+	Twilio            map[string]string        // <mount>/<prefixo>/twilio: CamposTwilio
+	WhatsApp          map[string]string        // <mount>/<prefixo>/whatsapp: campos do Provedor; nil = Canal desligado
+	WhatsAppLigado    bool                     // o caminho existe: Canal WhatsApp ligado (REQ-20)
+	ProvedorWhatsApp  dominio.ProvedorWhatsApp // campo `provedor` (ausente = meta); vazio com o Canal desligado
+	Webhooks          map[string]string        // <mount>/<prefixo>/webhooks: CamposWebhooks
+	ChaveOptOut       string                   // <mount>/<prefixo>/optout: chave (HMAC dos contatos, permanente)
 }
 
 // CamposWebhooks validam a assinatura dos Avisos de status (REQ-12).
 var CamposWebhooks = []string{"sendgrid_chave_publica", "twilio_auth_token"}
 
 // CamposWebhooksMeta são exigidos em <mount>/<prefixo>/webhooks só com o Canal
-// WhatsApp ligado (REQ-6, REQ-20).
+// WhatsApp ligado pela Meta (REQ-6, REQ-20).
 var CamposWebhooksMeta = []string{"meta_app_secret", "meta_verify_token"}
 
-// CamposWhatsApp são os campos exigidos em <mount>/<prefixo>/whatsapp (REQ-10).
-// Sem o caminho, o Canal fica desligado; com ele incompleto, o boot falha.
-var CamposWhatsApp = []string{"token", "phone_number_id"}
+// CamposWhatsApp são os campos exigidos em <mount>/<prefixo>/whatsapp por
+// Provedor, escolhido pelo campo `provedor` (REQ-6, REQ-10). Sem o caminho, o
+// Canal fica desligado; com ele incompleto, o boot falha.
+var CamposWhatsApp = map[dominio.ProvedorWhatsApp][]string{
+	dominio.WhatsAppMeta:     {"token", "phone_number_id"},
+	dominio.WhatsAppUltraMsg: {"instance_id", "token"},
+	dominio.WhatsAppZAPI:     {"instance_id", "token"},
+}
+
+// CamposOpcionaisWhatsApp são lidos quando existem: o `client_token` da Z-API
+// só existe se a conta ativou o token de segurança (REQ-6).
+var CamposOpcionaisWhatsApp = map[dominio.ProvedorWhatsApp][]string{
+	dominio.WhatsAppZAPI: {"client_token"},
+}
 
 // CamposTwilio são os campos exigidos em <mount>/<prefixo>/twilio (REQ-7).
 var CamposTwilio = []string{"account_sid", "api_key_sid", "api_key_secret", "messaging_service_sid"}
@@ -79,16 +93,13 @@ func Carregar(ctx context.Context, cfg Config) (Segredos, error) {
 	if err != nil {
 		return Segredos{}, err
 	}
-	wa, err := ler(ctx, cli, mount, prefixo+"/whatsapp", CamposWhatsApp...)
-	waLigado := err == nil
-	if errors.Is(err, bao.ErrSecretNotFound) {
-		wa, err = nil, nil
-	}
+	wa, provWA, err := lerWhatsApp(ctx, cli, mount, prefixo+"/whatsapp")
 	if err != nil {
 		return Segredos{}, err
 	}
+	waLigado := wa != nil
 	camposWH := CamposWebhooks
-	if waLigado {
+	if provWA == dominio.WhatsAppMeta {
 		camposWH = append(append([]string{}, CamposWebhooks...), CamposWebhooksMeta...)
 	}
 	wh, err := ler(ctx, cli, mount, prefixo+"/webhooks", camposWH...)
@@ -101,7 +112,7 @@ func Carregar(ctx context.Context, cfg Config) (Segredos, error) {
 	}
 	return Segredos{
 		PostgresDSN: pg["dsn"], SendGridAPIKey: sg["api_key"], SendGridRemetente: sg["remetente"],
-		Twilio: tw, WhatsApp: wa, WhatsAppLigado: waLigado, Webhooks: wh, ChaveOptOut: oo["chave"],
+		Twilio: tw, WhatsApp: wa, WhatsAppLigado: waLigado, ProvedorWhatsApp: provWA, Webhooks: wh, ChaveOptOut: oo["chave"],
 	}, nil
 }
 
@@ -134,14 +145,46 @@ func entrar(ctx context.Context, cfg Config) (*bao.Client, error) {
 	return cli, nil
 }
 
+// lerWhatsApp devolve nil sem o caminho (Canal desligado) e, com ele, os campos
+// exigidos e os opcionais presentes do Provedor indicado em `provedor`.
+func lerWhatsApp(ctx context.Context, cli *bao.Client, mount, caminho string) (map[string]string, dominio.ProvedorWhatsApp, error) {
+	s, err := cli.KVv2(mount).Get(ctx, caminho)
+	if errors.Is(err, bao.ErrSecretNotFound) {
+		return nil, "", nil
+	}
+	if err != nil {
+		return nil, "", fmt.Errorf("%w: ler %s/%s: %w", ErrOpenBao, mount, caminho, err)
+	}
+	campo, _ := s.Data["provedor"].(string)
+	prov, err := dominio.LerProvedorWhatsApp(campo)
+	if err != nil {
+		return nil, "", fmt.Errorf("%w: %s/%s: %w", ErrOpenBao, mount, caminho, err)
+	}
+	out, err := exigir(s.Data, mount, caminho, CamposWhatsApp[prov]...)
+	if err != nil {
+		return nil, "", err
+	}
+	for _, c := range CamposOpcionaisWhatsApp[prov] {
+		if v, _ := s.Data[c].(string); v != "" {
+			out[c] = v
+		}
+	}
+	return out, prov, nil
+}
+
 func ler(ctx context.Context, cli *bao.Client, mount, caminho string, campos ...string) (map[string]string, error) {
 	s, err := cli.KVv2(mount).Get(ctx, caminho)
 	if err != nil {
 		return nil, fmt.Errorf("%w: ler %s/%s: %w", ErrOpenBao, mount, caminho, err)
 	}
+	return exigir(s.Data, mount, caminho, campos...)
+}
+
+// exigir copia os campos pedidos; campo ausente ou vazio é erro que o cita.
+func exigir(dados map[string]any, mount, caminho string, campos ...string) (map[string]string, error) {
 	out := map[string]string{}
 	for _, c := range campos {
-		v, _ := s.Data[c].(string)
+		v, _ := dados[c].(string)
 		if v == "" {
 			return nil, fmt.Errorf("%w: %s/%s sem o campo %s", ErrOpenBao, mount, caminho, c)
 		}

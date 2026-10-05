@@ -8,9 +8,11 @@ Estrutura (criada sob demanda):
     README.md          o que é cada arquivo
     historico.jsonl    uma linha por execução: data, script, rc, faltas, alertas, erro
     problemas.md       o que está aberto AGORA: a última execução de cada script,
-                       com FALTA/ALERTA, erros e o comando de cada correção
+                       com FALTA/ALERTA, erros e o comando de cada correção; fora do
+                       git (reescrito a cada execução, só dava conflito)
     execucoes/         detalhe de cada execução (JSON); fica fora do git
-    .gitignore         ignora execucoes/
+    .gitignore         ignora execucoes/ e problemas.md
+    .gitattributes     historico.jsonl merge=union: os dois lados de um merge se juntam
 
 Uso nos scripts:
 
@@ -52,18 +54,32 @@ Para tratar: abra `problemas.md`, rode o comando de cada item (ou peça ao Claud
 
 
 def doc_do_projeto(raiz: Path):
-    """Pasta da DOC: DOC/ (app único) ou a única DOC/<projeto>/ com INDEX.md."""
+    """Pasta da DOC: DOC/ (app único) ou, em monorepo, a primeira DOC/<projeto>/ com INDEX.md
+    em ordem alfabética (o log dos scripts fica num lugar só, previsível)."""
     raiz = Path(raiz)
     if (raiz / "DOC" / "INDEX.md").is_file():
         return raiz / "DOC"
     base = raiz / "DOC"
-    if base.is_dir():
-        docs = sorted(p.parent for p in base.glob("*/INDEX.md"))
-        if len(docs) == 1:
-            return docs[0]
-        if docs:
-            return docs[0]
-    return None
+    docs = sorted(p.parent for p in base.glob("*/INDEX.md")) if base.is_dir() else []
+    return docs[0] if docs else None
+
+
+def _garante_linhas(arq: Path, linhas, cabecalho: str):
+    texto = arq.read_text(encoding="utf-8") if arq.exists() else ""
+    faltam = [l for l in linhas if l not in texto.splitlines()]
+    if faltam:
+        sep = "" if not texto or texto.endswith("\n") else "\n"
+        with arq.open("a", encoding="utf-8") as h:
+            h.write(sep + ("" if texto.strip() else cabecalho + "\n") + "\n".join(faltam) + "\n")
+
+
+def regras_git(log: Path):
+    """Logs gerados não podem dar conflito: execucoes/ e problemas.md (reescrito a cada execução) fora
+    do git; historico.jsonl só recebe linhas, então o merge junta os dois lados (union, nativo do git)."""
+    _garante_linhas(log / ".gitignore", ["execucoes/", "problemas.md"],
+                    "# gerados pelos scripts SDD: detalhe de cada execução e o retrato do que está aberto")
+    _garante_linhas(log / ".gitattributes", ["historico.jsonl merge=union"],
+                    "# só recebe linhas: merge, rebase e stash pop juntam os dois lados sem conflito")
 
 
 def _agora():
@@ -81,8 +97,7 @@ def registrar(raiz, script, rc, resumo=None, problemas=None, saida=None, erro=No
         (log / "execucoes").mkdir(parents=True, exist_ok=True)
         if not (log / "README.md").exists():
             (log / "README.md").write_text(README, encoding="utf-8")
-        if not (log / ".gitignore").exists():
-            (log / ".gitignore").write_text("execucoes/\n", encoding="utf-8")
+        regras_git(log)
 
         quando = _agora()
         problemas = list(problemas or [])

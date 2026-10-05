@@ -5,6 +5,53 @@ registro vira suposição de alguém daqui a seis meses.
 
 Entradas antigas: `log/arquivo-AAAA.md` (`tools/arquiva_log.py`).
 
+## 2026-10-05 — Fatia 9 (`09-whatsapp-zapi`) implementada: 26/27
+- `dominio.WhatsAppZAPI`, `EnviaTexto` e `ServirTexto` (forma + 4096, usado
+  também pelo UltraMsg); cofre com `CamposWhatsApp[zapi]` e o opcional
+  `client_token`; adaptador `saida/zapi` (JSON, telefone sem `+`, header
+  `Client-Token`, tokens mascarados no motivo); `OMINICORE_ZAPI_URL`; scripts
+  do cofre e runbook com a ordem cofre → reiniciar → ativar Client-Token.
+- Verde: `go test -race`, `make itest`, lint, contrato, `openspec validate
+  --strict`, rastreabilidade. T-82 a T-91 passando. Sentinel: aprovado com
+  ressalvas (sem `shellcheck`; respostas reais da Z-API pendentes — tarefa 5.3).
+
+## 2026-10-05 — Decisão: WhatsApp também pela Z-API (change `09-whatsapp-zapi`)
+- Sabatina fechada com as recomendações: Z-API como terceiro Provedor, um por
+  ambiente (`provedor=zapi`, `instance_id`, `token`, `client_token` opcional
+  no header `Client-Token`); envia o texto da versão WhatsApp como o UltraMsg,
+  com o mesmo limite de 4096 caracteres; sem Aviso de status (RN-5 intacta,
+  Tentativa fica `enviada`, `/webhooks/whatsapp` → 404).
+- Risco do gateway não oficial estendido à Z-API (adendo na ADR 0004).
+- Token da instância vai na URL: erro de rede não leva o `err` ao motivo e a
+  recusa mascara os tokens que a Z-API ecoar (T-84).
+- Webhooks *Ao enviar*/*Status* da Z-API ficam no `to-do.md` (exigem revisar a
+  RN-5); a 09 só arquiva depois da 08 (deltas MODIFIED partem dela).
+- RN-4 com três Provedores, glossário, Fatia 9 no backlog. REQ-6/10/11/21
+  modificados, T-82 a T-91.
+
+## 2026-10-05 — Fatia 8 (`08-whatsapp-ultramsg`) implementada: 31/32
+- `dominio.ProvedorWhatsApp` (`meta`/`ultramsg`, `Servir`); cofre lê `provedor`
+  (ausente = meta) e exige os campos de cada um; adaptador `saida/ultramsg`
+  (form, 4096 runas, classificação tolerante, `sent:"false"` = definitiva);
+  recusa 422 pela forma no pedido; rotas da Meta só com `provedor=meta`
+  (`MetaLigada`); migration 00008 (texto do `boas-vindas`).
+- Verde: `go test -race`, `make itest` 31/31, lint, contrato, `openspec validate
+  --strict`, rastreabilidade. T-70 a T-81 passando. Sentinel: aprovado com
+  ressalvas (sem `shellcheck`; formato real da resposta do UltraMsg pendente —
+  tarefa 5.2, depende da instância de trial).
+
+## 2026-10-05 — Decisão: WhatsApp pelo UltraMsg (change `08-whatsapp-ultramsg`)
+- Sabatina fechada: Meta e UltraMsg convivem, um por ambiente, pelo campo
+  `provedor` em `kv/<prefixo>/whatsapp` (ausente = `meta`); UltraMsg envia o
+  texto da versão WhatsApp (até 4096); versão sem a forma do Provedor ativo →
+  422; sem Aviso de status do UltraMsg (Tentativa fica enviada, webhook 404);
+  Opt-out de WhatsApp só pela API; instância e número distintos em hml e prod.
+- O cliente aceitou o risco do gateway não oficial (ADR 0004).
+- Formato da resposta do UltraMsg não documentado: classificação tolerante,
+  conferir com a instância de trial antes do deploy.
+- RN-4 reescrita, glossário ("Provedor"), Fatia 8 no backlog. REQ-6/10/11
+  modificados, REQ-21, T-70 a T-81.
+
 ## 2026-10-05 — Entrega: change `07-whatsapp-opcional` arquivada
 - Arquivada em `openspec/changes/archive/2026-10-05-07-whatsapp-opcional/`; specs
   sincronizadas: `segredos` REQ-6 modificado (T-63, T-64) e `notificacoes` REQ-20
@@ -183,42 +230,4 @@ Entradas antigas: `log/arquivo-AAAA.md` (`tools/arquiva_log.py`).
   `OMINICORE_REDIS_PASSWORD` (Redis do aviva2.0 com `requirepass`). Testes:
   isolamento de schemas no Postgres real, login no mount do ambiente.
 - Nada executado no host: as etapas com credencial de admin são do dono.
-
-## 2026-09-29 — Entrega: change `02-sms-e-fallback` arquivada
-- Arquivada em `openspec/changes/archive/2026-09-29-02-sms-e-fallback/`; spec
-  `notificacoes` sincronizada: REQ-2 modificado, REQ-7 (SMS), REQ-8
-  (Retentativa), REQ-9 (fallback). Cobre RN-2 e RN-3 por completo e RN-1
-  (ordem do pedido). T-15 a T-27 passando.
-
-## 2026-09-29 — Fatia 2 (`02-sms-e-fallback`) implementada: 24/24
-- Router novo no domínio (Retentativa 5 s/30 s/2 min ±20%, sorteio injetado;
-  fallback ao próximo Canal com contato); Retentativa e próximo Canal gravados
-  na transação da conclusão (sem schema novo além de `destinatario_telefone`).
-- Twilio por API Key + Messaging Service; classificação 2xx/429/5xx/4xx movida
-  para `saida/provedor` e reusada pelo SendGrid. Segredo `kv/<prefixo>/twilio`
-  passa a ser obrigatório no boot (REQ-6).
-- Pedido: `canais` opcional (vazio ou repetido = 400; sem versão = 422),
-  `telefone` E.164. Contrato sem `enum` em `canais`, para bater com o 422.
-- Verde: `go test -race`, `make itest` 14/14 (Postgres 17), lint, `sqlc diff`,
-  contrato, `openspec validate --strict`, rastreabilidade; boot local no Docker
-  com migration 00003 aplicada. T-15 a T-27 passando.
-- Sentinel: aprovado com ressalvas — entrega "pelo menos uma vez" segue; sem
-  rate limit por Provedor para rajada de Retentativas; `motivo` do Twilio pode
-  citar o telefone (fatia 5 anonimiza).
-
-## 2026-09-29 — Sabatina da fatia 02 fechada; change `02-sms-e-fallback` aberta
-- Decidido (recomendações aceitas): `canais` opcional no pedido (Canal sem
-  versão no Template = 422); Canal sem contato é pulado, 422 só se nenhum tem;
-  telefone E.164; 3 Retentativas (4 Tentativas) com 5 s/30 s/2 min ±20%;
-  Twilio por API Key + Messaging Service (`kv/<prefixo>/twilio`); 21211/21610
-  e demais 4xx = Falha definitiva; `boas-vindas` ganha SMS, ordem Email → SMS.
-- RN-2 corrigida: o critério dizia "até 3 Tentativas"; vale 3 Retentativas.
-  Glossário: termo **Retentativa**.
-
-## 2026-09-29 — Entrega: change `01-enviar-email` arquivada
-- Arquivada em `openspec/changes/archive/2026-09-29-01-enviar-email/`; specs
-  vigentes criadas: `autenticacao-origem` (REQ-1), `notificacoes` (REQ-2 a
-  REQ-5), `segredos` (REQ-6). Cobre RN-1, RN-3 (Email), RN-7 e RN-9
-  (credenciais); RN-2 parcial (falha encerra; retry/fallback na fatia 02).
-- T-1 a T-14 passando (`System/plano-de-testes.md`).
 

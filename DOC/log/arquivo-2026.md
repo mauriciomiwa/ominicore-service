@@ -2,6 +2,44 @@
 
 Entradas antigas do `log.md`, mais recente no topo.
 
+## 2026-09-29 — Entrega: change `02-sms-e-fallback` arquivada
+- Arquivada em `openspec/changes/archive/2026-09-29-02-sms-e-fallback/`; spec
+  `notificacoes` sincronizada: REQ-2 modificado, REQ-7 (SMS), REQ-8
+  (Retentativa), REQ-9 (fallback). Cobre RN-2 e RN-3 por completo e RN-1
+  (ordem do pedido). T-15 a T-27 passando.
+
+## 2026-09-29 — Fatia 2 (`02-sms-e-fallback`) implementada: 24/24
+- Router novo no domínio (Retentativa 5 s/30 s/2 min ±20%, sorteio injetado;
+  fallback ao próximo Canal com contato); Retentativa e próximo Canal gravados
+  na transação da conclusão (sem schema novo além de `destinatario_telefone`).
+- Twilio por API Key + Messaging Service; classificação 2xx/429/5xx/4xx movida
+  para `saida/provedor` e reusada pelo SendGrid. Segredo `kv/<prefixo>/twilio`
+  passa a ser obrigatório no boot (REQ-6).
+- Pedido: `canais` opcional (vazio ou repetido = 400; sem versão = 422),
+  `telefone` E.164. Contrato sem `enum` em `canais`, para bater com o 422.
+- Verde: `go test -race`, `make itest` 14/14 (Postgres 17), lint, `sqlc diff`,
+  contrato, `openspec validate --strict`, rastreabilidade; boot local no Docker
+  com migration 00003 aplicada. T-15 a T-27 passando.
+- Sentinel: aprovado com ressalvas — entrega "pelo menos uma vez" segue; sem
+  rate limit por Provedor para rajada de Retentativas; `motivo` do Twilio pode
+  citar o telefone (fatia 5 anonimiza).
+
+## 2026-09-29 — Sabatina da fatia 02 fechada; change `02-sms-e-fallback` aberta
+- Decidido (recomendações aceitas): `canais` opcional no pedido (Canal sem
+  versão no Template = 422); Canal sem contato é pulado, 422 só se nenhum tem;
+  telefone E.164; 3 Retentativas (4 Tentativas) com 5 s/30 s/2 min ±20%;
+  Twilio por API Key + Messaging Service (`kv/<prefixo>/twilio`); 21211/21610
+  e demais 4xx = Falha definitiva; `boas-vindas` ganha SMS, ordem Email → SMS.
+- RN-2 corrigida: o critério dizia "até 3 Tentativas"; vale 3 Retentativas.
+  Glossário: termo **Retentativa**.
+
+## 2026-09-29 — Entrega: change `01-enviar-email` arquivada
+- Arquivada em `openspec/changes/archive/2026-09-29-01-enviar-email/`; specs
+  vigentes criadas: `autenticacao-origem` (REQ-1), `notificacoes` (REQ-2 a
+  REQ-5), `segredos` (REQ-6). Cobre RN-1, RN-3 (Email), RN-7 e RN-9
+  (credenciais); RN-2 parcial (falha encerra; retry/fallback na fatia 02).
+- T-1 a T-14 passando (`System/plano-de-testes.md`).
+
 ## 2026-09-29 — Fatia 1 verificada contra serviços reais (30/30)
 - Docker ligado: `make itest` 7/7 contra Postgres 17 (T-4, T-7 com 10 reenvios
   concorrentes, T-9, T-10, T-11 ~0,65 s, T-12, janela de 24 h).

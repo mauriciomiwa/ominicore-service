@@ -504,10 +504,10 @@ func (p ponta) webhookMeta(t *testing.T, corpo string) int {
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	mux := http.NewServeMux()
 	webhooks.Webhooks{
-		WhatsAppLigado: true,
-		Cred:           webhooks.Credenciais{MetaAppSecret: appSecretTeste, MetaVerifyToken: "v"},
-		Receptor:       aplicacao.ReceiveMessageUseCase{Repo: postgres.Repositorio{Pool: p.pool}, Log: log},
-		Log:            log,
+		MetaLigada: true,
+		Cred:       webhooks.Credenciais{MetaAppSecret: appSecretTeste, MetaVerifyToken: "v"},
+		Receptor:   aplicacao.ReceiveMessageUseCase{Repo: postgres.Repositorio{Pool: p.pool}, Log: log},
+		Log:        log,
 	}.Registrar(mux)
 	m := hmac.New(sha256.New, []byte(appSecretTeste))
 	m.Write([]byte(corpo))
@@ -799,5 +799,20 @@ func TestT56_ConsultaMostraQuandoFoiAnonimizada(t *testing.T) {
 	c, ok, err := repo.ConsultarNotificacao(context.Background(), "sistema-a", id)
 	if err != nil || !ok || c.AnonimizadaEm == nil || len(c.Tentativas) != 1 || c.Status != dominio.NotificacaoEntregue {
 		t.Fatalf("consulta = %+v ok=%v err=%v", c, ok, err)
+	}
+}
+
+func TestT73_TextoDaVersaoWhatsAppNoSeedDoPostgres(t *testing.T) {
+	repo := postgres.Repositorio{Pool: banco(t)}
+	tpl, err := repo.BuscarTemplate(context.Background(), "boas-vindas")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, err := tpl.Preencher(dominio.CanalWhatsApp, map[string]string{"nome": "Ana"})
+	if err != nil || c.Corpo != "Olá Ana, sua conta está pronta." || c.ModeloAprovado != "boas_vindas" {
+		t.Fatalf("versão whatsapp = %+v err = %v", c, err)
+	}
+	if dominio.WhatsAppUltraMsg.Servir(c) != nil || dominio.WhatsAppMeta.Servir(c) != nil {
+		t.Fatal("o seed não serve aos dois Provedores")
 	}
 }

@@ -23,6 +23,9 @@ type PedidoNotificacao struct {
 type SendMessageUseCase struct {
 	Repo       portas.MessageRepositoryPort
 	Desligados map[dominio.Canal]bool // Canais sem credenciais no ambiente (REQ-20)
+	// ProvedorWhatsApp ativo decide a forma exigida da versão WhatsApp
+	// (REQ-11); vazio vale Meta.
+	ProvedorWhatsApp dominio.ProvedorWhatsApp
 }
 
 // Pedir valida o pedido contra o Template e registra a Notificação com a
@@ -41,8 +44,14 @@ func (uc SendMessageUseCase) Pedir(ctx context.Context, p PedidoNotificacao) (po
 		ordem = p.Canais
 	}
 	for _, c := range ordem {
-		if _, ok := tpl.Conteudos[c]; !ok {
+		conteudo, ok := tpl.Conteudos[c]
+		if !ok {
 			return portas.Registro{}, fmt.Errorf("%w: %s", dominio.ErrCanalSemVersao, c)
+		}
+		if c == dominio.CanalWhatsApp && !uc.Desligados[c] {
+			if err := uc.ProvedorWhatsApp.Servir(conteudo); err != nil {
+				return portas.Registro{}, err
+			}
 		}
 	}
 	optOut, err := uc.Repo.OptOutsDe(ctx, p.Destinatario)

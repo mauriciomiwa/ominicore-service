@@ -3,7 +3,7 @@
 
 Instalado pelo scaffold em <DOC>/tools/ e ligado em .claude/settings.json:
 
-  session-start   SessionStart     injeta o estado.md (onde o trabalho parou, ≤ 40
+  session-start   SessionStart     injeta o estado.md (onde o trabalho parou, ≤ 25
                                    linhas), os nomes das skills e o ciclo — o resto a
                                    IA lê sob demanda pelo INDEX.md
   prompt          UserPromptSubmit lê o pedido e injeta qual skill ele aciona
@@ -78,7 +78,7 @@ def emitir(evento, **campos):
 
 
 # ---------------------------------------------------------- session-start
-MAX_LINHAS_ESTADO = 40
+MAX_LINHAS_ESTADO = 25
 
 
 def ler_estado(doc: Path, raiz: Path):
@@ -108,19 +108,44 @@ def cartao_projeto(raiz: Path) -> str:
     return "Projeto: " + " · ".join(partes) + "."
 
 
+def branch_atrasada(raiz: Path, docs) -> str:
+    """Aviso quando a branch atual está atrás da branch padrão do origin (pelo último fetch, sem rede)."""
+    def git(*a):
+        try:
+            r = subprocess.run(["git", "-C", str(raiz), *a], capture_output=True, text=True, timeout=10)
+        except (OSError, subprocess.TimeoutExpired):
+            return None
+        return r
+    padrao = git("symbolic-ref", "--short", "refs/remotes/origin/HEAD")
+    atual = git("rev-parse", "--abbrev-ref", "HEAD")
+    if not padrao or padrao.returncode or not atual or atual.returncode:
+        return ""
+    padrao, atual = padrao.stdout.strip(), atual.stdout.strip()
+    if atual in ("HEAD", padrao.split("/", 1)[-1]):
+        return ""
+    n = git("rev-list", "--count", f"HEAD..{padrao}")
+    if not n or n.returncode or not n.stdout.strip().isdigit() or int(n.stdout) == 0:
+        return ""
+    tools = [d.relative_to(raiz).as_posix() + "/tools" for d in docs]
+    dif = git("diff", "--quiet", "HEAD", padrao, "--", *tools) if tools else None
+    novos = dif is not None and dif.returncode == 1  # 1 = há diferença nos scripts
+    return (f"A branch {atual} está {int(n.stdout)} commit(s) atrás de {padrao} (pelo último fetch)"
+            + ("; os scripts de <DOC>/tools/ da main são mais novos — traga a main (merge ou rebase) antes de "
+               "gerar o mapa ou rodar as checagens." if novos else "."))
+
+
 def cmd_session_start(_args):
     raiz = raiz_projeto(ler_stdin())
     from checa_projeto import docs_do_repo
     docs = docs_do_repo(raiz)
-    nomes = sorted(s.parent.name for s in (raiz / ".agents" / "skills").glob("*/SKILL.md")
-                   if not s.parent.name.startswith("openspec-"))
-    linhas = ["Projeto sob SDD com OpenSpec. Siga o AGENTS.md (gatilho de cada skill na tabela dele)."]
-    if nomes:
-        linhas.append("Skills do projeto em .agents/skills/ (leia o SKILL.md quando o pedido cair no gatilho): "
-                      + ", ".join(nomes) + ".")
+    # skills, ciclo e garantias já estão no AGENTS.md, que o Claude Code carrega em toda sessão
+    linhas = ["Projeto sob SDD com OpenSpec: siga o AGENTS.md (skills e gatilhos, ciclo, garantias)."]
     cartao = cartao_projeto(raiz)
     if cartao:
         linhas.append(cartao)
+    atraso = branch_atrasada(raiz, docs)
+    if atraso:
+        linhas.append(atraso)
     for d in docs:
         rel = d.relative_to(raiz).as_posix()
         estado = ler_estado(d, raiz)
@@ -134,11 +159,6 @@ def cmd_session_start(_args):
         "Leitura sob demanda: para o resto, use o INDEX.md da DOC e leia só o que a tarefa pedir — nunca o "
         "log.md inteiro (só a entrada do topo ou uma busca), no mapa só a página da área, nas specs só a "
         "capacidade envolvida.",
-        "Ciclo de mudança de comportamento: sabatina → /opsx:propose (RN de origem) → /opsx:apply (sentinel "
-        "audita o diff de cada tarefa) → openspec validate + valida_rastreabilidade → deploy pela skill ambientes → "
-        "/opsx:archive → passagem ao encerrar.",
-        "Garantias: o hook Stop recusa encerrar com FURO; comandos com efeito em prod pedem permissão; o "
-        "pre-commit e o CI repetem as checagens.",
     ]
     emitir("SessionStart", additionalContext="\n".join(linhas))
     return 0
@@ -156,14 +176,17 @@ ROTAS = [
     ("conhecimento", r"\b(onde fica|como funciona|por que|porque|o que (é|faz)|arquitetura|documenta|explica)\w*"),
     ("sabatina", r"\b(sabatin|grill|me questione|me pergunte|vamos alinhar|alinhar antes|pensar junto|"
                  r"nova funcionalidade|mudan[cç]a grande|redesenh|arquitetur|proposta|planejar|planej)\w*"),
+    ("brainstorm", r"\b(brainstorm|ideia|teoria|hip[oó]tese|e se (a gente|eu|n[oó]s)\b|anot(a|e|ar) (essa|esta|isso))\w*"),
 ]
 TEXTO_ROTA = {  # uma frase cada: o SKILL.md tem o resto
     "ambientes": "ambientes: bloco de alvo antes de executar; prod só com confirmação explícita.",
     "nomad-worker": "nomad-worker: copie o padrão de infra/*.hcl; segredo só via Vault; tag imutável.",
-    "sentinel": "sentinel: audite o trecho e registre o veredito (sdd_hooks.py auditoria).",
+    "sentinel": "sentinel: audite o diff da tarefa e registre o veredito (sdd_hooks.py auditoria).",
     "openspec": "OpenSpec: mudança de comportamento vira change (/opsx:propose) com RN, REQ-n e T-n.",
     "conhecimento": "conhecimento: responda pela DOC/ (estado.md, INDEX.md) e openspec/, citando o arquivo.",
     "sabatina": "sabatina: rodadas com recomendação antes de propor; só aja depois do \"fechado\".",
+    "brainstorm": "brainstorm: ideia ou teoria vai para <DOC>/brainstorm.md (B-n) — não é regra nem plano; "
+                  "não implemente nem abra change a partir dela sem pedido explícito.",
 }
 
 
@@ -175,6 +198,8 @@ def rotear(texto: str):
 def cmd_prompt(_args):
     entrada = ler_stdin()
     rotas = rotear(entrada.get("prompt", ""))
+    if "nomad-worker" in rotas and not (raiz_projeto(entrada) / ".agents" / "skills" / "nomad-worker" / "SKILL.md").is_file():
+        rotas.remove("nomad-worker")  # só vai para projeto da DKM com job Nomad: sem a skill, não há o que ler
     if not rotas:
         return 0
     emitir("UserPromptSubmit", additionalContext="Skills deste pedido (.agents/skills/): " + " | ".join(TEXTO_ROTA[r] for r in rotas))
@@ -257,7 +282,7 @@ def cmd_stop(_args):
     entrada = ler_stdin()
     raiz = raiz_projeto(entrada)
     try:
-        status = subprocess.run(["git", "status", "--porcelain"], cwd=raiz, capture_output=True,
+        status = subprocess.run(["git", "status", "--porcelain", "-z"], cwd=raiz, capture_output=True,
                                 text=True, timeout=30)
     except (OSError, subprocess.TimeoutExpired) as e:
         return _stop_inativo(f"git status: {type(e).__name__}")
@@ -313,10 +338,9 @@ def cmd_stop(_args):
 
 def estados_velhos(raiz: Path, porcelain: str):
     """estado.md ausente ou mais antigo que o arquivo mais recente mexido na sessão."""
-    from checa_projeto import docs_do_repo
+    from checa_projeto import caminhos_do_status, docs_do_repo
     mexidos = []
-    for ln in porcelain.splitlines():
-        p = ln[3:].split(" -> ")[-1].strip().strip('"')
+    for p in caminhos_do_status(porcelain):
         if not p or p.startswith(".sdd/") or p.endswith("estado.md") or "/log/" in p:
             continue
         f = raiz / p
@@ -348,7 +372,7 @@ def lembrar_passagem(raiz: Path, entrada: dict, porcelain: str):
     marca.parent.mkdir(parents=True, exist_ok=True)
     marca.write_text(json.dumps({"sessao": sessao}), encoding="utf-8")
     print("Antes de encerrar: " + ", ".join(velhos) + " ficou para trás do trabalho desta sessão. Atualize-o "
-          "com a skill passagem (retrato de onde parou, ≤ 40 linhas) — ou, se a sessão não mudou o rumo, "
+          "com a skill passagem (retrato de onde parou, ≤ 25 linhas) — ou, se a sessão não mudou o rumo, "
           "diga isso ao usuário em uma linha. Este lembrete não se repete nesta sessão.", file=sys.stderr)
     return 2
 
@@ -365,17 +389,26 @@ def cmd_auditoria(args):
     if arqs is None:
         print("ERRO: não é repositório git — nada a registrar.")
         return 2
+    fora_do_gate = False
     if not arqs:
-        print("Sem mudança de código não commitada — nada a registrar.")
+        # ferramenta, config ou doc (DOC/tools, .github/*.yml): a sentinel revisou, então
+        # o veredito fica registrado — mas não entra no gate do commit nem do encerramento
+        arqs = arquivos_alterados(raiz, todos=True) or {}
+        fora_do_gate = True
+    if not arqs:
+        print("Sem mudança não commitada — nada a registrar.")
         return 0
     log = raiz / ".sdd" / "auditoria.jsonl"
     log.parent.mkdir(parents=True, exist_ok=True)
     reg = {"data": datetime.datetime.now().isoformat(timespec="seconds"), "veredito": veredito,
            "arquivos": arqs}
+    if fora_do_gate:
+        reg["fora_do_gate"] = True
     with log.open("a", encoding="utf-8") as f:
         f.write(json.dumps(reg, ensure_ascii=False) + "\n")
-    print(f"Registrado: {len(arqs)} arquivo(s) — {veredito}.")
-    if veredito.startswith("corrigir"):
+    print(f"Registrado: {len(arqs)} arquivo(s) — {veredito}."
+          + (" Nenhum é código auditável: registro sem efeito no gate." if fora_do_gate else ""))
+    if veredito.startswith("corrigir") and not fora_do_gate:
         print("O commit e o encerramento ficam barrados até os arquivos mudarem e serem auditados de novo.")
     return 0
 

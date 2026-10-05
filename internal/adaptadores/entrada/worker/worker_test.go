@@ -15,7 +15,9 @@ import (
 	"ominicore/internal/adaptadores/saida/keycloak"
 	"ominicore/internal/adaptadores/saida/sendgrid"
 	"ominicore/internal/adaptadores/saida/twilio"
+	"ominicore/internal/adaptadores/saida/ultramsg"
 	"ominicore/internal/adaptadores/saida/whatsapp"
+	"ominicore/internal/adaptadores/saida/zapi"
 	"ominicore/internal/aplicacao"
 	"ominicore/internal/dominio"
 	"ominicore/internal/logs"
@@ -25,6 +27,8 @@ import (
 	"ominicore/internal/testes/metafake"
 	"ominicore/internal/testes/sendgridfake"
 	"ominicore/internal/testes/twiliofake"
+	"ominicore/internal/testes/ultramsgfake"
+	"ominicore/internal/testes/zapifake"
 
 	entradahttp "ominicore/internal/adaptadores/entrada/http"
 )
@@ -38,6 +42,8 @@ type fluxo struct {
 	sg    *sendgridfake.Fake
 	tw    *twiliofake.Fake
 	meta  *metafake.Fake
+	um    *ultramsgfake.Fake
+	zf    *zapifake.Fake
 	realm *emissor.Emissor
 	api   http.Handler
 	log   *bufferSeguro
@@ -60,14 +66,24 @@ func (s *bufferSeguro) String() string {
 	return s.b.String()
 }
 
-func novoFluxo(t *testing.T) *fluxo {
-	f := &fluxo{repo: memoria.Novo(), sg: sendgridfake.Novo(t), tw: twiliofake.Novo(t), meta: metafake.Novo(t), realm: emissor.Novo(t), log: &bufferSeguro{}}
+func novoFluxo(t *testing.T) *fluxo { return novoFluxoCom(t, dominio.WhatsAppMeta) }
+
+// novoFluxoCom liga o Canal WhatsApp ao Provedor dado (REQ-10).
+func novoFluxoCom(t *testing.T, prov dominio.ProvedorWhatsApp) *fluxo {
+	f := &fluxo{repo: memoria.Novo(), sg: sendgridfake.Novo(t), tw: twiliofake.Novo(t), meta: metafake.Novo(t), um: ultramsgfake.Novo(t), zf: zapifake.Novo(t), realm: emissor.Novo(t), log: &bufferSeguro{}}
 	log := logs.Novo(f.log, slog.LevelDebug)
 	f.api = entradahttp.Servidor{
 		Auth:   keycloak.Novo(f.realm.URL, "ominicore", &emissor.Cache{}),
-		Enviar: aplicacao.SendMessageUseCase{Repo: f.repo},
+		Enviar: aplicacao.SendMessageUseCase{Repo: f.repo, ProvedorWhatsApp: prov},
 		Log:    log,
 	}.Handler()
+	var wa portas.MessageSenderPort = whatsapp.Novo(f.meta.URL, whatsapp.Credenciais{Token: metafake.Token, PhoneNumberID: metafake.PhoneNumberID})
+	switch prov {
+	case dominio.WhatsAppUltraMsg:
+		wa = ultramsg.Novo(f.um.URL, ultramsg.Credenciais{InstanceID: ultramsgfake.InstanceID, Token: ultramsgfake.Token})
+	case dominio.WhatsAppZAPI:
+		wa = zapi.Novo(f.zf.URL, zapi.Credenciais{InstanceID: zapifake.InstanceID, Token: zapifake.Token, ClientToken: zapifake.ClientToken})
+	}
 	uc := aplicacao.DespacharUseCase{
 		Repo: f.repo,
 		Remetentes: map[dominio.Canal]portas.MessageSenderPort{
@@ -76,7 +92,7 @@ func novoFluxo(t *testing.T) *fluxo {
 				AccountSID: twiliofake.AccountSID, APIKeySID: twiliofake.APIKeySID,
 				APIKeySecret: twiliofake.APIKeySecret, MessagingServiceSID: twiliofake.MessagingServiceSID,
 			}),
-			dominio.CanalWhatsApp: whatsapp.Novo(f.meta.URL, whatsapp.Credenciais{Token: metafake.Token, PhoneNumberID: metafake.PhoneNumberID}),
+			dominio.CanalWhatsApp: wa,
 		},
 		Log: log,
 	}
@@ -269,4 +285,180 @@ func TestT50_STOPNoTwilioRegistraOptOutDeSMSESegueAOrdem(t *testing.T) {
 	if len(f.tw.Recebidos()) != 1 {
 		t.Fatalf("Twilio chamado %d vezes: STOP não tem Retentativa", len(f.tw.Recebidos()))
 	}
+}
+
+// esperarHistorico aguarda até n Tentativas no histórico, a última fora de pendente.
+func (f *fluxo) esperarHistorico(t *testing.T, n int) []dominio.Tentativa {
+	t.Helper()
+	fim := time.Now().Add(3 * time.Second)
+	for time.Now().Before(fim) {
+		if h := f.repo.Historico(); len(h) >= n && h[n-1].Status != dominio.TentativaPendente {
+			return h
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	t.Fatalf("histórico não chegou a %d Tentativas concluídas: %+v", n, f.repo.Historico())
+	return nil
+}
+
+func TestT73_TentativaDeWhatsAppEEnviadaComoTextoPeloUltraMsg(t *testing.T) {
+	f := novoFluxoCom(t, dominio.WhatsAppUltraMsg)
+	f.pedir(t, pedidoWhatsApp)
+	m := f.um.Esperar(t, 1, 3*time.Second)[0]
+	if m.Texto != "Olá Ana Souza, sua conta está pronta." || m.Para != "+5511999998888" || !m.TokenOK {
+		t.Fatalf("mensagem = %+v", m)
+	}
+	f.esperarStatus(t, dominio.TentativaEnviada)
+	if h := f.repo.Historico(); len(h) != 1 || f.repo.IDProvedor(0) != "42" || len(f.meta.Recebidas()) != 0 || len(f.tw.Recebidos()) != 0 {
+		t.Fatalf("histórico = %+v", h)
+	}
+}
+
+func TestT74_RecusaDoUltraMsgPassaAoSMS(t *testing.T) {
+	f := novoFluxoCom(t, dominio.WhatsAppUltraMsg)
+	f.um.Responder(http.StatusOK, "Wrong token")
+	f.pedir(t, pedidoWhatsApp)
+	f.tw.Esperar(t, 1, 3*time.Second)
+	h := f.esperarHistorico(t, 2)
+	if h[0].Canal != dominio.CanalWhatsApp || h[0].Status != dominio.TentativaFalhou || !strings.Contains(h[0].Motivo, "Wrong token") ||
+		h[1].Canal != dominio.CanalSMS || len(f.um.Recebidas()) != 1 {
+		t.Fatalf("histórico = %+v", h)
+	}
+}
+
+func TestT75_UltraMsgIndisponivelAgendaRetentativa(t *testing.T) {
+	f := novoFluxoCom(t, dominio.WhatsAppUltraMsg)
+	f.um.Responder(http.StatusServiceUnavailable, "")
+	f.pedir(t, pedidoWhatsApp)
+	f.um.Esperar(t, 1, 3*time.Second)
+	f.esperarStatus(t, dominio.TentativaFalhou)
+	fim := time.Now().Add(time.Second)
+	for time.Now().Before(fim) && len(f.repo.Historico()) < 2 {
+		time.Sleep(20 * time.Millisecond)
+	}
+	h := f.repo.Historico()
+	if len(h) != 2 || h[1].Canal != dominio.CanalWhatsApp || h[1].Numero != 2 || h[1].Status != dominio.TentativaPendente {
+		t.Fatalf("quero Retentativa pendente no WhatsApp: %+v", h)
+	}
+}
+
+func TestT76_TextoLongoDemaisNaoChegaAoUltraMsgESegueAOrdem(t *testing.T) {
+	f := novoFluxoCom(t, dominio.WhatsAppUltraMsg)
+	f.pedir(t, `{"template_id":"boas-vindas","destinatario":{"telefone":"+5511999998888"},"dados":{"nome":"`+strings.Repeat("a", 4100)+`"},"canais":["whatsapp","sms"]}`)
+	f.tw.Esperar(t, 1, 3*time.Second)
+	h := f.esperarHistorico(t, 2)
+	if h[0].Status != dominio.TentativaFalhou || h[1].Canal != dominio.CanalSMS || len(f.um.Recebidas()) != 0 {
+		t.Fatalf("histórico = %+v, chamadas ao UltraMsg = %d", h, len(f.um.Recebidas()))
+	}
+}
+
+func TestT77_TentativaPendenteSemAFormaDoProvedorAtivoSegueAOrdem(t *testing.T) {
+	f := novoFluxoCom(t, dominio.WhatsAppUltraMsg)
+	// o pedido foi aceito com a Meta; o Provedor virou UltraMsg antes do envio
+	// e a versão WhatsApp não tem texto
+	tpl := f.repo.Templates["boas-vindas"]
+	tpl.Conteudos[dominio.CanalWhatsApp] = dominio.ConteudoCanal{ModeloAprovado: "boas_vindas", Idioma: "pt_BR", Parametros: []string{"nome"}}
+	if _, err := (aplicacao.SendMessageUseCase{Repo: f.repo, ProvedorWhatsApp: dominio.WhatsAppMeta}).Pedir(context.Background(), aplicacao.PedidoNotificacao{
+		SistemaOrigem: "sistema-a", ChaveIdempotencia: "k-77", TemplateID: "boas-vindas",
+		Destinatario: dominio.Destinatario{Telefone: "+5511999998888"}, Dados: map[string]string{"nome": "Ana"},
+		Canais: []dominio.Canal{dominio.CanalWhatsApp, dominio.CanalSMS},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	f.tw.Esperar(t, 1, 3*time.Second)
+	h := f.esperarHistorico(t, 2)
+	if h[0].Status != dominio.TentativaFalhou || h[0].Motivo != "versão whatsapp sem texto" || h[1].Canal != dominio.CanalSMS || len(f.um.Recebidas()) != 0 {
+		t.Fatalf("histórico = %+v", h)
+	}
+}
+
+func TestT85_TentativaDeWhatsAppEEnviadaComoTextoPelaZAPI(t *testing.T) {
+	f := novoFluxoCom(t, dominio.WhatsAppZAPI)
+	f.pedir(t, pedidoWhatsApp)
+	m := f.zf.Esperar(t, 1, 3*time.Second)[0]
+	if m.Texto != "Olá Ana Souza, sua conta está pronta." || m.Telefone != "5511999998888" || m.ClientToken != zapifake.ClientToken {
+		t.Fatalf("mensagem = %+v", m)
+	}
+	f.esperarStatus(t, dominio.TentativaEnviada)
+	if h := f.repo.Historico(); len(h) != 1 || f.repo.IDProvedor(0) != zapifake.MessageID || len(f.um.Recebidas()) != 0 || len(f.tw.Recebidos()) != 0 {
+		t.Fatalf("histórico = %+v", h)
+	}
+}
+
+func TestT87_RecusaDaZAPIPassaAoSMSSemExporOToken(t *testing.T) {
+	f := novoFluxoCom(t, dominio.WhatsAppZAPI)
+	// T-84: a recusa ecoa o token; nem o motivo nem o log podem trazê-lo
+	f.zf.Responder(http.StatusBadRequest, "token "+zapifake.Token+" not allowed")
+	f.pedir(t, pedidoWhatsApp)
+	f.tw.Esperar(t, 1, 3*time.Second)
+	h := f.esperarHistorico(t, 2)
+	if h[0].Canal != dominio.CanalWhatsApp || h[0].Status != dominio.TentativaFalhou || !strings.Contains(h[0].Motivo, "not allowed") ||
+		h[1].Canal != dominio.CanalSMS || len(f.zf.Recebidas()) != 1 {
+		t.Fatalf("histórico = %+v", h)
+	}
+	for _, segredo := range []string{zapifake.Token, zapifake.ClientToken} {
+		if strings.Contains(h[0].Motivo, segredo) || strings.Contains(f.log.String(), segredo) {
+			t.Fatalf("token exposto: motivo %q", h[0].Motivo)
+		}
+	}
+}
+
+func TestT88_ZAPIIndisponivelAgendaRetentativa(t *testing.T) {
+	f := novoFluxoCom(t, dominio.WhatsAppZAPI)
+	f.zf.Responder(http.StatusServiceUnavailable, "")
+	f.pedir(t, pedidoWhatsApp)
+	f.zf.Esperar(t, 1, 3*time.Second)
+	f.esperarStatus(t, dominio.TentativaFalhou)
+	fim := time.Now().Add(time.Second)
+	for time.Now().Before(fim) && len(f.repo.Historico()) < 2 {
+		time.Sleep(20 * time.Millisecond)
+	}
+	h := f.repo.Historico()
+	if len(h) != 2 || h[1].Canal != dominio.CanalWhatsApp || h[1].Numero != 2 || h[1].Status != dominio.TentativaPendente {
+		t.Fatalf("quero Retentativa pendente no WhatsApp: %+v", h)
+	}
+}
+
+func TestT89_TextoLongoDemaisNaoChegaAZAPIESegueAOrdem(t *testing.T) {
+	f := novoFluxoCom(t, dominio.WhatsAppZAPI)
+	f.pedir(t, `{"template_id":"boas-vindas","destinatario":{"telefone":"+5511999998888"},"dados":{"nome":"`+strings.Repeat("a", 4100)+`"},"canais":["whatsapp","sms"]}`)
+	f.tw.Esperar(t, 1, 3*time.Second)
+	h := f.esperarHistorico(t, 2)
+	if h[0].Status != dominio.TentativaFalhou || h[1].Canal != dominio.CanalSMS || len(f.zf.Recebidas()) != 0 {
+		t.Fatalf("histórico = %+v, chamadas à Z-API = %d", h, len(f.zf.Recebidas()))
+	}
+}
+
+func TestT77_TentativaPendenteDeTextoComAMetaAtivaSegueAOrdem(t *testing.T) {
+	f := novoFluxoCom(t, dominio.WhatsAppMeta)
+	// o pedido foi aceito com um Provedor de texto; o Provedor virou Meta antes
+	// do envio e a versão WhatsApp só tem texto
+	tpl := f.repo.Templates["boas-vindas"]
+	tpl.Conteudos[dominio.CanalWhatsApp] = dominio.ConteudoCanal{Corpo: "Olá {{nome}}"}
+	if _, err := (aplicacao.SendMessageUseCase{Repo: f.repo, ProvedorWhatsApp: dominio.WhatsAppZAPI}).Pedir(context.Background(), aplicacao.PedidoNotificacao{
+		SistemaOrigem: "sistema-a", ChaveIdempotencia: "k-77m", TemplateID: "boas-vindas",
+		Destinatario: dominio.Destinatario{Telefone: "+5511999998888"}, Dados: map[string]string{"nome": "Ana"},
+		Canais: []dominio.Canal{dominio.CanalWhatsApp, dominio.CanalSMS},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	f.tw.Esperar(t, 1, 3*time.Second)
+	h := f.esperarHistorico(t, 2)
+	if h[0].Status != dominio.TentativaFalhou || h[0].Motivo != "versão whatsapp sem modelo aprovado" || h[1].Canal != dominio.CanalSMS || len(f.meta.Recebidas()) != 0 {
+		t.Fatalf("histórico = %+v", h)
+	}
+}
+
+func TestTrocarUltraMsgPorZAPINaoInvalidaATentativaPendente(t *testing.T) {
+	f := novoFluxoCom(t, dominio.WhatsAppZAPI)
+	// o pedido foi aceito com o UltraMsg; as duas enviam o texto (design da 09)
+	if _, err := (aplicacao.SendMessageUseCase{Repo: f.repo, ProvedorWhatsApp: dominio.WhatsAppUltraMsg}).Pedir(context.Background(), aplicacao.PedidoNotificacao{
+		SistemaOrigem: "sistema-a", ChaveIdempotencia: "k-troca", TemplateID: "boas-vindas",
+		Destinatario: dominio.Destinatario{Telefone: "+5511999998888"}, Dados: map[string]string{"nome": "Ana"},
+		Canais: []dominio.Canal{dominio.CanalWhatsApp, dominio.CanalSMS},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	f.zf.Esperar(t, 1, 3*time.Second)
+	f.esperarStatus(t, dominio.TentativaEnviada)
 }

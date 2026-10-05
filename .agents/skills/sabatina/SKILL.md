@@ -21,7 +21,8 @@ MIT) para o fluxo SDD da casa: DOC/, OpenSpec, glossário e decisões.
 1. Leia o que já existe, para não perguntar o que está escrito: `DOC/INDEX.md`
    (skill `conhecimento`), o glossário (`DOC/…/Negocio/glossario.md`), as
    decisões (`DOC/…/System/decisoes/`), as specs vigentes em
-   `openspec/specs/` e, se houver, o mapa (`DOC/…/System/mapa/`).
+   `openspec/specs/`, o `brainstorm.md` (só como contexto: a ideia pode já ter
+   um `B-n`; ideia não é decisão) e, se houver, o mapa (`DOC/…/System/mapa/`).
 2. Monte a **árvore de decisões**: cada decisão abre as que dependem dela
    (ex.: "quem pode cancelar" só faz sentido depois de "existe cancelamento
    parcial?").
@@ -69,22 +70,13 @@ mas `pedidos/cancelar.go:40` cancela o pedido inteiro — qual vale?".
 - **Termos:** use o vocabulário do glossário. Se o usuário usar um termo que
   conflita com ele, ou um termo vago ("conta" = cliente ou usuário?), pare e
   proponha o termo canônico. Termo resolvido entra **na hora** no glossário,
-  sem detalhe de implementação, neste formato (o glossário completo segue a
-  skill `novo-projeto-sdd`):
-
-  ```md
-  **Pedido**:
-  Solicitação de compra feita por um Cliente, com um ou mais itens.
-  _Evitar_: compra, ordem, transação
-  ```
+  sem detalhe de implementação (formato: `novo-projeto-sdd/references/glossario-e-decisoes.md`).
 - **Cenários concretos:** para fechar fronteiras entre conceitos, invente um
   caso de borda e pergunte o que acontece ("pedido pago, meio enviado, cliente
   cancela: estorna tudo?"). Caso de borda decidido costuma virar cenário T-n.
-- **Decisões:** ofereça registrar decisão (ADR) só quando as três forem
-  verdade — difícil de reverter, surpreendente para quem ler o código sem
-  contexto, e fruto de escolha real entre alternativas. Senão, não registre.
-  Formato: `System/decisoes/NNNN-titulo.md` com título e 1 a 3 frases
-  (contexto, o que se decidiu e por quê).
+- **Decisões:** ofereça registrar decisão (ADR) em `System/decisoes/` só
+  quando passar no critério dos três pontos (mesmo arquivo de referência);
+  senão, não registre.
 
 ## Fim da sabatina
 
@@ -97,8 +89,11 @@ assumido em silêncio. Então:
 2. **Não aja antes do "fechado" do usuário.** Com ele, siga o fluxo: RN no
    `Negocio/especificacao-negocio.md` → change do OpenSpec (`/opsx:propose`)
    com REQ-n (`Origem: RN-n`) e cenários T-n tirados dos casos de borda.
-3. O que ficou em aberto de propósito vai para o `to-do.md` como decisão em
-   aberto, não some.
+3. O que ficou em aberto de propósito não some: decisão de stack ou versão
+   vai para "Decisões em aberto" do `Padroes/stack-tecnologico.md`; as demais,
+   para o `to-do.md`.
+4. Veio de um `B-n` do `brainstorm.md` e o usuário decidiu levar adiante ou
+   descartar? Mova-o para "Encerradas" com o destino ou o motivo.
 
 ## Proporcionalidade
 

@@ -25,9 +25,20 @@ echo ">> segredos em kv/ominicore/*"
   account_sid="${TWILIO_ACCOUNT_SID:-AClocal}" api_key_sid="${TWILIO_API_KEY_SID:-SKlocal}" \
   api_key_secret="${TWILIO_API_KEY_SECRET:-local-invalida}" \
   messaging_service_sid="${TWILIO_MESSAGING_SERVICE_SID:-MGlocal}" >/dev/null
-# WhatsApp: token de System User + phone_number_id (fatia 6). Inválidos por padrão.
-"${BAO[@]}" kv put kv/ominicore/whatsapp \
-  token="${WHATSAPP_TOKEN:-local-invalido}" phone_number_id="${WHATSAPP_PHONE_NUMBER_ID:-000000000}" >/dev/null
+# WhatsApp (fatias 6, 8 e 9): Meta por padrão, com token de System User +
+# phone_number_id inválidos; WHATSAPP_PROVEDOR=ultramsg ou zapi grava instância
+# + token (na Z-API, ZAPI_CLIENT_TOKEN opcional).
+if [ "${WHATSAPP_PROVEDOR:-meta}" = ultramsg ]; then
+  "${BAO[@]}" kv put kv/ominicore/whatsapp provedor=ultramsg \
+    instance_id="${ULTRAMSG_INSTANCE_ID:-instance0}" token="${ULTRAMSG_TOKEN:-local-invalido}" >/dev/null
+elif [ "${WHATSAPP_PROVEDOR:-meta}" = zapi ]; then
+  ZAPI_CAMPOS=(provedor=zapi instance_id="${ZAPI_INSTANCE_ID:-instancia0}" token="${ZAPI_TOKEN:-local-invalido}")
+  if [ -n "${ZAPI_CLIENT_TOKEN:-}" ]; then ZAPI_CAMPOS+=(client_token="$ZAPI_CLIENT_TOKEN"); fi
+  "${BAO[@]}" kv put kv/ominicore/whatsapp "${ZAPI_CAMPOS[@]}" >/dev/null
+else
+  "${BAO[@]}" kv put kv/ominicore/whatsapp provedor=meta \
+    token="${WHATSAPP_TOKEN:-local-invalido}" phone_number_id="${WHATSAPP_PHONE_NUMBER_ID:-000000000}" >/dev/null
+fi
 
 # Webhooks: chave pública ECDSA de verdade (o boot recusa chave inválida) e
 # segredos de exemplo; localmente os Provedores não alcançam o OminiCore.

@@ -271,28 +271,13 @@ TEMPLATE_HTML = r"""<meta charset="utf-8">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
   :root {
-    --bg: #f4f5f3; --panel: #fbfbfa; --panel-2: #eceee9; --line: #dcdfd8;
+    color-scheme: light;  /* sempre claro, fundo branco: o mapa também é impresso e colado em documento */
+    --bg: #ffffff; --panel: #ffffff; --panel-2: #f1f3f0; --line: #dcdfd8;
     --ink: #13161a; --ink-2: #464b52; --ink-3: #737982;
     --g-1: #2d6fd6; --g-2: #13936a; --g-3: #c27208; --g-4: #6b5bd2; --g-5: #b4285a; --g-6: #0f8a9c;
     --warn: #c2410c;
     --sans: "Public Sans", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      color-scheme: dark;
-      --bg: #111315; --panel: #181b1e; --panel-2: #22262a; --line: #31363b;
-      --ink: #eef0f1; --ink-2: #c1c6cc; --ink-3: #8b9199;
-      --g-1: #6aa1f2; --g-2: #3cc497; --g-3: #f0a541; --g-4: #a497f2; --g-5: #e9729a; --g-6: #4fc3d3;
-      --warn: #f07a4a;
-    }
-  }
-  :root[data-theme="dark"] {
-    color-scheme: dark;
-    --bg: #111315; --panel: #181b1e; --panel-2: #22262a; --line: #31363b;
-    --ink: #eef0f1; --ink-2: #c1c6cc; --ink-3: #8b9199;
-    --g-1: #6aa1f2; --g-2: #3cc497; --g-3: #f0a541; --g-4: #a497f2; --g-5: #e9729a; --g-6: #4fc3d3;
-    --warn: #f07a4a;
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.6;
@@ -438,7 +423,7 @@ TEMPLATE_HTML = r"""<meta charset="utf-8">
 
 <script type="module">
   import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
-  mermaid.initialize({ startOnLoad: true, theme: matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "default" });
+  mermaid.initialize({ startOnLoad: true, theme: "default" });
 </script>
 <script>
   (function () {

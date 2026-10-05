@@ -1,0 +1,11 @@
+#!/bin/sh
+# Pre-commit SDD — instalado pela skill novo-projeto-sdd.
+# Ligado por: git config core.hooksPath .githooks
+# Roda as checagens rapidas (sem rede). Nao pule com --no-verify: corrija o furo.
+RAIZ="$(git rev-parse --show-toplevel)"
+PY="$(command -v python3 || command -v python)"
+if [ -z "$PY" ]; then
+  echo "pre-commit SDD: python3 nao encontrado — checagens nao rodaram." >&2
+  exit 1
+fi
+exec "$PY" "$RAIZ/{{DOC_REL}}/tools/checa_projeto.py" "$RAIZ" --modo precommit

@@ -1,33 +1,25 @@
 # Estado — ominicore
 
-> Atualizado em 2026-10-05 por Mauricio Miwa + Claude (change 07 arquivada)
-
-Retrato de onde o trabalho parou, reescrito a cada fim de sessão (skill
-`passagem`, no máximo 40 linhas). É o que o próximo chat lê primeiro.
+> Atualizado em 2026-10-05 por Mauricio Miwa + Claude (change 09 implementada)
 
 ## Em curso
-- Fatia 7 (`07-whatsapp-opcional`) entregue e arquivada; REQ-1 a REQ-20 vigentes,
-  T-1 a T-69 passando. Nenhuma change ativa. Branch `fatia/07-whatsapp-opcional`
-  ainda sem commit.
-- Próximo passo: commitar a fatia 7 e levar para a `main`.
-- Depois: deploy em hml pelo runbook `deploy/aviva2/README.md` (etapas do dono),
-  respondendo N ao WhatsApp; ligar depois com `configurar-openbao.sh hml --so-whatsapp`.
+- Change `08-whatsapp-ultramsg` (commitada): 31/32; falta a 5.2 (formato real da resposta do UltraMsg).
+- Change `09-whatsapp-zapi`: 26/27 na branch `fatia/09-whatsapp-zapi`, implementação sem commit; auditada (aprovado com ressalvas). Falta a 5.3 (respostas reais da Z-API: sucesso e token inválido).
+- Próximo passo: commitar a 09; com as instâncias de trial, fechar 5.2 (08) e 5.3 (09) com `curl`, ajustar `classificar` se divergir, `/opsx:archive` da 08 e depois da 09 (nessa ordem).
+- Depois: deploy em hml (`configurar-openbao.sh hml --so-whatsapp`, skill ambientes).
 
 ## Decisões recentes
-- WhatsApp desligado = ausência de `kv/<prefixo>/whatsapp`; recusa 422, pulo na
-  ordem, webhook 404 (`log.md` 2026-10-05; `design.md` da change 07).
-- MVP (fatias 1–6) entregue e commitado na `main`; sem remoto ainda.
-- hml e prod no mesmo host aviva2.0, separados por realm, prefixo do cofre e
-  schema; promove-se o mesmo binário (`Infra/AMBIENTES.md`).
+- WhatsApp por Meta, UltraMsg ou Z-API, um por ambiente (`provedor` no cofre); risco do gateway não oficial aceito (`System/decisoes/0004-…`, que ganha um adendo para a Z-API).
+- Z-API: `provedor=zapi`, `instance_id`, `token`, `client_token` opcional (header `Client-Token`); envia o texto como o UltraMsg; sem Aviso de status (RN-5 intacta, Tentativa fica `enviada`); webhooks da Z-API vão para o `to-do.md`.
+- Z-API põe o token na URL: erro de rede não pode levar a URL ao Motivo nem ao log (teste prova).
 
 ## Bloqueios e pendências
-- Conta Meta Business, Modelo `boas_vindas` aprovado e token: não bloqueiam mais
-  o deploy depois da change 07 (`to-do.md`, Fatia 06).
-- Runtime local: Colima (contexto `colima`); `make itest` segue o contexto.
-- Decisões em aberto no `to-do.md` (chave repetida com pedido diferente,
-  entrega "pelo menos uma vez", cadastro de Templates) — fora da change 07.
+- Instância de trial do UltraMsg: criada pelo dono (5.2).
+- `shellcheck` não roda local nem no CI (scripts só com `bash -n`).
+- Oferecidos e não decididos: `DOC/util.md` e `DOC/migrations.md`.
 
 ## Arquivos que importam agora
-- `../internal/adaptadores/saida/openbao/segredos.go` — leitura opcional do WhatsApp
-- `../deploy/aviva2/openbao/configurar-openbao.sh` — "[s/N]" e `--so-whatsapp` (sem shellcheck ainda)
-- `../deploy/aviva2/README.md` — runbook do deploy
+- `openspec/changes/08-whatsapp-ultramsg/` — modelo para a 09
+- `internal/adaptadores/saida/ultramsg/ultramsg.go` — base do futuro `saida/zapi`
+- `internal/dominio/provedor_whatsapp.go` — `Servir` vira "Provedores de texto"
+- Doc da Z-API: `developer.z-api.io/message/send-text.md`, `security/client-token.md`

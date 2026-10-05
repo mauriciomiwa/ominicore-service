@@ -4,7 +4,8 @@
 # kv/<prefixo>/* e role presa ao azp ominicore-app. Depois pede os segredos
 # (DSN, SendGrid, Twilio, webhooks e, se quiser, WhatsApp) sem ecoar e grava em
 # kv/<prefixo>/*. Sem kv/<prefixo>/whatsapp o Canal WhatsApp fica desligado
-# (REQ-20); --so-whatsapp liga o Canal depois, sem tocar nos outros segredos.
+# (REQ-20); --so-whatsapp liga o Canal depois (ou troca o Provedor: Meta,
+# UltraMsg ou Z-API, REQ-6), sem tocar nos outros segredos.
 # Quem roda: o dono, no host, como root. Pede um token de admin do OpenBao.
 # Uso: sudo ./configurar-openbao.sh hml|prod [--sem-segredos|--so-whatsapp]
 set -euo pipefail
@@ -44,9 +45,49 @@ fi
 ler() { local v; read -r -s -p "$1: " v; echo >&2; printf '%s' "$v"; }
 existe() { "${BAO[@]}" kv get "kv/$PREFIXO/$1" >/dev/null 2>&1; }
 
-# WhatsApp: credenciais da Cloud API + os dois segredos do webhook da Meta,
-# sempre juntos (caminho incompleto impede o boot, REQ-6).
+# WhatsApp: o Provedor escolhido e os campos dele, sempre juntos (caminho
+# incompleto impede o boot, REQ-6). UltraMsg e Z-API: instância + token, sem
+# webhook (ADR 0004); a Z-API aceita ainda o Client-Token da conta, opcional.
+# Meta: credenciais da Cloud API + os dois segredos do webhook.
 gravar_whatsapp() {
+  local WA_PROV
+  read -r -p "Provedor do WhatsApp [meta/ultramsg/zapi]: " WA_PROV
+  case "$WA_PROV" in
+  ultramsg) gravar_ultramsg ;;
+  zapi) gravar_zapi ;;
+  meta) gravar_meta ;;
+  *) echo "!! Provedor desconhecido: nada do WhatsApp foi gravado" >&2; return 1 ;;
+  esac
+}
+
+gravar_ultramsg() {
+  local UM_ID UM_TOKEN
+  read -r -p "UltraMsg instance_id (ex.: instance12345, do painel): " UM_ID
+  UM_TOKEN=$(ler "UltraMsg token")
+  if [ -z "$UM_ID" ] || [ -z "$UM_TOKEN" ]; then
+    echo "!! campo vazio: nada do WhatsApp foi gravado" >&2; return 1
+  fi
+  "${BAO[@]}" kv put "kv/$PREFIXO/whatsapp" provedor=ultramsg instance_id="$UM_ID" token=- >/dev/null <<<"$UM_TOKEN"
+  echo ">> WhatsApp ligado pelo UltraMsg: kv/$PREFIXO/whatsapp (reinicie api e worker)"
+}
+
+gravar_zapi() {
+  local ZA_ID ZA_TOKEN ZA_CT
+  read -r -p "Z-API instance_id (do painel, em Instâncias): " ZA_ID
+  ZA_TOKEN=$(ler "Z-API token da instância")
+  ZA_CT=$(ler "Z-API Client-Token da conta (vazio se o token de segurança não estiver ativado)")
+  if [ -z "$ZA_ID" ] || [ -z "$ZA_TOKEN" ]; then
+    echo "!! campo vazio: nada do WhatsApp foi gravado" >&2; return 1
+  fi
+  # um segredo por comando, sempre pelo stdin; o put substitui o caminho inteiro
+  "${BAO[@]}" kv put "kv/$PREFIXO/whatsapp" provedor=zapi instance_id="$ZA_ID" token=- >/dev/null <<<"$ZA_TOKEN"
+  if [ -n "$ZA_CT" ]; then
+    "${BAO[@]}" kv patch "kv/$PREFIXO/whatsapp" client_token=- >/dev/null <<<"$ZA_CT"
+  fi
+  echo ">> WhatsApp ligado pela Z-API: kv/$PREFIXO/whatsapp (reinicie api e worker; só então ative o Client-Token no painel)"
+}
+
+gravar_meta() {
   local WA_TOKEN WA_ID WH_APP WH_VT
   WA_TOKEN=$(ler "WhatsApp token (System User)"); read -r -p "WhatsApp phone_number_id: " WA_ID
   WH_APP=$(ler "Meta App Secret"); WH_VT=$(ler "Meta verify token (o mesmo que você cadastrar no painel)")
@@ -56,8 +97,8 @@ gravar_whatsapp() {
   # um segredo por comando, sempre pelo stdin (nunca em argumento nem em JSON montado à mão)
   "${BAO[@]}" kv patch "kv/$PREFIXO/webhooks" meta_app_secret=- >/dev/null <<<"$WH_APP"
   "${BAO[@]}" kv patch "kv/$PREFIXO/webhooks" meta_verify_token=- >/dev/null <<<"$WH_VT"
-  "${BAO[@]}" kv put "kv/$PREFIXO/whatsapp" token=- phone_number_id="$WA_ID" >/dev/null <<<"$WA_TOKEN"
-  echo ">> WhatsApp ligado: kv/$PREFIXO/whatsapp e campos meta_* em kv/$PREFIXO/webhooks (reinicie api e worker)"
+  "${BAO[@]}" kv put "kv/$PREFIXO/whatsapp" provedor=meta token=- phone_number_id="$WA_ID" >/dev/null <<<"$WA_TOKEN"
+  echo ">> WhatsApp ligado pela Meta: kv/$PREFIXO/whatsapp e campos meta_* em kv/$PREFIXO/webhooks (reinicie api e worker)"
 }
 
 case "$MODO" in

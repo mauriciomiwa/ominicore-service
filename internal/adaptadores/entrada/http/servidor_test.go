@@ -340,3 +340,32 @@ func TestT65_PedidoSoPorWhatsAppDesligadoVira422(t *testing.T) {
 		t.Fatalf("registrou %d notificações", n)
 	}
 }
+
+func TestT78_VersaoSemTextoComOUltraMsgVira422(t *testing.T) {
+	versaoSemTextoVira422(t, dominio.WhatsAppUltraMsg)
+}
+
+func TestT90_VersaoSemTextoComAZAPIVira422(t *testing.T) {
+	versaoSemTextoVira422(t, dominio.WhatsAppZAPI)
+}
+
+func versaoSemTextoVira422(t *testing.T, prov dominio.ProvedorWhatsApp) {
+	t.Helper()
+	realm := emissor.Novo(t)
+	repo := memoria.Novo()
+	tpl := repo.Templates["boas-vindas"]
+	tpl.Conteudos[dominio.CanalWhatsApp] = dominio.ConteudoCanal{ModeloAprovado: "boas_vindas", Idioma: "pt_BR", Parametros: []string{"nome"}}
+	a := ambiente{realm: realm, repo: repo, h: entradahttp.Servidor{
+		Auth:   keycloak.Novo(realm.URL, "ominicore", &emissor.Cache{}),
+		Enviar: aplicacao.SendMessageUseCase{Repo: repo, ProvedorWhatsApp: prov},
+		Log:    slog.New(slog.NewTextHandler(io.Discard, nil)),
+	}.Handler()}
+	corpo := `{"template_id":"boas-vindas","destinatario":{"telefone":"+5511999998888"},"dados":{"nome":"Ana"},"canais":["whatsapp","sms"]}`
+	rec := a.pedir(a.realm.Valido(t, "sistema-a"), "k-1", corpo)
+	if rec.Code != http.StatusUnprocessableEntity || !strings.Contains(rec.Body.String(), "versão whatsapp sem texto") {
+		t.Fatalf("status = %d corpo = %s", rec.Code, rec.Body.String())
+	}
+	if n, _ := repo.Contar(); n != 0 {
+		t.Fatalf("registrou %d notificações", n)
+	}
+}
