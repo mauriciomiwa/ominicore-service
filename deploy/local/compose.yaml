@@ -17,7 +17,7 @@ services:
       retries: 30
 
   redis:
-    image: docker.io/library/redis:7.4-alpine # mesma versão do aviva2.0
+    image: docker.io/library/redis:8.10-alpine # mesma versão do aviva2.0
     ports: ["127.0.0.1:6380:6379"] # 6379 costuma estar ocupada por outros projetos
 
   openbao:
