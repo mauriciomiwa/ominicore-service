@@ -94,6 +94,14 @@ Cobre: RN-4 (REQ-6, REQ-10, REQ-11 e REQ-21 modificados)
 Depende de: Fatia 8
 Pronto quando: T-82 a T-91 passando e change arquivada.
 
+### Fatia 10 — Configuração do WhatsApp pela API
+Change: `10-config-whatsapp-api`
+Valor: o Operador troca o Provedor e as credenciais do WhatsApp (Meta,
+UltraMsg ou Z-API) ou desliga o Canal pela API, sem SSH no host nem reinício.
+Cobre: RN-11 (REQ-22 a REQ-28)
+Depende de: Fatias 8 e 9 arquivadas
+Pronto quando: T-92 a T-105 passando e change arquivada.
+
 ## Trilha de infraestrutura (não é fatia)
 
 Deploy no aviva2.0 (quadlets `ominicore-api` e `ominicore-worker`, rota
