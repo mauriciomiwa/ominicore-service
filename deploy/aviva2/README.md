@@ -22,7 +22,7 @@ em `ambientes/hml.sh` e `ambientes/prod.sh`.
 | 6 | Sistemas de origem: `sudo keycloak/criar-sistema-origem.sh hml <client-id>` | host | dono | senha admin do Keycloak |
 
 **Ligar o WhatsApp depois** — `sudo openbao/configurar-openbao.sh hml --so-whatsapp`
-pergunta o Provedor (`meta` ou `ultramsg`); reinicie api e worker no host
+pergunta o Provedor (`meta`, `ultramsg` ou `zapi`); reinicie api e worker no host
 (`sudo systemctl restart ominicore-hml-api.service ominicore-hml-worker.service`)
 e confira o log de boot `whatsapp ligado: <provedor>`.
 
@@ -34,6 +34,24 @@ e confira o log de boot `whatsapp ligado: <provedor>`.
   só envia ao reconectar: acompanhe o status da instância no painel. Antes do
   primeiro envio real, confira o formato da resposta com um `curl` de teste
   (`DOC/Padroes/fontes-externas.md`).
+- **Z-API** (gateway não oficial, ADR 0004): como no UltraMsg, uma instância e
+  um número **dedicados por ambiente**, autenticados por QR no painel da Z-API;
+  o script pede `instance_id`, o token da instância e, opcional, o
+  **Client-Token** da conta (aba Segurança). Não há webhook a cadastrar: a
+  Tentativa fica `enviada` e `/webhooks/whatsapp` responde 404. Riscos e
+  cuidados:
+  - **Ordem do Client-Token:** grave o `client_token` pelo script, reinicie api
+    e worker e **só então** clique em "Ativar Token" no painel. Ativado antes,
+    todo envio vira Falha definitiva (`null not allowed`) e cai no próximo
+    Canal.
+  - **Token na URL:** a Z-API exige o token da instância no caminho da chamada.
+    O OminiCore não o escreve em log nem no motivo da Tentativa; se ele vazar,
+    gere outro no painel da instância e rode de novo `--so-whatsapp`.
+  - **Falhas depois do aceite não aparecem:** a Z-API responde 200 ao
+    enfileirar; número sem WhatsApp, shadow ban ou instância desconectada só
+    chegariam pelo webhook dela, que não é ouvido. Acompanhe a instância no
+    painel. Antes do primeiro envio real, confira as respostas com um `curl`
+    de teste (`DOC/Padroes/fontes-externas.md`).
 - **Meta** (conta Meta, número verificado e Modelo `boas_vindas` aprovado):
   o script pede token, `phone_number_id`, App Secret e verify token; depois
   cadastre o webhook da Meta (etapa 5b).

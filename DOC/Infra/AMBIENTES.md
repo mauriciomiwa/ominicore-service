@@ -56,8 +56,9 @@ não enxerga o schema `ominicore`, e nenhum dos dois enxerga os schemas alheios.
 - **Fonte da verdade das chaves:** `deploy/local/README.md` (tabela "Variáveis").
 - **Onde ficam os valores:** OpenBao (`kv/<prefixo>/postgres`, `kv/<prefixo>/sendgrid`,
   `kv/<prefixo>/twilio` — API Key + Messaging Service, `kv/<prefixo>/whatsapp` —
-  `provedor` (`meta`, padrão, ou `ultramsg`) e os campos dele: Meta = token de
-  System User + `phone_number_id`; UltraMsg = `instance_id` + `token`, com
+  `provedor` (`meta`, padrão, `ultramsg` ou `zapi`) e os campos dele: Meta = token de
+  System User + `phone_number_id`; UltraMsg = `instance_id` + `token`; Z-API =
+  `instance_id` + `token` + `client_token` opcional; UltraMsg e Z-API com
   instância e número distintos em hml e prod (ADR 0004), `kv/<prefixo>/webhooks` — chave pública
   do SendGrid, Auth Token do Twilio, App Secret e verify token da Meta,
   `kv/<prefixo>/optout` — chave do HMAC dos Opt-outs, **permanente**, uma por ambiente).

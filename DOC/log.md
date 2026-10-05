@@ -5,6 +5,30 @@ registro vira suposição de alguém daqui a seis meses.
 
 Entradas antigas: `log/arquivo-AAAA.md` (`tools/arquiva_log.py`).
 
+## 2026-10-05 — Fatia 9 (`09-whatsapp-zapi`) implementada: 26/27
+- `dominio.WhatsAppZAPI`, `EnviaTexto` e `ServirTexto` (forma + 4096, usado
+  também pelo UltraMsg); cofre com `CamposWhatsApp[zapi]` e o opcional
+  `client_token`; adaptador `saida/zapi` (JSON, telefone sem `+`, header
+  `Client-Token`, tokens mascarados no motivo); `OMINICORE_ZAPI_URL`; scripts
+  do cofre e runbook com a ordem cofre → reiniciar → ativar Client-Token.
+- Verde: `go test -race`, `make itest`, lint, contrato, `openspec validate
+  --strict`, rastreabilidade. T-82 a T-91 passando. Sentinel: aprovado com
+  ressalvas (sem `shellcheck`; respostas reais da Z-API pendentes — tarefa 5.3).
+
+## 2026-10-05 — Decisão: WhatsApp também pela Z-API (change `09-whatsapp-zapi`)
+- Sabatina fechada com as recomendações: Z-API como terceiro Provedor, um por
+  ambiente (`provedor=zapi`, `instance_id`, `token`, `client_token` opcional
+  no header `Client-Token`); envia o texto da versão WhatsApp como o UltraMsg,
+  com o mesmo limite de 4096 caracteres; sem Aviso de status (RN-5 intacta,
+  Tentativa fica `enviada`, `/webhooks/whatsapp` → 404).
+- Risco do gateway não oficial estendido à Z-API (adendo na ADR 0004).
+- Token da instância vai na URL: erro de rede não leva o `err` ao motivo e a
+  recusa mascara os tokens que a Z-API ecoar (T-84).
+- Webhooks *Ao enviar*/*Status* da Z-API ficam no `to-do.md` (exigem revisar a
+  RN-5); a 09 só arquiva depois da 08 (deltas MODIFIED partem dela).
+- RN-4 com três Provedores, glossário, Fatia 9 no backlog. REQ-6/10/11/21
+  modificados, T-82 a T-91.
+
 ## 2026-10-05 — Fatia 8 (`08-whatsapp-ultramsg`) implementada: 31/32
 - `dominio.ProvedorWhatsApp` (`meta`/`ultramsg`, `Servir`); cofre lê `provedor`
   (ausente = meta) e exige os campos de cada um; adaptador `saida/ultramsg`
@@ -206,26 +230,4 @@ Entradas antigas: `log/arquivo-AAAA.md` (`tools/arquiva_log.py`).
   `OMINICORE_REDIS_PASSWORD` (Redis do aviva2.0 com `requirepass`). Testes:
   isolamento de schemas no Postgres real, login no mount do ambiente.
 - Nada executado no host: as etapas com credencial de admin são do dono.
-
-## 2026-09-29 — Entrega: change `02-sms-e-fallback` arquivada
-- Arquivada em `openspec/changes/archive/2026-09-29-02-sms-e-fallback/`; spec
-  `notificacoes` sincronizada: REQ-2 modificado, REQ-7 (SMS), REQ-8
-  (Retentativa), REQ-9 (fallback). Cobre RN-2 e RN-3 por completo e RN-1
-  (ordem do pedido). T-15 a T-27 passando.
-
-## 2026-09-29 — Fatia 2 (`02-sms-e-fallback`) implementada: 24/24
-- Router novo no domínio (Retentativa 5 s/30 s/2 min ±20%, sorteio injetado;
-  fallback ao próximo Canal com contato); Retentativa e próximo Canal gravados
-  na transação da conclusão (sem schema novo além de `destinatario_telefone`).
-- Twilio por API Key + Messaging Service; classificação 2xx/429/5xx/4xx movida
-  para `saida/provedor` e reusada pelo SendGrid. Segredo `kv/<prefixo>/twilio`
-  passa a ser obrigatório no boot (REQ-6).
-- Pedido: `canais` opcional (vazio ou repetido = 400; sem versão = 422),
-  `telefone` E.164. Contrato sem `enum` em `canais`, para bater com o 422.
-- Verde: `go test -race`, `make itest` 14/14 (Postgres 17), lint, `sqlc diff`,
-  contrato, `openspec validate --strict`, rastreabilidade; boot local no Docker
-  com migration 00003 aplicada. T-15 a T-27 passando.
-- Sentinel: aprovado com ressalvas — entrega "pelo menos uma vez" segue; sem
-  rate limit por Provedor para rajada de Retentativas; `motivo` do Twilio pode
-  citar o telefone (fatia 5 anonimiza).
 

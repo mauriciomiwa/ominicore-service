@@ -192,11 +192,11 @@ components:
             Template. Canal sem versão no Template é recusado com 422.
             Canais do MVP: `email`, `sms`, `whatsapp` (contato =
             `destinatario.telefone`). O WhatsApp sai pelo Provedor do ambiente:
-            Meta (Modelo aprovado) ou UltraMsg (texto da versão WhatsApp); a
-            versão sem a forma do Provedor ativo é recusada com 422 "versão
-            whatsapp sem texto" ou "versão whatsapp sem modelo aprovado". Com o
-            UltraMsg não há Aviso de status: a Tentativa de WhatsApp aceita
-            fica `enviada`. Canal desligado no ambiente (WhatsApp sem
+            Meta (Modelo aprovado), UltraMsg ou Z-API (texto da versão
+            WhatsApp); a versão sem a forma do Provedor ativo é recusada com
+            422 "versão whatsapp sem texto" ou "versão whatsapp sem modelo
+            aprovado". Com o UltraMsg ou a Z-API não há Aviso de status: a
+            Tentativa de WhatsApp aceita fica `enviada`. Canal desligado no ambiente (WhatsApp sem
             credenciais) é pulado; sem Canal disponível, o pedido é recusado
             com 422 "canal whatsapp indisponível".
           uniqueItems: true

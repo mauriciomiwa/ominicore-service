@@ -17,6 +17,7 @@ import (
 	"ominicore/internal/adaptadores/saida/openbao"
 	"ominicore/internal/adaptadores/saida/ultramsg"
 	"ominicore/internal/adaptadores/saida/whatsapp"
+	"ominicore/internal/adaptadores/saida/zapi"
 	"ominicore/internal/aplicacao"
 	"ominicore/internal/dominio"
 	"ominicore/internal/logs"
@@ -128,8 +129,39 @@ func TestT70_UltraMsgLigadoRegistraORemetenteEAvisaOProvedorNoLog(t *testing.T) 
 	}
 }
 
+func TestT82_ZAPILigadaRegistraORemetenteEAvisaOProvedorNoLog(t *testing.T) {
+	seg := openbao.Segredos{
+		SendGridAPIKey: "SG.x", Twilio: map[string]string{"account_sid": "AC"},
+		WhatsAppLigado: true, ProvedorWhatsApp: dominio.WhatsAppZAPI,
+		WhatsApp: map[string]string{"instance_id": "inst1", "token": "tk-secreto", "client_token": "ct-secreto"},
+	}
+	r, ok := remetentes(config{}, seg)[dominio.CanalWhatsApp].(zapi.Remetente)
+	if !ok || r.Cred.ClientToken != "ct-secreto" {
+		t.Fatalf("Remetente do WhatsApp não é a Z-API com o client_token: %+v", r)
+	}
+	if len(canaisDesligados(seg)) != 0 || metaLigada(seg) {
+		t.Fatal("Z-API ligada deixou o Canal desligado ou as rotas da Meta ligadas")
+	}
+	var saida bytes.Buffer
+	anunciarCanais(logs.Novo(&saida, slog.LevelInfo), seg)
+	if l := saida.String(); !strings.Contains(l, "whatsapp ligado: zapi") || strings.Contains(l, "tk-secreto") || strings.Contains(l, "ct-secreto") {
+		t.Fatalf("log do boot = %q", l)
+	}
+}
+
 func TestT81_WebhookDaMetaComOUltraMsgAtivoResponde404(t *testing.T) {
-	seg := openbao.Segredos{WhatsAppLigado: true, ProvedorWhatsApp: dominio.WhatsAppUltraMsg}
+	webhookDaMetaResponde404(t, dominio.WhatsAppUltraMsg)
+}
+
+func TestT91_WebhookDaMetaComAZAPIAtivaResponde404(t *testing.T) {
+	webhookDaMetaResponde404(t, dominio.WhatsAppZAPI)
+}
+
+// webhookDaMetaResponde404: com um Provedor de texto, as rotas da Meta não
+// existem (REQ-21).
+func webhookDaMetaResponde404(t *testing.T, prov dominio.ProvedorWhatsApp) {
+	t.Helper()
+	seg := openbao.Segredos{WhatsAppLigado: true, ProvedorWhatsApp: prov}
 	mux := http.NewServeMux()
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	repo := memoria.Novo()

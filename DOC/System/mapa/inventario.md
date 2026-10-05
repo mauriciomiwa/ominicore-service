@@ -1,6 +1,6 @@
 # Inventário do código — ominicore
 
-> GERADO por `tools/mapeia_projeto.py` em 2026-10-05T11:02:25. Não edite: rode o script de novo.
+> GERADO por `tools/mapeia_projeto.py` em 2026-10-05T12:03:44. Não edite: rode o script de novo.
 > A interpretação (o que cada área faz, fluxos, RN candidatas) está nas outras páginas desta pasta.
 
 ## Stack
@@ -14,13 +14,13 @@
 ```mermaid
 graph LR
   cmd["cmd (2)"]
-  internal["internal (54)"]
+  internal["internal (57)"]
   migrations["migrations (1)"]
 ```
 
 | Módulo | Arquivos | Importa |
 |---|---|---|
-| `internal` | 54 | — |
+| `internal` | 57 | — |
 | `cmd` | 2 | — |
 | `migrations` | 1 | — |
 
@@ -49,7 +49,7 @@ graph LR
 | POST | `/protocol/openid-connect/token` | `internal/adaptadores/saida/keycloak/token.go:17` |
 | POST | `/v3/mail/send` | `internal/adaptadores/saida/sendgrid/sendgrid.go:78` |
 
-## Variáveis de ambiente lidas no código (15)
+## Variáveis de ambiente lidas no código (18)
 
 | Variável | Declarada em .env* | Onde é lida |
 |---|---|---|
@@ -68,6 +68,9 @@ graph LR
 | `WHATSAPP_PHONE_NUMBER_ID` | **não** | `deploy/local/bootstrap.sh` |
 | `WHATSAPP_PROVEDOR` | **não** | `deploy/local/bootstrap.sh` |
 | `WHATSAPP_TOKEN` | **não** | `deploy/local/bootstrap.sh` |
+| `ZAPI_CLIENT_TOKEN` | **não** | `deploy/local/bootstrap.sh` |
+| `ZAPI_INSTANCE_ID` | **não** | `deploy/local/bootstrap.sh` |
+| `ZAPI_TOKEN` | **não** | `deploy/local/bootstrap.sh` |
 
 ## Dados
 

@@ -16,3 +16,14 @@ Consequências: número dedicado por ambiente (hml e prod), só mensagem
 transacional a quem já é cliente; sem Aviso de status (a Tentativa fica
 `enviada`, nunca `entregue`); número sem WhatsApp não é detectado; instância
 desconectada enfileira no UltraMsg sem erro — monitorar no painel.
+
+## Adendo (2026-10-05) — Z-API
+
+A Z-API entra como terceiro Provedor do Canal WhatsApp (`provedor=zapi`,
+change `09-whatsapp-zapi`), da mesma família do UltraMsg: gateway sobre o
+WhatsApp Web, número autenticado por QR. O risco aceito pelo cliente nesta
+decisão vale também para ela, com as mesmas consequências e a mesma regra de
+número dedicado por ambiente. Diferenças que pesam: a Z-API exige o token da
+instância na URL (o OminiCore não o escreve em log nem no motivo) e tem um
+token de segurança da conta (`Client-Token`) opcional. Os webhooks dela não
+têm assinatura documentada: seguem sem uso até a RN-5 ser revista.

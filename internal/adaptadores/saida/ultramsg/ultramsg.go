@@ -14,7 +14,6 @@ import (
 	"net/url"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"ominicore/internal/adaptadores/saida/provedor"
 	"ominicore/internal/dominio"
@@ -25,7 +24,7 @@ import (
 const URLPadrao = "https://api.ultramsg.com"
 
 // LimiteTexto é o tamanho máximo do body aceito pelo UltraMsg, em caracteres.
-const LimiteTexto = 4096
+const LimiteTexto = dominio.LimiteTextoWhatsApp
 
 // Credenciais vêm do OpenBao (`kv/<prefixo>/whatsapp` com provedor=ultramsg, REQ-6).
 type Credenciais struct {
@@ -54,11 +53,8 @@ func Novo(baseURL string, c Credenciais) Remetente {
 // definitiva sem chamar o Provedor (T-76, T-77). O token vai no corpo, nunca
 // na URL.
 func (r Remetente) Enviar(ctx context.Context, para string, c dominio.ConteudoCanal) dominio.ResultadoEnvio {
-	if err := dominio.WhatsAppUltraMsg.Servir(c); err != nil {
+	if err := dominio.WhatsAppUltraMsg.ServirTexto(c); err != nil {
 		return dominio.ResultadoEnvio{Tipo: dominio.FalhaDefinitiva, Motivo: err.Error()}
-	}
-	if n := utf8.RuneCountInString(c.Corpo); n > LimiteTexto {
-		return dominio.ResultadoEnvio{Tipo: dominio.FalhaDefinitiva, Motivo: fmt.Sprintf("texto whatsapp com %d caracteres (limite %d)", n, LimiteTexto)}
 	}
 	form := url.Values{"token": {r.Cred.Token}, "to": {para}, "body": {c.Corpo}}
 	endpoint := strings.TrimRight(r.URL, "/") + "/" + url.PathEscape(r.Cred.InstanceID) + "/messages/chat"

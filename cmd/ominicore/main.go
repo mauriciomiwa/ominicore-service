@@ -29,6 +29,7 @@ import (
 	"ominicore/internal/adaptadores/saida/twilio"
 	"ominicore/internal/adaptadores/saida/ultramsg"
 	"ominicore/internal/adaptadores/saida/whatsapp"
+	"ominicore/internal/adaptadores/saida/zapi"
 	"ominicore/internal/aplicacao"
 	"ominicore/internal/dominio"
 	"ominicore/internal/logs"
@@ -101,6 +102,7 @@ type config struct {
 	TwilioURL     string
 	WhatsAppURL   string
 	UltraMsgURL   string
+	ZAPIURL       string
 	Schema        string // search_path no Postgres: ominicore (prod) ou ominicore_hml
 	WebhookURL    string // origem pública dos webhooks (https://notify-hml.flipapi.com.br); vazia no local
 	RetencaoDias  string // OMINICORE_RETENCAO_DIAS, padrão 30 (RN-9)
@@ -134,6 +136,7 @@ func lerConfig(env func(string) string) config {
 		TwilioURL:     env("OMINICORE_TWILIO_URL"),
 		WhatsAppURL:   env("OMINICORE_WHATSAPP_URL"),
 		UltraMsgURL:   env("OMINICORE_ULTRAMSG_URL"),
+		ZAPIURL:       env("OMINICORE_ZAPI_URL"),
 		Schema:        padrao("OMINICORE_DB_SCHEMA", postgres.SchemaPadrao),
 		WebhookURL:    strings.TrimRight(env("OMINICORE_WEBHOOK_URL"), "/"),
 		RetencaoDias:  padrao("OMINICORE_RETENCAO_DIAS", "30"),
@@ -271,6 +274,10 @@ func remetentes(cfg config, seg openbao.Segredos) map[dominio.Canal]portas.Messa
 	case seg.ProvedorWhatsApp == dominio.WhatsAppUltraMsg:
 		r[dominio.CanalWhatsApp] = ultramsg.Novo(cfg.UltraMsgURL, ultramsg.Credenciais{
 			InstanceID: seg.WhatsApp["instance_id"], Token: seg.WhatsApp["token"],
+		})
+	case seg.ProvedorWhatsApp == dominio.WhatsAppZAPI:
+		r[dominio.CanalWhatsApp] = zapi.Novo(cfg.ZAPIURL, zapi.Credenciais{
+			InstanceID: seg.WhatsApp["instance_id"], Token: seg.WhatsApp["token"], ClientToken: seg.WhatsApp["client_token"],
 		})
 	default:
 		r[dominio.CanalWhatsApp] = whatsapp.Novo(cfg.WhatsAppURL, whatsapp.Credenciais{

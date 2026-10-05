@@ -70,3 +70,10 @@ func TestT80_VariavelDoTextoDoWhatsAppEExigida(t *testing.T) {
 		t.Fatalf("registrou %d notificações", n)
 	}
 }
+
+func TestT90_VersaoSemTextoERecusadaComAZAPIAtiva(t *testing.T) {
+	repo := memoria.Novo()
+	p := pedidoSo(repo, dominio.ConteudoCanal{ModeloAprovado: "boas_vindas", Idioma: "pt_BR", Parametros: []string{"nome"}})
+	_, err := aplicacao.SendMessageUseCase{Repo: repo, ProvedorWhatsApp: dominio.WhatsAppZAPI}.Pedir(context.Background(), p)
+	recusadoSemRegistro(t, repo, err, "versão whatsapp sem texto")
+}

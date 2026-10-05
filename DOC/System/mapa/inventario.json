@@ -1,5 +1,5 @@
 {
- "gerado_em": "2026-10-05T11:02:25",
+ "gerado_em": "2026-10-05T12:03:44",
  "raiz": "ominicore",
  "stack": [
   {
@@ -15,7 +15,7 @@
    "importa": []
   },
   "internal": {
-   "arquivos": 54,
+   "arquivos": 57,
    "importa": []
   },
   "migrations": {
@@ -180,6 +180,15 @@
    "deploy/local/bootstrap.sh"
   ],
   "WHATSAPP_TOKEN": [
+   "deploy/local/bootstrap.sh"
+  ],
+  "ZAPI_CLIENT_TOKEN": [
+   "deploy/local/bootstrap.sh"
+  ],
+  "ZAPI_INSTANCE_ID": [
+   "deploy/local/bootstrap.sh"
+  ],
+  "ZAPI_TOKEN": [
    "deploy/local/bootstrap.sh"
   ]
  },

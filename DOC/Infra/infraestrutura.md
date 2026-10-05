@@ -60,7 +60,7 @@ o binário, só aditivas. Quem pode escrever em prod: só o dono (`AMBIENTES.md`
 | Fila / broker | tabela `tentativas` (`ominicore_hml`) | tabela `tentativas` (`ominicore`) | sem broker (ADR 0001) |
 | Cache | Redis do aviva2.0 (`redis:6379`, `requirepass`) | o mesmo | só JWKS; chave inclui o realm |
 | Storage de arquivos | — | — | não usa |
-| Serviços externos | SendGrid, Twilio e Meta em sandbox; UltraMsg com instância e número de hml | contas de produção; UltraMsg com instância e número de prod | credenciais em `kv/<prefixo>/{sendgrid,twilio,whatsapp,webhooks}`; `whatsapp` opcional (sem ele o Canal fica desligado) e com `provedor` = `meta` ou `ultramsg` (ADR 0004) |
+| Serviços externos | SendGrid, Twilio e Meta em sandbox; UltraMsg ou Z-API com instância e número de hml | contas de produção; UltraMsg ou Z-API com instância e número de prod | credenciais em `kv/<prefixo>/{sendgrid,twilio,whatsapp,webhooks}`; `whatsapp` opcional (sem ele o Canal fica desligado) e com `provedor` = `meta`, `ultramsg` ou `zapi` (ADR 0004) |
 | Identidade e cofre | Keycloak realm `ominicore-hml`; OpenBao `kv/ominicore-hml/*` | realm `ominicore`; `kv/ominicore/*` | Keycloak e OpenBao da casa, no mesmo host |
 | Observabilidade | `slog` JSON no journald | idem | sem métricas/alerta ainda |
 
@@ -72,7 +72,7 @@ graph LR
   P[Provedores] -->|Cloudflare + Traefik, /webhooks/*| API
   API --> PG[(Aurora new_aviva / ominicore)]
   W[ominicore-worker] --> PG
-  W --> SG[SendGrid / Twilio / Meta ou UltraMsg]
+  W --> SG[SendGrid / Twilio / Meta, UltraMsg ou Z-API]
   API & W --> BAO[OpenBao]
   API --> KC[Keycloak]
   API --> RD[(Redis)]

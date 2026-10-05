@@ -37,6 +37,13 @@ var CamposWebhooksMeta = []string{"meta_app_secret", "meta_verify_token"}
 var CamposWhatsApp = map[dominio.ProvedorWhatsApp][]string{
 	dominio.WhatsAppMeta:     {"token", "phone_number_id"},
 	dominio.WhatsAppUltraMsg: {"instance_id", "token"},
+	dominio.WhatsAppZAPI:     {"instance_id", "token"},
+}
+
+// CamposOpcionaisWhatsApp são lidos quando existem: o `client_token` da Z-API
+// só existe se a conta ativou o token de segurança (REQ-6).
+var CamposOpcionaisWhatsApp = map[dominio.ProvedorWhatsApp][]string{
+	dominio.WhatsAppZAPI: {"client_token"},
 }
 
 // CamposTwilio são os campos exigidos em <mount>/<prefixo>/twilio (REQ-7).
@@ -139,7 +146,7 @@ func entrar(ctx context.Context, cfg Config) (*bao.Client, error) {
 }
 
 // lerWhatsApp devolve nil sem o caminho (Canal desligado) e, com ele, os campos
-// exigidos pelo Provedor indicado em `provedor`.
+// exigidos e os opcionais presentes do Provedor indicado em `provedor`.
 func lerWhatsApp(ctx context.Context, cli *bao.Client, mount, caminho string) (map[string]string, dominio.ProvedorWhatsApp, error) {
 	s, err := cli.KVv2(mount).Get(ctx, caminho)
 	if errors.Is(err, bao.ErrSecretNotFound) {
@@ -154,7 +161,15 @@ func lerWhatsApp(ctx context.Context, cli *bao.Client, mount, caminho string) (m
 		return nil, "", fmt.Errorf("%w: %s/%s: %w", ErrOpenBao, mount, caminho, err)
 	}
 	out, err := exigir(s.Data, mount, caminho, CamposWhatsApp[prov]...)
-	return out, prov, err
+	if err != nil {
+		return nil, "", err
+	}
+	for _, c := range CamposOpcionaisWhatsApp[prov] {
+		if v, _ := s.Data[c].(string); v != "" {
+			out[c] = v
+		}
+	}
+	return out, prov, nil
 }
 
 func ler(ctx context.Context, cli *bao.Client, mount, caminho string, campos ...string) (map[string]string, error) {

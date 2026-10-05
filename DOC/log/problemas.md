@@ -1,10 +1,6 @@
 # Problemas abertos
 
-> Gerado em 2026-10-05 11:29 a partir da última execução de cada script. Não edite: rode os scripts de novo.
-
-## checa_projeto-local — 2026-10-05 11:04
-
-- [ ] **ALERTA** [estrutura] DOC/estado.md com 33 linhas (> 25) — é retrato, não histórico; reescreva com a skill passagem.
+> Gerado em 2026-10-05 12:05 a partir da última execução de cada script. Não edite: rode os scripts de novo.
 
 ## verifica-projeto — 2026-10-05 11:29
 
