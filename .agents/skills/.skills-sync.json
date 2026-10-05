@@ -1,5 +1,5 @@
 {
-  "sincronizado_em": "2026-10-05T10:53:30",
+  "sincronizado_em": "2026-10-05T11:28:54",
   "fonte": "/Users/mauriciomiwa/Mauricio/skills",
   "commit_da_fonte": "8402475",
   "skills": [
@@ -66,8 +66,8 @@
     ".agents/skills/novo-projeto-sdd/references/projeto-existente.md": "f03044e844c6a4b5",
     ".agents/skills/novo-projeto-sdd/references/util-e-migrations.md": "e6de766c8a1843a6",
     ".agents/skills/novo-projeto-sdd/scripts/arquiva_log.py": "4617ce11c0255d13",
-    ".agents/skills/novo-projeto-sdd/scripts/checa_projeto.py": "039bbe303f6214c0",
-    ".agents/skills/novo-projeto-sdd/scripts/dependabot_config.py": "21d281583c453bfe",
+    ".agents/skills/novo-projeto-sdd/scripts/checa_projeto.py": "3a742185a07d7ee7",
+    ".agents/skills/novo-projeto-sdd/scripts/dependabot_config.py": "408474fc8d032e4c",
     ".agents/skills/novo-projeto-sdd/scripts/mapa_html.py": "ee651afc3a57c3cf",
     ".agents/skills/novo-projeto-sdd/scripts/mapeia_projeto.py": "a256a185dfe5720a",
     ".agents/skills/novo-projeto-sdd/scripts/registro_log.py": "6320cb6b2a229b2b",
@@ -80,8 +80,8 @@
     ".agents/skills/sentinel/references/anti-padroes.md": "48105fd216712bac",
     ".agents/skills/sentinel/references/diretrizes.md": "5f9b4eeb0308956c",
     "DOC/tools/arquiva_log.py": "4617ce11c0255d13",
-    "DOC/tools/checa_projeto.py": "039bbe303f6214c0",
-    "DOC/tools/dependabot_config.py": "21d281583c453bfe",
+    "DOC/tools/checa_projeto.py": "3a742185a07d7ee7",
+    "DOC/tools/dependabot_config.py": "408474fc8d032e4c",
     "DOC/tools/diff_ambientes.py": "5d49ec65531c3859",
     "DOC/tools/mapa_html.py": "ee651afc3a57c3cf",
     "DOC/tools/mapeia_projeto.py": "a256a185dfe5720a",

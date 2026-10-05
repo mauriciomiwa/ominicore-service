@@ -229,3 +229,14 @@
 {"data": "2026-10-05T11:02:57", "script": "mapa_html", "rc": 0, "faltas": 0, "alertas": 0, "erro": false, "detalhe": "execucoes/2026-10-05_110257_mapa_html.json", "areas": 1, "regras_candidatas": 1}
 {"data": "2026-10-05T11:04:22", "script": "mapeia_projeto-check", "rc": 0, "faltas": 0, "alertas": 0, "erro": false, "detalhe": "execucoes/2026-10-05_110422_mapeia_projeto-check.json", "surgiu": 0, "sumiu": 0}
 {"data": "2026-10-05T11:04:23", "script": "checa_projeto-local", "rc": 0, "faltas": 0, "alertas": 1, "erro": false, "detalhe": "execucoes/2026-10-05_110423_checa_projeto-local.json", "furos": 0}
+{"data": "2026-10-05T11:28:47", "script": "mapeia_projeto-check", "rc": 0, "faltas": 0, "alertas": 0, "erro": false, "detalhe": "execucoes/2026-10-05_112847_mapeia_projeto-check.json", "surgiu": 0, "sumiu": 0}
+{"data": "2026-10-05T11:28:48", "script": "mapeia_projeto-check", "rc": 0, "faltas": 0, "alertas": 0, "erro": false, "detalhe": "execucoes/2026-10-05_112848_mapeia_projeto-check.json", "surgiu": 0, "sumiu": 0}
+{"data": "2026-10-05T11:28:48", "script": "verifica-projeto", "rc": 1, "faltas": 2, "alertas": 2, "erro": false, "detalhe": "execucoes/2026-10-05_112848_verifica-projeto.json", "faltando": 2, "etapas_ok": 11}
+{"data": "2026-10-05T11:28:49", "script": "mapeia_projeto-check", "rc": 0, "faltas": 0, "alertas": 0, "erro": false, "detalhe": "execucoes/2026-10-05_112849_mapeia_projeto-check.json", "surgiu": 0, "sumiu": 0}
+{"data": "2026-10-05T11:28:54", "script": "sync-skills", "rc": 0, "faltas": 0, "alertas": 0, "erro": false, "detalhe": "execucoes/2026-10-05_112854_sync-skills.json", "novos": 0, "atualizados": 4, "orfaos": 0}
+{"data": "2026-10-05T11:28:55", "script": "sync-skills", "rc": 0, "faltas": 0, "alertas": 0, "erro": false, "detalhe": "execucoes/2026-10-05_112855_sync-skills.json", "novos": 0, "atualizados": 0, "orfaos": 0}
+{"data": "2026-10-05T11:28:58", "script": "sync-skills", "rc": 0, "faltas": 0, "alertas": 0, "erro": false, "detalhe": "execucoes/2026-10-05_112858_sync-skills.json", "novos": 0, "atualizados": 0, "orfaos": 0}
+{"data": "2026-10-05T11:29:01", "script": "mapeia_projeto-check", "rc": 0, "faltas": 0, "alertas": 0, "erro": false, "detalhe": "execucoes/2026-10-05_112901_mapeia_projeto-check.json", "surgiu": 0, "sumiu": 0}
+{"data": "2026-10-05T11:29:02", "script": "mapeia_projeto-check", "rc": 0, "faltas": 0, "alertas": 0, "erro": false, "detalhe": "execucoes/2026-10-05_112902_mapeia_projeto-check.json", "surgiu": 0, "sumiu": 0}
+{"data": "2026-10-05T11:29:02", "script": "verifica-projeto", "rc": 0, "faltas": 0, "alertas": 2, "erro": false, "detalhe": "execucoes/2026-10-05_112902_verifica-projeto.json", "faltando": 0, "etapas_ok": 13}
+{"data": "2026-10-05T11:29:03", "script": "mapeia_projeto-check", "rc": 0, "faltas": 0, "alertas": 0, "erro": false, "detalhe": "execucoes/2026-10-05_112903_mapeia_projeto-check.json", "surgiu": 0, "sumiu": 0}

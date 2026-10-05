@@ -59,7 +59,7 @@ def scripts_tools(skills: Path) -> dict:
     return {n: (skills / "ambientes" / "scripts" / n if n == "diff_ambientes.py" else aqui / n) for n in TOOLS}
 IGNORAR_DIRS = {".git", "node_modules", ".venv", "venv", "__pycache__", "dist", "build",
                 "target", ".next", ".idea", ".vscode", "vendor", ".sdd", ".gradle",
-                ".claude"}  # worktrees do Claude Code: cópia do repo inteiro (jobs e testes em dobro)
+                ".claude", ".worktrees"}  # worktrees (Claude Code e git): cópia do repo inteiro (jobs e testes em dobro)
 RE_TESTE_ARQ = re.compile(
     r"(^|/)(tests?|__tests__|spec|specs|e2e|it)/|(^|/)test_[^/]+$|_test\.[a-z]+$|"
     r"\.(test|spec)\.[a-z]+$|Tests?\.(java|kt|cs|scala)$|_spec\.rb$", re.I)

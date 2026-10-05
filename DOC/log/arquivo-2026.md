@@ -2,6 +2,22 @@
 
 Entradas antigas do `log.md`, mais recente no topo.
 
+## 2026-09-29 — Sabatina da fatia 02 fechada; change `02-sms-e-fallback` aberta
+- Decidido (recomendações aceitas): `canais` opcional no pedido (Canal sem
+  versão no Template = 422); Canal sem contato é pulado, 422 só se nenhum tem;
+  telefone E.164; 3 Retentativas (4 Tentativas) com 5 s/30 s/2 min ±20%;
+  Twilio por API Key + Messaging Service (`kv/<prefixo>/twilio`); 21211/21610
+  e demais 4xx = Falha definitiva; `boas-vindas` ganha SMS, ordem Email → SMS.
+- RN-2 corrigida: o critério dizia "até 3 Tentativas"; vale 3 Retentativas.
+  Glossário: termo **Retentativa**.
+
+## 2026-09-29 — Entrega: change `01-enviar-email` arquivada
+- Arquivada em `openspec/changes/archive/2026-09-29-01-enviar-email/`; specs
+  vigentes criadas: `autenticacao-origem` (REQ-1), `notificacoes` (REQ-2 a
+  REQ-5), `segredos` (REQ-6). Cobre RN-1, RN-3 (Email), RN-7 e RN-9
+  (credenciais); RN-2 parcial (falha encerra; retry/fallback na fatia 02).
+- T-1 a T-14 passando (`System/plano-de-testes.md`).
+
 ## 2026-09-29 — Fatia 1 verificada contra serviços reais (30/30)
 - Docker ligado: `make itest` 7/7 contra Postgres 17 (T-4, T-7 com 10 reenvios
   concorrentes, T-9, T-10, T-11 ~0,65 s, T-12, janela de 24 h).

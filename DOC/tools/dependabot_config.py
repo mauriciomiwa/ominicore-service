@@ -59,7 +59,7 @@ REGRAS = [
 ]
 IGNORAR = {".git", "node_modules", "vendor", "target", "build", "dist", ".venv",
            "venv", "__pycache__", ".gradle", ".idea", "bin", "obj", ".next",
-           ".terraform", "Garbage", ".agents", ".claude"}
+           ".terraform", "Garbage", ".agents", ".claude", ".worktrees"}
 PROFUNDIDADE = 4
 # lockfile proprio de um package.json: com ele o diretorio tem gerente proprio
 LOCKS_NPM = ("package-lock.json", "npm-shrinkwrap.json", "yarn.lock", "pnpm-lock.yaml")
