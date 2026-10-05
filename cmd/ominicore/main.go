@@ -76,8 +76,10 @@ func run(ctx context.Context, args []string, env func(string) string, saida io.W
 	case "migrate":
 		return postgres.Migrar(ctx, pool, cfg.Schema)
 	case "api":
+		anunciarCanais(log, seg)
 		return rodarAPI(ctx, cfg, seg, repo, log)
 	case "worker":
+		anunciarCanais(log, seg)
 		return rodarWorker(ctx, cfg, seg, repo, log)
 	default:
 		return fmt.Errorf("subcomando desconhecido: %s", args[0])
@@ -181,7 +183,7 @@ func rodarAPI(ctx context.Context, cfg config, seg openbao.Segredos, repo postgr
 		Addr: cfg.Endereco,
 		Handler: entradahttp.Servidor{
 			Auth:      keycloak.NovoComBackchannel(cfg.KCEmissor, cfg.realmInterno(), cfg.KCPublico, redis.Cache{Cliente: rdb}),
-			Enviar:    aplicacao.SendMessageUseCase{Repo: repo},
+			Enviar:    aplicacao.SendMessageUseCase{Repo: repo, Desligados: canaisDesligados(seg)},
 			Consultar: aplicacao.ConsultarUseCase{Repo: repo},
 			OptOut:    aplicacao.OptOutUseCase{Repo: repo},
 			Webhooks: webhooks.Webhooks{
@@ -190,9 +192,10 @@ func rodarAPI(ctx context.Context, cfg config, seg openbao.Segredos, repo postgr
 					MetaAppSecret: seg.Webhooks["meta_app_secret"], MetaVerifyToken: seg.Webhooks["meta_verify_token"],
 					URLPublica: cfg.WebhookURL,
 				},
-				Receptor: aplicacao.ReceiveMessageUseCase{Repo: repo, Log: log},
-				OptOut:   aplicacao.OptOutUseCase{Repo: repo},
-				Log:      log,
+				WhatsAppLigado: seg.WhatsAppLigado,
+				Receptor:       aplicacao.ReceiveMessageUseCase{Repo: repo, Desligados: canaisDesligados(seg), Log: log},
+				OptOut:         aplicacao.OptOutUseCase{Repo: repo},
+				Log:            log,
 			},
 			Log: log,
 		}.Handler(),
@@ -217,15 +220,10 @@ func rodarAPI(ctx context.Context, cfg config, seg openbao.Segredos, repo postgr
 
 func rodarWorker(ctx context.Context, cfg config, seg openbao.Segredos, repo postgres.Repositorio, log *slog.Logger) error {
 	uc := aplicacao.DespacharUseCase{
-		Repo: repo,
-		Remetentes: map[dominio.Canal]portas.MessageSenderPort{
-			dominio.CanalEmail: sendgrid.Novo(cfg.SendGridURL, seg.SendGridAPIKey, seg.SendGridRemetente),
-			dominio.CanalSMS:   remetenteSMS(cfg, seg),
-			dominio.CanalWhatsApp: whatsapp.Novo(cfg.WhatsAppURL, whatsapp.Credenciais{
-				Token: seg.WhatsApp["token"], PhoneNumberID: seg.WhatsApp["phone_number_id"],
-			}),
-		},
-		Log: log,
+		Repo:       repo,
+		Remetentes: remetentes(cfg, seg),
+		Desligados: canaisDesligados(seg),
+		Log:        log,
 	}
 	dias, err := strconv.Atoi(cfg.RetencaoDias)
 	if err != nil || dias < 1 {
@@ -236,6 +234,37 @@ func rodarWorker(ctx context.Context, cfg config, seg openbao.Segredos, repo pos
 	log.Info("worker no ar", "versao", version, "retencao_dias", dias)
 	worker.Worker{Despachante: uc, Log: log}.Rodar(ctx)
 	return nil
+}
+
+// canaisDesligados são os Canais sem credenciais no cofre (REQ-20): hoje só o
+// WhatsApp pode faltar.
+func canaisDesligados(seg openbao.Segredos) map[dominio.Canal]bool {
+	if seg.WhatsAppLigado {
+		return nil
+	}
+	return map[dominio.Canal]bool{dominio.CanalWhatsApp: true}
+}
+
+// anunciarCanais registra no boot quais Canais ficaram desligados (T-63).
+func anunciarCanais(log *slog.Logger, seg openbao.Segredos) {
+	for c := range canaisDesligados(seg) {
+		log.Info(string(c)+" desligado", "canal", c, "motivo", "sem credenciais no openbao")
+	}
+}
+
+// remetentes liga cada Canal ao seu Provedor; Canal desligado fica sem
+// Remetente e a Tentativa pendente nele vira Falha definitiva (T-68).
+func remetentes(cfg config, seg openbao.Segredos) map[dominio.Canal]portas.MessageSenderPort {
+	r := map[dominio.Canal]portas.MessageSenderPort{
+		dominio.CanalEmail: sendgrid.Novo(cfg.SendGridURL, seg.SendGridAPIKey, seg.SendGridRemetente),
+		dominio.CanalSMS:   remetenteSMS(cfg, seg),
+	}
+	if seg.WhatsAppLigado {
+		r[dominio.CanalWhatsApp] = whatsapp.Novo(cfg.WhatsAppURL, whatsapp.Credenciais{
+			Token: seg.WhatsApp["token"], PhoneNumberID: seg.WhatsApp["phone_number_id"],
+		})
+	}
+	return r
 }
 
 // remetenteSMS pede o Aviso de status ao Twilio quando há URL pública (REQ-12).

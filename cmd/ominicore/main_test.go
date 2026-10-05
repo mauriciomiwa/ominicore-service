@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +13,8 @@ import (
 	"time"
 
 	"ominicore/internal/adaptadores/saida/openbao"
+	"ominicore/internal/dominio"
+	"ominicore/internal/logs"
 )
 
 func envCom(vars map[string]string) func(string) string {
@@ -67,5 +70,31 @@ func TestRealmInternoTrocaOHostPublicoPeloBackchannel(t *testing.T) {
 		if got := cfg.realmInterno(); got != quero {
 			t.Errorf("realmInterno(%+v) = %q, quero %q", cfg, got, quero)
 		}
+	}
+}
+
+func TestT63_SemCredenciaisDaMetaSobeComEmailESMSEAvisaNoLog(t *testing.T) {
+	seg := openbao.Segredos{SendGridAPIKey: "SG.x", Twilio: map[string]string{"account_sid": "AC"}} // WhatsAppLigado = false
+	r := remetentes(config{}, seg)
+	if _, ok := r[dominio.CanalEmail]; !ok {
+		t.Fatal("sem Remetente de Email")
+	}
+	if _, ok := r[dominio.CanalSMS]; !ok {
+		t.Fatal("sem Remetente de SMS")
+	}
+	if _, ok := r[dominio.CanalWhatsApp]; ok {
+		t.Fatal("Remetente de WhatsApp registrado sem credenciais")
+	}
+	if !canaisDesligados(seg)[dominio.CanalWhatsApp] {
+		t.Fatal("WhatsApp não ficou desligado")
+	}
+	var saida bytes.Buffer
+	anunciarCanais(logs.Novo(&saida, slog.LevelInfo), seg)
+	if !strings.Contains(saida.String(), "whatsapp desligado") {
+		t.Fatalf("log do boot = %q", saida.String())
+	}
+	seg.WhatsAppLigado = true
+	if _, ok := remetentes(config{}, seg)[dominio.CanalWhatsApp]; !ok || len(canaisDesligados(seg)) != 0 {
+		t.Fatal("WhatsApp ligado sem Remetente")
 	}
 }

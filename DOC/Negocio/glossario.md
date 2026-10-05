@@ -21,6 +21,11 @@ Meio pelo qual a Notificação chega ao Destinatário: Email, SMS (e WhatsApp,
 depois).
 _Evitar_: provedor, meio, tipo
 
+**Canal desligado**:
+Canal cujo Provedor não tem credenciais configuradas no ambiente; o OminiCore
+o trata como indisponível no pedido, no fallback e nos Avisos de status.
+_Evitar_: canal inativo, canal off, canal sem provedor
+
 **Provedor**:
 Empresa externa que executa o envio de um Canal (SendGrid para Email, Twilio
 para SMS).

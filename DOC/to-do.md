@@ -16,6 +16,8 @@ ficam no `System/backlog-mvp.md` (cada uma é uma change do OpenSpec); furos de 
 - [ ] Caminho do módulo Go (`ominicore` → `github.com/<org>/ominicore`) quando o repositório existir.
 
 ## Fatia 06 — WhatsApp
+Não bloqueia o deploy (Fatia 7): sem estes itens o core sobe com o WhatsApp
+desligado; para ligar, `configurar-openbao.sh <amb> --so-whatsapp`.
 - [ ] Conta Meta Business + WhatsApp Business Account + número verificado; Modelo aprovado `boas_vindas` (`pt_BR`, 1 parâmetro = nome). Sem isso, só testes com Meta falsa.
 - [ ] Token permanente de System User e `phone_number_id` em `kv/<prefixo>/whatsapp` (dono).
 - [ ] Revisar a versão da Graph API fixada no adaptador antes da data de desativação da Meta.
@@ -35,7 +37,8 @@ Artefatos prontos no repositório (2026-09-29); **nada executado no host ainda**
 - [ ] 1. DNS + Cloudflare `notify-hml.flipapi.com.br` (dono).
 - [ ] 2. Aurora: `deploy/aviva2/aurora/criar-schema.sql`, bloco hml (dono, DBeaver).
 - [ ] 3. Keycloak: `sudo deploy/aviva2/keycloak/criar-realm.sh hml` (dono, no host).
-- [ ] 4. OpenBao: `sudo deploy/aviva2/openbao/configurar-openbao.sh hml` (dono, no host; contas SendGrid/Twilio de sandbox).
+- [ ] 4. OpenBao: `sudo deploy/aviva2/openbao/configurar-openbao.sh hml` (dono, no host; contas SendGrid/Twilio de sandbox; WhatsApp: responder N até a conta Meta existir).
+- [ ] Instalar `shellcheck` local (`brew install shellcheck`) — `configurar-openbao.sh` da Fatia 7 só passou por `bash -n`.
 - [ ] 5. `./deploy/aviva2/publicar.sh hml` (bloco de alvo antes).
 - [ ] 6. Sistema de origem de teste em hml (`keycloak/criar-sistema-origem.sh hml <id>`) e um pedido de ponta a ponta.
 - [ ] Depois, prod: mesmos passos com `prod`, só com a promoção aprovada (`AMBIENTES.md` §6).

@@ -57,6 +57,7 @@ TWILIO_MESSAGING_SERVICE_SID=...` antes do `./deploy/local/bootstrap.sh`.
 Segredos no OpenBao: `kv/<prefixo>/postgres` (`dsn`), `kv/<prefixo>/sendgrid`
 (`api_key`, `remetente`), `kv/<prefixo>/twilio` (`account_sid`, `api_key_sid`,
 `api_key_secret`, `messaging_service_sid`), `kv/<prefixo>/whatsapp` (`token`,
-`phone_number_id`) e `kv/<prefixo>/webhooks` (`sendgrid_chave_publica`,
-`twilio_auth_token`, `meta_app_secret`, `meta_verify_token`) e `kv/<prefixo>/optout`
+`phone_number_id`; opcional — sem ele o Canal WhatsApp fica desligado) e
+`kv/<prefixo>/webhooks` (`sendgrid_chave_publica`, `twilio_auth_token` e, com o
+WhatsApp ligado, `meta_app_secret`, `meta_verify_token`) e `kv/<prefixo>/optout`
 (`chave` do HMAC dos Opt-outs — permanente, ver `deploy/aviva2/README.md`). Endereços de hml e prod: `DOC/Infra/AMBIENTES.md`.

@@ -2,6 +2,31 @@
 
 Entradas antigas do `log.md`, mais recente no topo.
 
+## 2026-09-29 — Fatia 1 verificada contra serviços reais (30/30)
+- Docker ligado: `make itest` 7/7 contra Postgres 17 (T-4, T-7 com 10 reenvios
+  concorrentes, T-9, T-10, T-11 ~0,65 s, T-12, janela de 24 h).
+- Ambiente local de ponta a ponta (`COMPOSE="docker compose" make compose-up`):
+  token real do Keycloak → 202; mesma chave → mesmo id + `Idempotent-Replayed`;
+  sem token → 401; worker enviou (SendGrid falso local, para não chamar a API
+  real) e gravou `enviada`.
+- Login `jwt` no OpenBao via Keycloak (ADR 0002) provado: `ominicore-app` entra
+  e lê `kv/ominicore/*`; `sistema-local` é recusado (`aud` ≠ `openbao`).
+- Achados só visíveis rodando, corrigidos: arquivo de realm precisa do nome do
+  realm (`ominicore-realm.json`); `bound_claims` só entra como JSON; OpenBao
+  valida o JWKS ao gravar (retry no bootstrap); Redis local na 6380 (6379 é de
+  outro projeto); `make itest` prefere o Docker; audience mapper `openbao` no
+  client `ominicore-app` (hml/prod devem espelhar).
+
+## 2026-09-29 — Contrato de ambientes (`Infra/AMBIENTES.md`) fechado
+- Dono aceitou as recomendações: realms `ominicore`/`ominicore-hml` em
+  `auth.flipapi.com.br`; webhooks em `notify(-hml).flipapi.com.br/webhooks/*`;
+  API interna `ominicore-api(-hml):8080`; schema `ominicore_hml` no mesmo
+  Aurora; cofre `kv/ominicore-hml/*` × `kv/ominicore/*`; só o dono escreve
+  segredo de prod; hml só com dado sintético; promove-se o mesmo binário.
+- Código: `OMINICORE_KC_URL` (JWKS e token pelo backchannel `http://keycloak:8080`,
+  porque o host público tem allowlist) e `OMINICORE_BAO_PREFIXO` (isola hml de
+  prod no mesmo OpenBao), com testes.
+
 ## 2026-09-28 — Fatia 1 (`01-enviar-email`) implementada, verificação parcial
 - Código hexagonal em Go 1.27 (módulo `ominicore`): domínio, casos de uso
   SendMessage/Despachar, adaptadores HTTP, worker, Postgres (pgx + sqlc + goose,

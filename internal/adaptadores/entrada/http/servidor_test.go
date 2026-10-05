@@ -322,3 +322,21 @@ func TestT56_ConsultaMostraQuandoFoiAnonimizadaNoHTTP(t *testing.T) {
 		t.Fatalf("status %d: %s", res.Code, res.Body)
 	}
 }
+
+func TestT65_PedidoSoPorWhatsAppDesligadoVira422(t *testing.T) {
+	realm := emissor.Novo(t)
+	repo := memoria.Novo()
+	a := ambiente{realm: realm, repo: repo, h: entradahttp.Servidor{
+		Auth:   keycloak.Novo(realm.URL, "ominicore", &emissor.Cache{}),
+		Enviar: aplicacao.SendMessageUseCase{Repo: repo, Desligados: map[dominio.Canal]bool{dominio.CanalWhatsApp: true}},
+		Log:    slog.New(slog.NewTextHandler(io.Discard, nil)),
+	}.Handler()}
+	corpo := `{"template_id":"boas-vindas","destinatario":{"telefone":"+5511999998888"},"dados":{"nome":"Ana"},"canais":["whatsapp"]}`
+	rec := a.pedir(a.realm.Valido(t, "sistema-a"), "k-1", corpo)
+	if rec.Code != http.StatusUnprocessableEntity || !strings.Contains(rec.Body.String(), "canal whatsapp indisponível") {
+		t.Fatalf("status = %d corpo = %s", rec.Code, rec.Body.String())
+	}
+	if n, _ := repo.Contar(); n != 0 {
+		t.Fatalf("registrou %d notificações", n)
+	}
+}

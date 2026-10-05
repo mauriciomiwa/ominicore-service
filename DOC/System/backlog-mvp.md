@@ -69,6 +69,15 @@ Pronto quando: T-28 a T-33 passando e change arquivada.
 **Entregue em 2026-09-29** (`openspec/changes/archive/2026-09-29-06-whatsapp/`). Incluída no MVP em
 2026-09-29 (antes era "depois"); status de entrega do WhatsApp entra com a Fatia 3.
 
+### Fatia 7 — WhatsApp opcional
+Change: `07-whatsapp-opcional`
+Valor: o core (Email e SMS) vai ao ar antes da conta Meta existir; o WhatsApp
+liga depois só gravando as credenciais no cofre.
+Cobre: RN-4, RN-9 (REQ-6 modificado, REQ-20)
+Depende de: Fatias 3 e 6
+Pronto quando: T-63 a T-69 passando e change arquivada.
+**Entregue em 2026-10-05** (`openspec/changes/archive/2026-10-05-07-whatsapp-opcional/`).
+
 ## Trilha de infraestrutura (não é fatia)
 
 Deploy no aviva2.0 (quadlets `ominicore-api` e `ominicore-worker`, rota

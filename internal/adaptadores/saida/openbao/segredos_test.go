@@ -93,3 +93,59 @@ func TestLoginJWTUsaOMountDoAmbiente(t *testing.T) {
 		t.Fatalf("login em %q", loginEm)
 	}
 }
+
+// cofreSemMeta tem tudo o que o core exige e nada do WhatsApp.
+func cofreSemMeta() map[string]map[string]string {
+	return map[string]map[string]string{
+		"/v1/kv/data/ominicore/postgres": {"dsn": "postgres://x"},
+		"/v1/kv/data/ominicore/sendgrid": {"api_key": "SG.x", "remetente": "x@exemplo.com"},
+		"/v1/kv/data/ominicore/twilio":   {"account_sid": "AC", "api_key_sid": "SK", "api_key_secret": "x", "messaging_service_sid": "MG"},
+		"/v1/kv/data/ominicore/webhooks": {"sendgrid_chave_publica": "k", "twilio_auth_token": "t"},
+		"/v1/kv/data/ominicore/optout":   {"chave": "chave-de-teste-com-mais-de-32-caracteres"},
+	}
+}
+
+func TestT63_SemCredenciaisDaMetaOCanalFicaDesligado(t *testing.T) {
+	seg, err := openbao.Carregar(context.Background(), openbao.Config{Endereco: kvFalso(t, cofreSemMeta()), Token: "t"})
+	if err != nil {
+		t.Fatalf("sem a Meta o boot falhou: %v", err)
+	}
+	if seg.WhatsAppLigado || seg.WhatsApp != nil || seg.SendGridAPIKey != "SG.x" || seg.Twilio["messaging_service_sid"] != "MG" {
+		t.Fatalf("segredos = %+v", seg)
+	}
+}
+
+func TestT64_CredenciaisDaMetaIncompletasImpedemOInicio(t *testing.T) {
+	casos := map[string]struct {
+		whatsapp, metaWebhook map[string]string
+		campo                 string
+	}{
+		"sem phone_number_id": {map[string]string{"token": "t"}, map[string]string{"meta_app_secret": "s", "meta_verify_token": "v"}, "phone_number_id"},
+		"sem App Secret":      {map[string]string{"token": "t", "phone_number_id": "1"}, map[string]string{"meta_verify_token": "v"}, "meta_app_secret"},
+		"sem verify token":    {map[string]string{"token": "t", "phone_number_id": "1"}, map[string]string{"meta_app_secret": "s"}, "meta_verify_token"},
+	}
+	for nome, c := range casos {
+		t.Run(nome, func(t *testing.T) {
+			kv := cofreSemMeta()
+			kv["/v1/kv/data/ominicore/whatsapp"] = c.whatsapp
+			for k, v := range c.metaWebhook {
+				kv["/v1/kv/data/ominicore/webhooks"][k] = v
+			}
+			_, err := openbao.Carregar(context.Background(), openbao.Config{Endereco: kvFalso(t, kv), Token: "t"})
+			if !errors.Is(err, openbao.ErrOpenBao) || !strings.Contains(err.Error(), c.campo) {
+				t.Fatalf("erro = %v, quero ErrOpenBao citando %s", err, c.campo)
+			}
+		})
+	}
+}
+
+func TestWhatsAppLigadoComTodasAsCredenciais(t *testing.T) {
+	kv := cofreSemMeta()
+	kv["/v1/kv/data/ominicore/whatsapp"] = map[string]string{"token": "t", "phone_number_id": "1"}
+	kv["/v1/kv/data/ominicore/webhooks"]["meta_app_secret"] = "s"
+	kv["/v1/kv/data/ominicore/webhooks"]["meta_verify_token"] = "v"
+	seg, err := openbao.Carregar(context.Background(), openbao.Config{Endereco: kvFalso(t, kv), Token: "t"})
+	if err != nil || !seg.WhatsAppLigado || seg.WhatsApp["phone_number_id"] != "1" || seg.Webhooks["meta_verify_token"] != "v" {
+		t.Fatalf("segredos = %+v err = %v", seg, err)
+	}
+}

@@ -504,9 +504,10 @@ func (p ponta) webhookMeta(t *testing.T, corpo string) int {
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	mux := http.NewServeMux()
 	webhooks.Webhooks{
-		Cred:     webhooks.Credenciais{MetaAppSecret: appSecretTeste, MetaVerifyToken: "v"},
-		Receptor: aplicacao.ReceiveMessageUseCase{Repo: postgres.Repositorio{Pool: p.pool}, Log: log},
-		Log:      log,
+		WhatsAppLigado: true,
+		Cred:           webhooks.Credenciais{MetaAppSecret: appSecretTeste, MetaVerifyToken: "v"},
+		Receptor:       aplicacao.ReceiveMessageUseCase{Repo: postgres.Repositorio{Pool: p.pool}, Log: log},
+		Log:            log,
 	}.Registrar(mux)
 	m := hmac.New(sha256.New, []byte(appSecretTeste))
 	m.Write([]byte(corpo))

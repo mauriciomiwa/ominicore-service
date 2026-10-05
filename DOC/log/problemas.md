@@ -1,6 +1,6 @@
 # Problemas abertos
 
-> Gerado em 2026-10-02 20:41 a partir da última execução de cada script. Não edite: rode os scripts de novo.
+> Gerado em 2026-10-05 08:47 a partir da última execução de cada script. Não edite: rode os scripts de novo.
 
 ## verifica-projeto — 2026-09-30 18:45
 
