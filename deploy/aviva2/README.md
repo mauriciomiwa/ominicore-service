@@ -59,6 +59,45 @@ e confira o log de boot `whatsapp ligado: <provedor>`.
   com o outro Provedor, ou apague o caminho
   (`kv delete kv/<prefixo>/whatsapp`, Canal desligado), e reinicie api e worker.
 
+**Trocar o WhatsApp pela API, sem reiniciar (RN-11)** — o caminho do dia a dia
+depois da primeira configuração. Uma vez por ambiente:
+
+1. `sudo openbao/configurar-openbao.sh hml --sem-segredos`: a policy passa a
+   permitir escrita **só** em `kv/<prefixo>/whatsapp` (ADR 0005).
+2. Crie um client de operação (nunca um Sistema de origem comum) com
+   `sudo keycloak/criar-sistema-origem.sh hml ops-<nome>` e dê a ele o papel de
+   Operador: `sudo keycloak/conceder-operador.sh hml ops-<nome>`. Para revogar:
+   o mesmo comando com `--revogar` (os tokens atuais expiram em até 5 min).
+
+Depois, com o token do client de operação (`client_credentials`):
+
+```bash
+curl -s -H "Authorization: Bearer $TOKEN" https://<api interna>/v1/config/whatsapp
+```
+
+```bash
+curl -s -X PUT -H "Authorization: Bearer $TOKEN" https://<api interna>/v1/config/whatsapp -d @config.json
+```
+
+```bash
+curl -s -X DELETE -H "Authorization: Bearer $TOKEN" https://<api interna>/v1/config/whatsapp
+```
+
+- O `config.json` leva `provedor` e os campos dele (ver `api/openapi.yaml`);
+  monte-o num arquivo fora do repositório e apague depois — o token do
+  Provedor nunca vai em argumento de linha de comando.
+- A api passa a usar na hora; o worker, na próxima releitura
+  (`OMINICORE_CONFIG_RELEITURA`, 30 s). Confira no log
+  `whatsapp reconfigurado: <provedor>`. Configuração inválida editada à mão no
+  cofre não derruba nada: o log diz "mantida a anterior".
+- Cada troca fica em `config_eventos` (quem, quando, qual Provedor, sem
+  segredo). Falha ao registrar = resposta 500 "gravada sem registro" e a troca
+  fica no log de erro.
+- **Meta pela API:** o App Secret e o verify token passam a morar em
+  `kv/<prefixo>/whatsapp`. Antes de voltar para um binário anterior à fatia 10,
+  regrave a Meta com `--so-whatsapp` (o binário antigo os procura em
+  `webhooks`).
+
 Para copiar os scripts ao host: `scp -i ~/.ssh/aviva2.0.pem -r deploy/aviva2 ubuntu@44.209.101.158:/tmp/`.
 
 Credencial nunca vai para o repositório, para o chat nem para argumento de

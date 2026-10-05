@@ -21,6 +21,7 @@ import (
 	"ominicore/internal/aplicacao"
 	"ominicore/internal/dominio"
 	"ominicore/internal/logs"
+	"ominicore/internal/portas"
 	"ominicore/internal/testes/memoria"
 )
 
@@ -69,13 +70,16 @@ func TestT13_SemOpenBaoOProcessoNaoInicia(t *testing.T) {
 }
 
 func TestRealmInternoTrocaOHostPublicoPeloBackchannel(t *testing.T) {
-	casos := map[config]string{
-		{KCEmissor: "https://auth.flipapi.com.br/realms/ominicore-hml", KCURL: "http://keycloak:8080/"}: "http://keycloak:8080/realms/ominicore-hml",
-		{KCEmissor: "http://localhost:8081/realms/ominicore"}:                                           "http://localhost:8081/realms/ominicore",
+	casos := []struct {
+		cfg   config
+		quero string
+	}{
+		{config{KCEmissor: "https://auth.flipapi.com.br/realms/ominicore-hml", KCURL: "http://keycloak:8080/"}, "http://keycloak:8080/realms/ominicore-hml"},
+		{config{KCEmissor: "http://localhost:8081/realms/ominicore"}, "http://localhost:8081/realms/ominicore"},
 	}
-	for cfg, quero := range casos {
-		if got := cfg.realmInterno(); got != quero {
-			t.Errorf("realmInterno(%+v) = %q, quero %q", cfg, got, quero)
+	for _, c := range casos {
+		if got := c.cfg.realmInterno(); got != c.quero {
+			t.Errorf("realmInterno(%+v) = %q, quero %q", c.cfg, got, c.quero)
 		}
 	}
 }
@@ -115,7 +119,7 @@ func TestT70_UltraMsgLigadoRegistraORemetenteEAvisaOProvedorNoLog(t *testing.T) 
 	if _, ok := remetentes(config{}, seg)[dominio.CanalWhatsApp].(ultramsg.Remetente); !ok {
 		t.Fatal("Remetente do WhatsApp não é o UltraMsg")
 	}
-	if len(canaisDesligados(seg)) != 0 || metaLigada(seg) {
+	if len(canaisDesligados(seg)) != 0 || metaLigada(t, seg) {
 		t.Fatal("UltraMsg ligado deixou o Canal desligado ou as rotas da Meta ligadas")
 	}
 	var saida bytes.Buffer
@@ -124,7 +128,7 @@ func TestT70_UltraMsgLigadoRegistraORemetenteEAvisaOProvedorNoLog(t *testing.T) 
 		t.Fatalf("log do boot = %q", saida.String())
 	}
 	seg.ProvedorWhatsApp = dominio.WhatsAppMeta
-	if _, ok := remetentes(config{}, seg)[dominio.CanalWhatsApp].(whatsapp.Remetente); !ok || !metaLigada(seg) {
+	if _, ok := remetentes(config{}, seg)[dominio.CanalWhatsApp].(whatsapp.Remetente); !ok || !metaLigada(t, seg) {
 		t.Fatal("com a Meta, o Remetente ou as rotas não são da Meta")
 	}
 }
@@ -139,7 +143,7 @@ func TestT82_ZAPILigadaRegistraORemetenteEAvisaOProvedorNoLog(t *testing.T) {
 	if !ok || r.Cred.ClientToken != "ct-secreto" {
 		t.Fatalf("Remetente do WhatsApp não é a Z-API com o client_token: %+v", r)
 	}
-	if len(canaisDesligados(seg)) != 0 || metaLigada(seg) {
+	if len(canaisDesligados(seg)) != 0 || metaLigada(t, seg) {
 		t.Fatal("Z-API ligada deixou o Canal desligado ou as rotas da Meta ligadas")
 	}
 	var saida bytes.Buffer
@@ -167,7 +171,7 @@ func webhookDaMetaResponde404(t *testing.T, prov dominio.ProvedorWhatsApp) {
 	repo := memoria.Novo()
 	webhooks.Webhooks{
 		Cred:       webhooks.Credenciais{MetaAppSecret: "s", MetaVerifyToken: "v"},
-		MetaLigada: metaLigada(seg),
+		MetaLigada: metaLigada(t, seg),
 		Receptor:   aplicacao.ReceiveMessageUseCase{Repo: repo, Log: log},
 		Log:        log,
 	}.Registrar(mux)
@@ -184,4 +188,11 @@ func webhookDaMetaResponde404(t *testing.T, prov dominio.ProvedorWhatsApp) {
 	if len(repo.Historico()) != 0 {
 		t.Fatal("aviso mudou alguma Tentativa")
 	}
+}
+
+// metaLigada diz se as rotas da Meta respondem com a configuração do boot.
+func metaLigada(t *testing.T, seg openbao.Segredos) bool {
+	t.Helper()
+	nada := func(dominio.ConfigWhatsApp) portas.MessageSenderPort { return nil }
+	return metaAtual(aplicacao.NovaConfigWhatsAppAtual(seg.ConfigWhatsApp(), nada))().Ligada
 }

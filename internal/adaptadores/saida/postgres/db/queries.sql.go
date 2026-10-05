@@ -8,6 +8,8 @@ package db
 import (
 	"context"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const anonimizarLote = `-- name: AnonimizarLote :many
@@ -263,6 +265,28 @@ func (q *Queries) ContarPendentesVencidas(ctx context.Context, criadaEm time.Tim
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const inserirEventoConfig = `-- name: InserirEventoConfig :exec
+INSERT INTO config_eventos (canal, acao, provedor, por) VALUES ($1, $2, $3, $4)
+`
+
+type InserirEventoConfigParams struct {
+	Canal    string
+	Acao     string
+	Provedor pgtype.Text
+	Por      string
+}
+
+// Troca da configuração de um Canal pela API, sem segredo (REQ-27).
+func (q *Queries) InserirEventoConfig(ctx context.Context, arg InserirEventoConfigParams) error {
+	_, err := q.db.Exec(ctx, inserirEventoConfig,
+		arg.Canal,
+		arg.Acao,
+		arg.Provedor,
+		arg.Por,
+	)
+	return err
 }
 
 const inserirEventoOptOut = `-- name: InserirEventoOptOut :exec

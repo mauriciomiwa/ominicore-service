@@ -34,13 +34,13 @@ Camadas: `internal/dominio` (sem dependência externa) · `internal/aplicacao` e
 ## Áreas
 | Área | O que faz | Entradas (rotas/endpoints) | Depende de |
 |---|---|---|---|
-| [Envio](envio.md) | pedido de Notificação por Template e despacho por Email, SMS e WhatsApp, com Retentativa e fallback | `POST`/`GET /v1/notificacoes`, `/webhooks/*`, worker | Keycloak, OpenBao, Postgres, Redis, SendGrid, Twilio, Meta, UltraMsg, Z-API |
+| [Envio](envio.md) | pedido de Notificação por Template e despacho por Email, SMS e WhatsApp, com Retentativa e fallback | `POST`/`GET /v1/notificacoes`, `/v1/opt-outs`, `/v1/config/whatsapp`, `/webhooks/*`, worker | Keycloak, OpenBao, Postgres, Redis, SendGrid, Twilio, Meta, UltraMsg, Z-API |
 
 ## Integrações externas
 | Sistema | Como é chamado | Onde |
 |---|---|---|
 | Keycloak | JWKS + token client_credentials | `internal/adaptadores/saida/keycloak/` |
-| OpenBao | login `jwt` (ou token local) + KV v2 | `internal/adaptadores/saida/openbao/segredos.go` |
+| OpenBao | login `jwt` (ou token local, re-login quando a sessão expira) + KV v2; escrita só em `kv/<p>/whatsapp` (ADR 0005) | `internal/adaptadores/saida/openbao/segredos.go` |
 | SendGrid | `POST /v3/mail/send` | `internal/adaptadores/saida/sendgrid/sendgrid.go` |
 | Twilio | `POST .../Messages.json` (API Key) | `internal/adaptadores/saida/twilio/twilio.go` |
 | Meta (WhatsApp) | `POST /v26.0/{phone_number_id}/messages` (Bearer) | `internal/adaptadores/saida/whatsapp/whatsapp.go` |

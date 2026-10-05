@@ -61,7 +61,7 @@ func run(ctx context.Context, args []string, env func(string) string, saida io.W
 	}
 	log := logs.Novo(saida, slog.LevelInfo)
 	cfg := lerConfig(env)
-	seg, err := carregarSegredos(ctx, cfg)
+	cofre, seg, err := carregarSegredos(ctx, cfg)
 	if err != nil {
 		return err
 	}
@@ -77,12 +77,20 @@ func run(ctx context.Context, args []string, env func(string) string, saida io.W
 	switch args[0] {
 	case "migrate":
 		return postgres.Migrar(ctx, pool, cfg.Schema)
-	case "api":
+	case "api", "worker":
+		releitura, err := time.ParseDuration(cfg.Releitura)
+		if err != nil || releitura < time.Second {
+			return fmt.Errorf("OMINICORE_CONFIG_RELEITURA inválido: %q (duração ≥ 1s, ex.: 30s)", cfg.Releitura)
+		}
 		anunciarCanais(log, seg)
-		return rodarAPI(ctx, cfg, seg, repo, log)
-	case "worker":
-		anunciarCanais(log, seg)
-		return rodarWorker(ctx, cfg, seg, repo, log)
+		atual := aplicacao.NovaConfigWhatsAppAtual(seg.ConfigWhatsApp(), func(c dominio.ConfigWhatsApp) portas.MessageSenderPort {
+			return remetenteWhatsApp(cfg, c)
+		})
+		go aplicacao.ReleituraConfig{Cofre: cofre, Atual: atual, Log: log}.Rodar(ctx, releitura)
+		if args[0] == "api" {
+			return rodarAPI(ctx, cfg, seg, atual, cofre, repo, log)
+		}
+		return rodarWorker(ctx, cfg, seg, atual, repo, log)
 	default:
 		return fmt.Errorf("subcomando desconhecido: %s", args[0])
 	}
@@ -103,6 +111,7 @@ type config struct {
 	WhatsAppURL   string
 	UltraMsgURL   string
 	ZAPIURL       string
+	Releitura     string // OMINICORE_CONFIG_RELEITURA: intervalo da releitura da configuração (REQ-26)
 	Schema        string // search_path no Postgres: ominicore (prod) ou ominicore_hml
 	WebhookURL    string // origem pública dos webhooks (https://notify-hml.flipapi.com.br); vazia no local
 	RetencaoDias  string // OMINICORE_RETENCAO_DIAS, padrão 30 (RN-9)
@@ -137,6 +146,7 @@ func lerConfig(env func(string) string) config {
 		WhatsAppURL:   env("OMINICORE_WHATSAPP_URL"),
 		UltraMsgURL:   env("OMINICORE_ULTRAMSG_URL"),
 		ZAPIURL:       env("OMINICORE_ZAPI_URL"),
+		Releitura:     padrao("OMINICORE_CONFIG_RELEITURA", "30s"),
 		Schema:        padrao("OMINICORE_DB_SCHEMA", postgres.SchemaPadrao),
 		WebhookURL:    strings.TrimRight(env("OMINICORE_WEBHOOK_URL"), "/"),
 		RetencaoDias:  padrao("OMINICORE_RETENCAO_DIAS", "30"),
@@ -159,23 +169,28 @@ func (c config) realmInterno() string {
 
 // carregarSegredos entra no OpenBao (token local, ou JWT do Keycloak em hml e
 // prod — ADR 0002) e falha fechado: sem segredos o processo não sobe (T-13).
-func carregarSegredos(ctx context.Context, cfg config) (openbao.Segredos, error) {
+// O Cofre fica aberto para a releitura e a gravação da configuração do
+// WhatsApp, renovando o JWT quando a sessão expira (REQ-26).
+func carregarSegredos(ctx context.Context, cfg config) (*openbao.Cofre, openbao.Segredos, error) {
 	if cfg.Bao.Endereco == "" {
-		return openbao.Segredos{}, fmt.Errorf("%w: OMINICORE_BAO_ADDR vazio", openbao.ErrOpenBao)
+		return nil, openbao.Segredos{}, fmt.Errorf("%w: OMINICORE_BAO_ADDR vazio", openbao.ErrOpenBao)
 	}
 	if cfg.Bao.Token == "" {
-		jwt, err := keycloak.TokenDeServico(ctx, cfg.realmInterno(), cfg.KCClientID, cfg.KCSecret)
-		if err != nil {
-			return openbao.Segredos{}, fmt.Errorf("%w: %w", openbao.ErrOpenBao, err)
+		cfg.Bao.RenovarJWT = func(ctx context.Context) (string, error) {
+			return keycloak.TokenDeServico(ctx, cfg.realmInterno(), cfg.KCClientID, cfg.KCSecret)
 		}
-		cfg.Bao.JWT = jwt
 	}
 	ctx, cancelar := context.WithTimeout(ctx, 15*time.Second)
 	defer cancelar()
-	return openbao.Carregar(ctx, cfg.Bao)
+	cofre, err := openbao.Abrir(ctx, cfg.Bao)
+	if err != nil {
+		return nil, openbao.Segredos{}, err
+	}
+	seg, err := cofre.Carregar(ctx)
+	return cofre, seg, err
 }
 
-func rodarAPI(ctx context.Context, cfg config, seg openbao.Segredos, repo postgres.Repositorio, log *slog.Logger) error {
+func rodarAPI(ctx context.Context, cfg config, seg openbao.Segredos, atual *aplicacao.ConfigWhatsAppAtual, cofre *openbao.Cofre, repo postgres.Repositorio, log *slog.Logger) error {
 	if cfg.KCEmissor == "" {
 		return errors.New("OMINICORE_KC_ISSUER vazio")
 	}
@@ -189,19 +204,19 @@ func rodarAPI(ctx context.Context, cfg config, seg openbao.Segredos, repo postgr
 		Addr: cfg.Endereco,
 		Handler: entradahttp.Servidor{
 			Auth:      keycloak.NovoComBackchannel(cfg.KCEmissor, cfg.realmInterno(), cfg.KCPublico, redis.Cache{Cliente: rdb}),
-			Enviar:    aplicacao.SendMessageUseCase{Repo: repo, Desligados: canaisDesligados(seg), ProvedorWhatsApp: seg.ProvedorWhatsApp},
+			Enviar:    aplicacao.SendMessageUseCase{Repo: repo, Estado: atual},
 			Consultar: aplicacao.ConsultarUseCase{Repo: repo},
 			OptOut:    aplicacao.OptOutUseCase{Repo: repo},
+			Config:    &aplicacao.ConfigurarUseCase{Cofre: cofre, Registro: repo, Atual: atual, Log: log},
 			Webhooks: webhooks.Webhooks{
 				Cred: webhooks.Credenciais{
 					SendGridChavePublica: chaveSG, TwilioAuthToken: seg.Webhooks["twilio_auth_token"],
-					MetaAppSecret: seg.Webhooks["meta_app_secret"], MetaVerifyToken: seg.Webhooks["meta_verify_token"],
 					URLPublica: cfg.WebhookURL,
 				},
-				MetaLigada: metaLigada(seg),
-				Receptor:   aplicacao.ReceiveMessageUseCase{Repo: repo, Desligados: canaisDesligados(seg), Log: log},
-				OptOut:     aplicacao.OptOutUseCase{Repo: repo},
-				Log:        log,
+				Meta:     metaAtual(atual),
+				Receptor: aplicacao.ReceiveMessageUseCase{Repo: repo, Estado: atual, Log: log},
+				OptOut:   aplicacao.OptOutUseCase{Repo: repo},
+				Log:      log,
 			},
 			Log: log,
 		}.Handler(),
@@ -224,11 +239,13 @@ func rodarAPI(ctx context.Context, cfg config, seg openbao.Segredos, repo postgr
 	return nil
 }
 
-func rodarWorker(ctx context.Context, cfg config, seg openbao.Segredos, repo postgres.Repositorio, log *slog.Logger) error {
+func rodarWorker(ctx context.Context, cfg config, seg openbao.Segredos, atual *aplicacao.ConfigWhatsAppAtual, repo postgres.Repositorio, log *slog.Logger) error {
+	rem := remetentes(cfg, seg)
+	rem[dominio.CanalWhatsApp] = atual // segue a configuração em uso (REQ-26)
 	uc := aplicacao.DespacharUseCase{
 		Repo:       repo,
-		Remetentes: remetentes(cfg, seg),
-		Desligados: canaisDesligados(seg),
+		Remetentes: rem,
+		Estado:     atual,
 		Log:        log,
 	}
 	dias, err := strconv.Atoi(cfg.RetencaoDias)
@@ -269,28 +286,36 @@ func remetentes(cfg config, seg openbao.Segredos) map[dominio.Canal]portas.Messa
 		dominio.CanalEmail: sendgrid.Novo(cfg.SendGridURL, seg.SendGridAPIKey, seg.SendGridRemetente),
 		dominio.CanalSMS:   remetenteSMS(cfg, seg),
 	}
-	switch {
-	case !seg.WhatsAppLigado:
-	case seg.ProvedorWhatsApp == dominio.WhatsAppUltraMsg:
-		r[dominio.CanalWhatsApp] = ultramsg.Novo(cfg.UltraMsgURL, ultramsg.Credenciais{
-			InstanceID: seg.WhatsApp["instance_id"], Token: seg.WhatsApp["token"],
-		})
-	case seg.ProvedorWhatsApp == dominio.WhatsAppZAPI:
-		r[dominio.CanalWhatsApp] = zapi.Novo(cfg.ZAPIURL, zapi.Credenciais{
-			InstanceID: seg.WhatsApp["instance_id"], Token: seg.WhatsApp["token"], ClientToken: seg.WhatsApp["client_token"],
-		})
-	default:
-		r[dominio.CanalWhatsApp] = whatsapp.Novo(cfg.WhatsAppURL, whatsapp.Credenciais{
-			Token: seg.WhatsApp["token"], PhoneNumberID: seg.WhatsApp["phone_number_id"],
-		})
+	if seg.WhatsAppLigado {
+		r[dominio.CanalWhatsApp] = remetenteWhatsApp(cfg, seg.ConfigWhatsApp())
 	}
 	return r
 }
 
-// metaLigada: as rotas da Meta só existem com o WhatsApp ligado pela Meta
-// (REQ-20, REQ-21).
-func metaLigada(seg openbao.Segredos) bool {
-	return seg.WhatsAppLigado && seg.ProvedorWhatsApp == dominio.WhatsAppMeta
+// remetenteWhatsApp liga a configuração do WhatsApp ao Remetente do Provedor
+// dela; usado no boot e a cada troca de configuração (REQ-26).
+func remetenteWhatsApp(cfg config, c dominio.ConfigWhatsApp) portas.MessageSenderPort {
+	switch c.Provedor {
+	case dominio.WhatsAppUltraMsg:
+		return ultramsg.Novo(cfg.UltraMsgURL, ultramsg.Credenciais{InstanceID: c.Campos["instance_id"], Token: c.Campos["token"]})
+	case dominio.WhatsAppZAPI:
+		return zapi.Novo(cfg.ZAPIURL, zapi.Credenciais{
+			InstanceID: c.Campos["instance_id"], Token: c.Campos["token"], ClientToken: c.Campos["client_token"],
+		})
+	default:
+		return whatsapp.Novo(cfg.WhatsAppURL, whatsapp.Credenciais{Token: c.Campos["token"], PhoneNumberID: c.Campos["phone_number_id"]})
+	}
+}
+
+// metaAtual: as rotas da Meta acompanham o Provedor em uso (REQ-21, T-103).
+func metaAtual(a *aplicacao.ConfigWhatsAppAtual) func() webhooks.MetaAtual {
+	return func() webhooks.MetaAtual {
+		c := a.Config()
+		return webhooks.MetaAtual{
+			Ligada:    c.Ligado && c.Provedor == dominio.WhatsAppMeta,
+			AppSecret: c.Campos["meta_app_secret"], VerifyToken: c.Campos["meta_verify_token"],
+		}
+	}
 }
 
 // remetenteSMS pede o Aviso de status ao Twilio quando há URL pública (REQ-12).

@@ -15,6 +15,11 @@ ficam no `System/backlog-mvp.md` (cada uma é uma change do OpenSpec); furos de 
 - [ ] Decidir se envio duplicado na janela de queda (Provedor aceitou, commit falhou) é aceitável: hoje o despacho é "pelo menos uma vez".
 - [ ] Caminho do módulo Go (`ominicore` → `github.com/<org>/ominicore`) quando o repositório existir.
 
+## Fatia 10 — Configuração do WhatsApp pela API (change `10-config-whatsapp-api`) — fora do escopo, para decidir depois
+- [ ] Status da instância e QR do UltraMsg e da Z-API pela API (hoje só no painel do Provedor).
+- [ ] Testar a credencial no Provedor antes de gravar (hoje só os campos são conferidos).
+- [ ] Configuração de Email (SendGrid) e SMS (Twilio) pela API do Operador.
+
 ## Fatia 09 — WhatsApp pela Z-API (change `09-whatsapp-zapi`, 26/27; auditada em 2026-10-05: aprovado com ressalvas)
 - [ ] Webhooks *Ao enviar* (`DeliveryCallback`) e *Status* da Z-API com segredo na URL: detectariam número sem WhatsApp e shadow ban depois do aceite e disparariam o fallback, mas a Z-API não documenta assinatura — exige revisar a RN-5 (aviso sem assinatura válida é descartado). Decisão do negócio.
 - [x] Auditar com a sentinel o diff de código da 09 (`cmd/ominicore`, `internal/adaptadores/saida/{openbao,ultramsg,zapi}`, `internal/dominio`, `internal/testes/zapifake`, scripts de `deploy/`) e registrar o veredito quando a sessão que implementa fechar as tarefas — auditar no meio da escrita não vale (o veredito se amarra ao conteúdo atual).

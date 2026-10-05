@@ -260,3 +260,13 @@
 {"data": "2026-10-05T12:10:25", "script": "mapeia_projeto-check", "rc": 0, "faltas": 0, "alertas": 0, "erro": false, "detalhe": "execucoes/2026-10-05_121025_mapeia_projeto-check.json", "surgiu": 0, "sumiu": 0}
 {"data": "2026-10-05T12:10:25", "script": "verifica-projeto", "rc": 0, "faltas": 0, "alertas": 2, "erro": false, "detalhe": "execucoes/2026-10-05_121025_verifica-projeto.json", "faltando": 0, "etapas_ok": 13}
 {"data": "2026-10-05T12:10:26", "script": "mapeia_projeto-check", "rc": 0, "faltas": 0, "alertas": 0, "erro": false, "detalhe": "execucoes/2026-10-05_121026_mapeia_projeto-check.json", "surgiu": 0, "sumiu": 0}
+{"data": "2026-10-05T13:36:49", "script": "mapeia_projeto", "rc": 0, "faltas": 0, "alertas": 0, "erro": false, "detalhe": "execucoes/2026-10-05_133649_mapeia_projeto.json", "modulos": 3, "rotas": 0, "endpoints": 19, "chamadas_http": 2, "env": 18}
+{"data": "2026-10-05T13:37:02", "script": "mapa_html", "rc": 0, "faltas": 0, "alertas": 0, "erro": false, "detalhe": "execucoes/2026-10-05_133702_mapa_html.json", "areas": 1, "regras_candidatas": 1}
+{"data": "2026-10-05T13:37:03", "script": "mapeia_projeto-check", "rc": 0, "faltas": 0, "alertas": 0, "erro": false, "detalhe": "execucoes/2026-10-05_133703_mapeia_projeto-check.json", "surgiu": 0, "sumiu": 0}
+{"data": "2026-10-05T13:37:03", "script": "checa_projeto-local", "rc": 0, "faltas": 0, "alertas": 2, "erro": false, "detalhe": "execucoes/2026-10-05_133703_checa_projeto-local.json", "furos": 0}
+{"data": "2026-10-05T13:38:12", "script": "mapeia_projeto-check", "rc": 0, "faltas": 0, "alertas": 0, "erro": false, "detalhe": "execucoes/2026-10-05_133812_mapeia_projeto-check.json", "surgiu": 0, "sumiu": 0}
+{"data": "2026-10-05T13:38:13", "script": "checa_projeto-local", "rc": 0, "faltas": 0, "alertas": 1, "erro": false, "detalhe": "execucoes/2026-10-05_133813_checa_projeto-local.json", "furos": 0}
+{"data": "2026-10-05T13:40:19", "script": "mapeia_projeto-check", "rc": 0, "faltas": 0, "alertas": 0, "erro": false, "detalhe": "execucoes/2026-10-05_134019_mapeia_projeto-check.json", "surgiu": 0, "sumiu": 0}
+{"data": "2026-10-05T13:40:20", "script": "checa_projeto-local", "rc": 0, "faltas": 0, "alertas": 1, "erro": false, "detalhe": "execucoes/2026-10-05_134020_checa_projeto-local.json", "furos": 0}
+{"data": "2026-10-05T13:40:23", "script": "mapeia_projeto-check", "rc": 0, "faltas": 0, "alertas": 0, "erro": false, "detalhe": "execucoes/2026-10-05_134023_mapeia_projeto-check.json", "surgiu": 0, "sumiu": 0}
+{"data": "2026-10-05T13:40:24", "script": "checa_projeto-local", "rc": 0, "faltas": 0, "alertas": 0, "erro": false, "detalhe": "execucoes/2026-10-05_134024_checa_projeto-local.json", "furos": 0}

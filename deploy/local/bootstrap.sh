@@ -61,7 +61,9 @@ for tentativa in $(seq 1 60); do
   [ "$tentativa" = 60 ] && { echo "Keycloak não respondeu o JWKS em 120 s" >&2; exit 1; }
   sleep 2
 done
-printf 'path "kv/data/ominicore/*" { capabilities = ["read"] }\n' | "${BAO[@]}" policy write ominicore - >/dev/null
+# leitura de tudo; escrita só na configuração do WhatsApp (ADR 0005, RN-11)
+printf 'path "kv/data/ominicore/*" { capabilities = ["read"] }\npath "kv/data/ominicore/whatsapp" { capabilities = ["create", "update", "read", "delete"] }\n' |
+  "${BAO[@]}" policy write ominicore - >/dev/null
 # bound_claims é um mapa: só entra como JSON pelo stdin
 "${BAO[@]}" write auth/jwt/role/ominicore - >/dev/null <<'JSON'
 {"role_type": "jwt", "user_claim": "azp", "bound_claims": {"azp": "ominicore-app"},

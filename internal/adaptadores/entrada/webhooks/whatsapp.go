@@ -16,11 +16,11 @@ import (
 // verificarMeta responde a verificação do webhook: hub.challenge quando o
 // verify token confere (T-40).
 // https://developers.facebook.com/docs/graph-api/webhooks/getting-started
-func (w Webhooks) verificarMeta(rw http.ResponseWriter, r *http.Request) {
+func (w Webhooks) verificarMeta(rw http.ResponseWriter, r *http.Request, m MetaAtual) {
 	q := r.URL.Query()
 	token := q.Get("hub.verify_token")
-	if q.Get("hub.mode") != "subscribe" || w.Cred.MetaVerifyToken == "" ||
-		subtle.ConstantTimeCompare([]byte(token), []byte(w.Cred.MetaVerifyToken)) != 1 {
+	if q.Get("hub.mode") != "subscribe" || m.VerifyToken == "" ||
+		subtle.ConstantTimeCompare([]byte(token), []byte(m.VerifyToken)) != 1 {
 		http.Error(rw, "verificação recusada", http.StatusForbidden)
 		return
 	}
@@ -35,9 +35,9 @@ func (w Webhooks) verificarMeta(rw http.ResponseWriter, r *http.Request) {
 
 // whatsapp: statuses da Cloud API, corpo assinado com HMAC-SHA256 (App Secret)
 // em X-Hub-Signature-256: sha256=<hex>.
-func (w Webhooks) whatsapp(rw http.ResponseWriter, r *http.Request) {
+func (w Webhooks) whatsapp(rw http.ResponseWriter, r *http.Request, m MetaAtual) {
 	corpo, err := lerCorpo(r)
-	if err != nil || !assinaturaMetaValida(w.Cred.MetaAppSecret, r.Header.Get("X-Hub-Signature-256"), corpo) {
+	if err != nil || !assinaturaMetaValida(m.AppSecret, r.Header.Get("X-Hub-Signature-256"), corpo) {
 		w.recusar(rw, r, "whatsapp")
 		return
 	}

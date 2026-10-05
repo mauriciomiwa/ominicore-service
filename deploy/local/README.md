@@ -24,6 +24,18 @@ curl -i -X POST http://localhost:8080/v1/notificacoes \
   -d '{"template_id":"boas-vindas","destinatario":{"email":"voce@exemplo.com"},"dados":{"nome":"Você"}}'
 ```
 
+Ver e trocar a configuração do WhatsApp com o Operador de teste
+(`operador-local`, papel `ominicore-config`):
+
+```bash
+OPS=$(curl -s -d grant_type=client_credentials -d client_id=operador-local \
+  -d client_secret=operador-local-secret \
+  http://localhost:8081/realms/ominicore/protocol/openid-connect/token | jq -r .access_token)
+curl -s -H "Authorization: Bearer $OPS" http://localhost:8080/v1/config/whatsapp
+curl -s -X PUT -H "Authorization: Bearer $OPS" http://localhost:8080/v1/config/whatsapp \
+  -d '{"provedor":"zapi","instance_id":"instancia0","token":"local-invalido"}'
+```
+
 Sem chave SendGrid real, a Tentativa termina `falhou` com `sendgrid 401` e o
 fallback tenta o SMS (se o Destinatário tiver `telefone`), que falha com
 `twilio 401`. Para enviar de verdade: `SENDGRID_API_KEY=... SENDGRID_REMETENTE=...`
@@ -55,6 +67,7 @@ TWILIO_MESSAGING_SERVICE_SID=...` antes do `./deploy/local/bootstrap.sh`.
 | `OMINICORE_WHATSAPP_URL` | `https://graph.facebook.com` | trocar só em teste (versão da Graph API fixada no adaptador) |
 | `OMINICORE_ULTRAMSG_URL` | `https://api.ultramsg.com` | trocar só em teste (UltraMsg falso) |
 | `OMINICORE_ZAPI_URL` | `https://api.z-api.io` | trocar só em teste (Z-API falsa) |
+| `OMINICORE_CONFIG_RELEITURA` | `30s` | intervalo da releitura da configuração do WhatsApp no cofre (≥ 1s) |
 
 Segredos no OpenBao: `kv/<prefixo>/postgres` (`dsn`), `kv/<prefixo>/sendgrid`
 (`api_key`, `remetente`), `kv/<prefixo>/twilio` (`account_sid`, `api_key_sid`,

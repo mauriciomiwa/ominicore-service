@@ -51,6 +51,48 @@
           }
         }
       ]
+    },
+    {
+      "clientId": "operador-local",
+      "name": "Operador de teste (local): configura os Canais",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "operador-local-secret",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "protocolMappers": [
+        {
+          "name": "audience-ominicore",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "ominicore",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "ominicore-config",
+        "description": "Operador: configura o Provedor e as credenciais dos Canais pela API (RN-11)"
+      }
+    ]
+  },
+  "users": [
+    {
+      "username": "service-account-operador-local",
+      "enabled": true,
+      "serviceAccountClientId": "operador-local",
+      "realmRoles": [
+        "ominicore-config"
+      ]
     }
   ]
 }

@@ -5,6 +5,33 @@ registro vira suposição de alguém daqui a seis meses.
 
 Entradas antigas: `log/arquivo-AAAA.md` (`tools/arquiva_log.py`).
 
+## 2026-10-05 — Fatia 10 (`10-config-whatsapp-api`) implementada: 33/33
+- `dominio.ConfigWhatsApp` (campos e segredos por Provedor, validação única
+  para boot, releitura e API); `openbao.Cofre` (ler, gravar, apagar, re-login
+  em 403); `aplicacao.ConfigWhatsAppAtual` (retrato atômico lido por pedido,
+  envio, aviso e webhooks; trocas serializadas para a releitura não aplicar
+  leitura velha) e `ReleituraConfig`; `ConfigurarUseCase` + rotas
+  `/v1/config/whatsapp` com o papel `ominicore-config`; `config_eventos`
+  (migration 00009); `conceder-operador.sh`; policy com escrita só em
+  `kv/<p>/whatsapp`; ADR 0005.
+- Verde: `go test -race`, `make itest`, lint, contrato, `openspec validate
+  --strict`, rastreabilidade. T-92 a T-105 passando. Sentinel: aprovado com
+  ressalvas (sem `shellcheck`; deploy em hml ainda não feito).
+
+## 2026-10-05 — Decisão: configuração do WhatsApp pela API (change `10-config-whatsapp-api`)
+- Sabatina fechada com as recomendações (P1–P10): `GET`/`PUT`/`DELETE
+  /v1/config/whatsapp` para Meta, UltraMsg e Z-API, só para o Operador (realm
+  role `ominicore-config`; Sistema de origem sem o papel → 403); grava no
+  OpenBao só em `kv/<p>/whatsapp` (ADR 0005, revisa a 0002); valida só os
+  campos, sem testar no Provedor; segredos nunca saem (consulta diz só se
+  estão configurados); vale sem reinício (releitura a cada 30 s; inválida
+  mantém a anterior); `config_eventos` guarda quem, quando e qual Provedor.
+- Segredos do webhook da Meta passam para `kv/<p>/whatsapp`, com `webhooks`
+  como alternativa de leitura (REQ-28); rollback para binário antigo com a
+  Meta pela API exige regravá-la pelo script (runbook).
+- RN-11 e termo Operador no glossário; Fatia 10 no backlog. REQ-22 a REQ-28,
+  T-92 a T-105.
+
 ## 2026-10-05 — Fatia 9 (`09-whatsapp-zapi`) implementada: 26/27
 - `dominio.WhatsAppZAPI`, `EnviaTexto` e `ServirTexto` (forma + 4096, usado
   também pelo UltraMsg); cofre com `CamposWhatsApp[zapi]` e o opcional
@@ -195,39 +222,4 @@ Entradas antigas: `log/arquivo-AAAA.md` (`tools/arquiva_log.py`).
   `notificacoes` ganha REQ-10 (envio pelo Modelo aprovado) e REQ-11 (versão
   WhatsApp do Template). Cobre RN-4. T-28 a T-33 passando. Validação contra a
   Meta real segue pendente da conta (to-do).
-
-## 2026-09-29 — Fatia 6 (`06-whatsapp`) implementada: 13/13
-- Canal WhatsApp pela Cloud API da Meta (Graph `v26.0`, conferida na doc em
-  2026-09-29); migration 00004 (Modelo aprovado em `template_conteudos`);
-  `Variaveis()` inclui os parâmetros do Modelo aprovado; contato = telefone.
-- Códigos confirmados na doc da Meta: 131026/132001 definitiva, 130429/131000
-  temporária; 131049 (marketing por usuário, 24 h) cai na regra comum (4xx =
-  definitiva), porque 24 h não cabem na Retentativa.
-- Verde: `go test -race`, `make itest` 17/17, lint, `sqlc diff`, contrato,
-  `openspec validate --strict`, rastreabilidade. T-28 a T-33 passando.
-- Sentinel: aprovado com ressalvas — `to` vai em E.164 com `+` (aceito pela
-  Meta segundo a doc, não validado contra conta real); validação real depende
-  da conta Meta Business (to-do).
-
-## 2026-09-29 — Sabatina do WhatsApp fechada; RN-4 entra no MVP (fatia 06)
-- Decidido (recomendações aceitas): Cloud API da Meta direto (não Twilio);
-  só Modelo aprovado, sem texto livre (depende de RN-6); contato = telefone
-  E.164; 131026/132001 definitiva, 130429/131000 temporária; versão WhatsApp do
-  `boas-vindas`, ordem padrão inalterada (Email → SMS); versão da Graph API
-  fixada no adaptador; validação real depois da conta Meta (não bloqueia).
-- Glossário: **Modelo aprovado**. Backlog: fatia 06 com REQ-10/REQ-11; REQ
-  previstos das fatias 3–5 renumerados (REQ-12 a REQ-15).
-- Change `06-whatsapp` aberta (T-28 a T-33).
-
-## 2026-09-29 — Trilha de infraestrutura: artefatos do aviva2.0 preparados
-- `deploy/aviva2/`: quadlets (template api/worker), env sem segredo, rota do
-  Traefik só `/webhooks/*`, SQL do schema/role, scripts do realm (kcadm, sem
-  reiniciar o Keycloak) e do OpenBao (auth `jwt` por realm), `publicar.sh
-  hml|prod` (sem padrão; prod pede confirmação e árvore limpa; `--voltar`).
-- Lacunas de código achadas ao desenhar o deploy e corrigidas (config, sem
-  regra nova): `OMINICORE_DB_SCHEMA` (hml = `ominicore_hml`, validado contra
-  injeção), `OMINICORE_BAO_AUTH_MOUNT` (um mount `jwt` aceita um só emissor),
-  `OMINICORE_REDIS_PASSWORD` (Redis do aviva2.0 com `requirepass`). Testes:
-  isolamento de schemas no Postgres real, login no mount do ambiente.
-- Nada executado no host: as etapas com credencial de admin são do dono.
 

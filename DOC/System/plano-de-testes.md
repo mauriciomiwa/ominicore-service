@@ -8,7 +8,7 @@ haver dois lugares a manter. Tipo: **Exemplo** (caso concreto) ou
 **Propriedade** (invariante). Status: pendente / escrito (não rodado) /
 passando.
 
-T-1 a T-62 vigentes desde 2026-10-02 e T-63 a T-69 desde 2026-10-05 (`openspec/specs/{autenticacao-origem,notificacoes,segredos}`); T-70 a T-81 na change ativa `08-whatsapp-ultramsg`; T-82 a T-91 na change ativa `09-whatsapp-zapi`.
+T-1 a T-62 vigentes desde 2026-10-02 e T-63 a T-69 desde 2026-10-05 (`openspec/specs/{autenticacao-origem,notificacoes,segredos}`); T-70 a T-81 na change ativa `08-whatsapp-ultramsg`; T-82 a T-91 na change ativa `09-whatsapp-zapi`; T-92 a T-105 na change ativa `10-config-whatsapp-api`.
 
 Nome do teste em Go cita o T-n: `func TestT7_ReenvioComAMesmaChaveNaoDuplica(t *testing.T)`.
 Unitários com fakes (`internal/testes/`: repositório em memória, realm JWT,
@@ -109,3 +109,17 @@ rode com `make itest` (Docker Desktop, Colima ou Podman: usa o socket do context
 | T-89 | Exemplo | `internal/adaptadores/saida/zapi/zapi_test.go` · `internal/adaptadores/entrada/worker/worker_test.go` | passando (change 09 ativa) |
 | T-90 | Exemplo | `internal/aplicacao/provedor_whatsapp_test.go` · `internal/adaptadores/entrada/http/servidor_test.go` | passando (change 09 ativa) |
 | T-91 | Exemplo | `cmd/ominicore/main_test.go` | passando (change 09 ativa) |
+| T-92 | Exemplo | `internal/adaptadores/entrada/http/config_test.go` | passando (change 10 ativa) |
+| T-93 | Exemplo | `internal/adaptadores/entrada/http/config_test.go` | passando (change 10 ativa) |
+| T-94 | Exemplo | `internal/adaptadores/entrada/http/config_test.go` | passando (change 10 ativa) |
+| T-95 | Exemplo | `internal/adaptadores/entrada/http/config_test.go` | passando (change 10 ativa) |
+| T-96 | Exemplo | `internal/adaptadores/entrada/http/config_test.go` | passando (change 10 ativa) |
+| T-97 | Exemplo | `internal/adaptadores/entrada/http/config_test.go` | passando (change 10 ativa) |
+| T-98 | Exemplo | `internal/adaptadores/entrada/http/config_test.go` | passando (change 10 ativa) |
+| T-99 | Exemplo | `internal/adaptadores/entrada/http/config_test.go` | passando (change 10 ativa) |
+| T-100 | Exemplo | `internal/adaptadores/entrada/http/config_test.go` | passando (change 10 ativa) |
+| T-101 | Exemplo | `cmd/ominicore/config_test.go` | passando (change 10 ativa) |
+| T-102 | Exemplo | `cmd/ominicore/config_test.go` | passando (change 10 ativa) |
+| T-103 | Exemplo | `cmd/ominicore/config_test.go` | passando (change 10 ativa) |
+| T-104 | Exemplo | `internal/adaptadores/entrada/http/config_test.go` · `internal/integracao/integracao_test.go` (Postgres) | passando (change 10 ativa) |
+| T-105 | Exemplo | `internal/adaptadores/saida/openbao/cofre_test.go` | passando (change 10 ativa) |

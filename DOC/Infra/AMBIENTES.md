@@ -64,10 +64,15 @@ não enxerga o schema `ominicore`, e nenhum dos dois enxerga os schemas alheios.
   `kv/<prefixo>/optout` — chave do HMAC dos Opt-outs, **permanente**, uma por ambiente).
   WhatsApp é opcional: sem `kv/<prefixo>/whatsapp` o Canal fica desligado (REQ-20)
   e os campos da Meta em `webhooks` não são exigidos; com o caminho, os campos do
-  Provedor são obrigatórios (Meta: também os dois de `webhooks`). Liga-se ou
-  troca-se o Provedor com `configurar-openbao.sh <amb> --so-whatsapp` e reinício
-  de api e worker. Conferir o estado: log de boot "whatsapp desligado" ou
-  "whatsapp ligado: <provedor>";
+  Provedor são obrigatórios (Meta: também App Secret e verify token, em
+  `whatsapp` ou, na falta, em `webhooks` — REQ-28). Liga-se ou troca-se o
+  Provedor pela API do Operador (`/v1/config/whatsapp`, papel de realm
+  `ominicore-config` concedido por `conceder-operador.sh <amb> <client>`, sem
+  reinício; releitura a cada `OMINICORE_CONFIG_RELEITURA`, padrão 30 s, igual
+  em hml e prod) ou com `configurar-openbao.sh <amb> --so-whatsapp` e reinício.
+  A policy do OminiCore só escreve em `kv/<prefixo>/whatsapp` (ADR 0005).
+  Conferir o estado: `GET /v1/config/whatsapp` ou o log ("whatsapp desligado",
+  "whatsapp ligado: <provedor>", "whatsapp reconfigurado: <provedor>");
   client secret do Keycloak (`ominicore-app`) como podman secret no host (ADR 0002).
 - **Quem pode ler/escrever valor de prod:** escrever — só o dono (Mauricio
   Miwa), com token de admin do OpenBao; ler — só o app, pela role `jwt` presa

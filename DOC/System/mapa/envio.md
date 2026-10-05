@@ -12,7 +12,7 @@ aprovado, ou UltraMsg ou Z-API, texto — um Provedor por ambiente) na Ordem de 
 Retentativa de Falha temporária e fallback para o próximo Canal, sem duplicar
 em reenvio (RN-1, RN-2, RN-3, RN-4, RN-7); Avisos de status atualizam a Tentativa e o
 Sistema de origem consulta o resultado (RN-5); Canal em Opt-out é pulado no
-pedido, no fallback e no envio (RN-8); o worker anonimiza as Notificações finalizadas
+pedido, no fallback e no envio (RN-8); o Operador troca o Provedor do WhatsApp pela API, sem reiniciar (RN-11); o worker anonimiza as Notificações finalizadas
 depois do prazo de retenção (RN-9).
 
 ## Telas / entradas
@@ -21,8 +21,10 @@ depois do prazo de retenção (RN-9).
 | `POST /v1/notificacoes` | — (API; contrato em `api/openapi.yaml`) | `internal/adaptadores/entrada/http/servidor.go:34` |
 | `GET /healthz` | — (healthcheck do quadlet) | `internal/adaptadores/entrada/http/servidor.go:33` |
 | `GET /v1/notificacoes/{id}` | — (consulta do dono, REQ-14) | `internal/adaptadores/entrada/http/servidor.go` |
-| `POST /webhooks/{sendgrid,twilio,whatsapp}`, `GET /webhooks/whatsapp` | — (públicos, Aviso de status assinado, REQ-12; as rotas da Meta só existem com o WhatsApp ligado pela Meta, senão 404 — REQ-20, REQ-21) | `internal/adaptadores/entrada/webhooks/` |
+| `POST /webhooks/{sendgrid,twilio,whatsapp}`, `GET /webhooks/whatsapp` | — (públicos, Aviso de status assinado, REQ-12; as rotas da Meta respondem só com o WhatsApp ligado pela Meta, decidido a cada requisição pela configuração em uso, senão 404 — REQ-20, REQ-21, REQ-26) | `internal/adaptadores/entrada/webhooks/` |
 | `POST`/`DELETE /v1/opt-outs` | — (Opt-out por contato + Canal, REQ-15) | `internal/adaptadores/entrada/http/servidor.go` |
+| `GET`/`PUT`/`DELETE /v1/config/whatsapp` | — (Operador, papel `ominicore-config`: Provedor e credenciais do WhatsApp, sem segredo na leitura, troca sem reinício — REQ-22 a REQ-27) | `internal/adaptadores/entrada/http/config.go` |
+| api e worker (releitura de `kv/<p>/whatsapp`, a cada `OMINICORE_CONFIG_RELEITURA`) | — | `internal/aplicacao/config_atual.go` |
 | worker (fila no Postgres) | — | `internal/adaptadores/entrada/worker/worker.go` |
 | worker (retenção, a cada 1 h) | — | `internal/adaptadores/entrada/worker/retencao.go` |
 

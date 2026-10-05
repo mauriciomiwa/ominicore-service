@@ -1,11 +1,12 @@
 # Estado — ominicore
 
-> Atualizado em 2026-10-05 por Mauricio Miwa + Claude (change 10 proposta)
+> Atualizado em 2026-10-05 por Mauricio Miwa + Claude (change 10 implementada)
 
 ## Em curso
 - Changes `08-whatsapp-ultramsg` (31/32, falta 5.2) e `09-whatsapp-zapi` (26/27, falta 5.3) na `main` e em `origin`; arquivar 08 e depois 09 após os `curl` reais.
-- Change `10-config-whatsapp-api` proposta (1/32 tarefas, sem commit): API `GET/PUT/DELETE /v1/config/whatsapp` só para o Operador (realm role `ominicore-config`), grava em `kv/<p>/whatsapp`, releitura a quente a cada 30 s, `config_eventos`. T-92 a T-105.
-- Próximo passo: revisar os artefatos da 10 e `/opsx:apply 10-config-whatsapp-api` (ideal depois de arquivar 08 e 09).
+- Change `10-config-whatsapp-api`: 33/33 na branch `fatia/10-config-whatsapp-api` (planejamento commitado, implementação sem commit); auditada (aprovado com ressalvas). Arquivar depois da 08 e da 09.
+- Próximo passo: commitar a 10; fechar 5.2/5.3 com instâncias reais; `/opsx:archive` 08 → 09 → 10.
+- Depois: deploy em hml (skill ambientes): `configurar-openbao.sh hml --sem-segredos` (policy de escrita), `conceder-operador.sh hml <client>`, binário com a migration 00009.
 
 ## Decisões recentes
 - WhatsApp por Meta, UltraMsg ou Z-API, um por ambiente (`provedor` no cofre; ADR 0004 com adendo da Z-API).
@@ -18,5 +19,5 @@
 
 ## Arquivos que importam agora
 - `openspec/changes/10-config-whatsapp-api/` — proposta, deltas, design, tarefas
-- `cmd/ominicore/main.go` — estado do Canal hoje congelado no boot (vira `configwa.Atual`)
-- `internal/adaptadores/saida/openbao/segredos.go` — leitura; ganha escrita e releitura
+- `internal/aplicacao/config_atual.go` e `configurar.go` — estado trocável, releitura e caso de uso
+- `deploy/aviva2/README.md` — Operador, troca pela API, rollback com a Meta

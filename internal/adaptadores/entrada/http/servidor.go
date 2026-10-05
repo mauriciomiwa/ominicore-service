@@ -19,7 +19,8 @@ import (
 
 // Autenticador devolve o Sistema de origem do token (REQ-1).
 type Autenticador interface {
-	SistemaOrigem(ctx context.Context, token string) (string, error)
+	// Identificar devolve o client do token (`azp`) e os papéis do realm.
+	Identificar(ctx context.Context, token string) (azp string, papeis []string, err error)
 }
 
 // Servidor liga as rotas aos casos de uso.
@@ -28,6 +29,8 @@ type Servidor struct {
 	Enviar    aplicacao.SendMessageUseCase
 	Consultar aplicacao.ConsultarUseCase
 	OptOut    aplicacao.OptOutUseCase
+	// Config liga /v1/config/whatsapp, só para o Operador (RN-11); nil = sem rotas.
+	Config *aplicacao.ConfigurarUseCase
 	// Webhooks registra /webhooks/* (públicos, assinados pelo Provedor); nil = sem rotas.
 	Webhooks interface{ Registrar(*http.ServeMux) }
 	Log      *slog.Logger
@@ -41,6 +44,11 @@ func (s Servidor) Handler() http.Handler {
 	mux.Handle("GET /v1/notificacoes/{id}", s.autenticar(http.HandlerFunc(s.consultarNotificacao)))
 	mux.Handle("POST /v1/opt-outs", s.autenticar(http.HandlerFunc(s.optOut(s.OptOut.Registrar))))
 	mux.Handle("DELETE /v1/opt-outs", s.autenticar(http.HandlerFunc(s.optOut(s.OptOut.Remover))))
+	if s.Config != nil {
+		mux.Handle("GET /v1/config/whatsapp", s.autenticar(exigirPapel(PapelOperador, http.HandlerFunc(s.consultarConfig))))
+		mux.Handle("PUT /v1/config/whatsapp", s.autenticar(exigirPapel(PapelOperador, http.HandlerFunc(s.gravarConfig))))
+		mux.Handle("DELETE /v1/config/whatsapp", s.autenticar(exigirPapel(PapelOperador, http.HandlerFunc(s.apagarConfig))))
+	}
 	if s.Webhooks != nil {
 		s.Webhooks.Registrar(mux)
 	}
@@ -57,13 +65,14 @@ func (s Servidor) autenticar(prox http.Handler) http.Handler {
 			problema(w, http.StatusUnauthorized, "não autenticado", "token Bearer ausente")
 			return
 		}
-		origem, err := s.Auth.SistemaOrigem(r.Context(), token)
+		origem, papeis, err := s.Auth.Identificar(r.Context(), token)
 		if err != nil {
 			s.Log.InfoContext(r.Context(), "token recusado", "erro", err.Error())
 			problema(w, http.StatusUnauthorized, "não autenticado", "token inválido")
 			return
 		}
-		prox.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), chaveOrigem{}, origem)))
+		ctx := context.WithValue(context.WithValue(r.Context(), chaveOrigem{}, origem), chavePapeis{}, papeis)
+		prox.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 

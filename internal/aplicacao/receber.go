@@ -23,6 +23,7 @@ const (
 type ReceiveMessageUseCase struct {
 	Repo       portas.MessageRepositoryPort
 	Desligados map[dominio.Canal]bool // a falha tardia pula esses Canais (REQ-20)
+	Estado     portas.EstadoCanais    // quando dado, substitui Desligados (REQ-26)
 	Router     dominio.NotificationRouter
 	Log        *slog.Logger
 }
@@ -41,7 +42,7 @@ func (uc ReceiveMessageUseCase) Receber(ctx context.Context, a dominio.AvisoStat
 		res.Liberar(ctx)
 		return AvisoIgnorado, nil
 	}
-	res.Notificacao.Destinatario.Desligados = uc.Desligados
+	res.Notificacao.Destinatario.Desligados = desligadosDe(uc.Estado, uc.Desligados)
 	atualizacao := uc.Router.DecidirAviso(res.Tentativa, res.Notificacao, a)
 	if err := res.Aplicar(ctx, atualizacao); err != nil {
 		return AvisoIgnorado, fmt.Errorf("aplicar aviso na tentativa %d: %w", res.Tentativa.ID, err)

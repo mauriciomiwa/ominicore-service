@@ -148,6 +148,101 @@ paths:
           $ref: "#/components/responses/Problema"
         "500":
           $ref: "#/components/responses/Problema"
+  /v1/config/whatsapp:
+    get:
+      operationId: consultarConfigWhatsApp
+      summary: Consultar a configuração do Canal WhatsApp (Operador)
+      description: |
+        Só para o Operador: token com o papel de realm `ominicore-config`
+        (RN-11). Devolve o Provedor e os campos públicos; de cada segredo,
+        só se está configurado — nunca o valor (REQ-23).
+      responses:
+        "200":
+          description: Configuração atual.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigWhatsApp"
+              example:
+                ligado: true
+                provedor: zapi
+                campos:
+                  instance_id: 3C4F2A
+                segredos:
+                  token: true
+                  client_token: false
+        "401":
+          $ref: "#/components/responses/Problema"
+        "403":
+          $ref: "#/components/responses/Problema"
+        "503":
+          $ref: "#/components/responses/Problema"
+    put:
+      operationId: gravarConfigWhatsApp
+      summary: Gravar o Provedor e as credenciais do WhatsApp (Operador)
+      description: |
+        Substitui a configuração inteira no OpenBao e vale sem reiniciar: a
+        api na hora, o worker na próxima releitura (`OMINICORE_CONFIG_RELEITURA`,
+        padrão 30 s). Campos exigidos: `meta` = `token`, `phone_number_id`,
+        `meta_app_secret`, `meta_verify_token`; `ultramsg` e `zapi` =
+        `instance_id`, `token` (`zapi` aceita `client_token`). Outros campos
+        são ignorados. A credencial não é testada no Provedor. Cada troca fica
+        registrada com o Operador (`azp`), sem segredo.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GravarConfigWhatsApp"
+            example:
+              provedor: zapi
+              instance_id: 3C4F2A
+              token: "<token da instância>"
+              client_token: "<token de segurança da conta>"
+      responses:
+        "200":
+          description: Gravada; devolve a visão sem segredos.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigWhatsApp"
+        "400":
+          $ref: "#/components/responses/Problema"
+        "401":
+          $ref: "#/components/responses/Problema"
+        "403":
+          $ref: "#/components/responses/Problema"
+        "422":
+          description: Provedor desconhecido ou campo exigido faltando; nada é gravado.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
+        "500":
+          description: Gravada, mas o registro da troca falhou (fica no log).
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
+        "503":
+          $ref: "#/components/responses/Problema"
+    delete:
+      operationId: desligarWhatsApp
+      summary: Desligar o Canal WhatsApp (Operador)
+      description: |
+        Apaga a configuração: o Canal passa a desligado (pulado na ordem;
+        pedido só por WhatsApp = 422). Idempotente.
+      responses:
+        "204":
+          description: Desligado (ou já estava).
+        "401":
+          $ref: "#/components/responses/Problema"
+        "403":
+          $ref: "#/components/responses/Problema"
+        "500":
+          $ref: "#/components/responses/Problema"
+        "503":
+          $ref: "#/components/responses/Problema"
 components:
   securitySchemes:
     keycloak:
@@ -273,6 +368,35 @@ components:
         contato:
           type: string
           description: E-mail (Canal email) ou telefone E.164 (Canais sms e whatsapp).
+    ConfigWhatsApp:
+      type: object
+      description: Configuração do Canal WhatsApp sem segredos (REQ-23).
+      required: [ligado]
+      properties:
+        ligado:
+          type: boolean
+        provedor:
+          type: string
+          enum: [meta, ultramsg, zapi]
+        campos:
+          type: object
+          description: Campos que não são segredo (`instance_id`, `phone_number_id`).
+          additionalProperties:
+            type: string
+        segredos:
+          type: object
+          description: Para cada segredo do Provedor, se está configurado.
+          additionalProperties:
+            type: boolean
+    GravarConfigWhatsApp:
+      type: object
+      required: [provedor]
+      properties:
+        provedor:
+          type: string
+          enum: [meta, ultramsg, zapi]
+      additionalProperties:
+        type: string
     Problema:
       type: object
       required: [status, title]

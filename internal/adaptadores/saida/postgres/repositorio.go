@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"ominicore/internal/adaptadores/saida/postgres/db"
@@ -340,4 +341,12 @@ func (r Repositorio) AnonimizarLote(ctx context.Context, antes time.Time, lote i
 func (r Repositorio) PendentesVencidas(ctx context.Context, antes time.Time) (int, error) {
 	n, err := db.New(r.Pool).ContarPendentesVencidas(ctx, antes)
 	return int(n), err
+}
+
+// RegistrarEventoConfig guarda quem trocou a configuração de um Canal (REQ-27).
+func (r Repositorio) RegistrarEventoConfig(ctx context.Context, e portas.EventoConfig) error {
+	return db.New(r.Pool).InserirEventoConfig(ctx, db.InserirEventoConfigParams{
+		Canal: string(e.Canal), Acao: e.Acao, Por: e.Por,
+		Provedor: pgtype.Text{String: string(e.Provedor), Valid: e.Provedor != ""},
+	})
 }

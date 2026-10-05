@@ -1,6 +1,6 @@
 # Inventário do código — ominicore
 
-> GERADO por `tools/mapeia_projeto.py` em 2026-10-05T12:03:44. Não edite: rode o script de novo.
+> GERADO por `tools/mapeia_projeto.py` em 2026-10-05T13:36:49. Não edite: rode o script de novo.
 > A interpretação (o que cada área faz, fluxos, RN candidatas) está nas outras páginas desta pasta.
 
 ## Stack
@@ -13,34 +13,40 @@
 
 ```mermaid
 graph LR
-  cmd["cmd (2)"]
-  internal["internal (57)"]
+  cmd["cmd (3)"]
+  internal["internal (66)"]
   migrations["migrations (1)"]
 ```
 
 | Módulo | Arquivos | Importa |
 |---|---|---|
-| `internal` | 57 | — |
-| `cmd` | 2 | — |
+| `internal` | 66 | — |
+| `cmd` | 3 | — |
 | `migrations` | 1 | — |
 
-## Endpoints (13)
+## Endpoints (19)
 
 | Método | Caminho | Onde |
 |---|---|---|
-| GET | `/healthz` | `internal/adaptadores/entrada/http/servidor.go`:39 |
+| GET | `/healthz` | `internal/adaptadores/entrada/http/servidor.go`:42 |
+| DELETE | `/v1/config/whatsapp` | `api/openapi.yaml` (contrato) |
+| DELETE | `/v1/config/whatsapp` | `internal/adaptadores/entrada/http/servidor.go`:50 |
+| GET | `/v1/config/whatsapp` | `api/openapi.yaml` (contrato) |
+| GET | `/v1/config/whatsapp` | `internal/adaptadores/entrada/http/servidor.go`:48 |
+| PUT | `/v1/config/whatsapp` | `api/openapi.yaml` (contrato) |
+| PUT | `/v1/config/whatsapp` | `internal/adaptadores/entrada/http/servidor.go`:49 |
 | POST | `/v1/notificacoes` | `api/openapi.yaml` (contrato) |
-| POST | `/v1/notificacoes` | `internal/adaptadores/entrada/http/servidor.go`:40 |
+| POST | `/v1/notificacoes` | `internal/adaptadores/entrada/http/servidor.go`:43 |
 | GET | `/v1/notificacoes/{id}` | `api/openapi.yaml` (contrato) |
-| GET | `/v1/notificacoes/{id}` | `internal/adaptadores/entrada/http/servidor.go`:41 |
+| GET | `/v1/notificacoes/{id}` | `internal/adaptadores/entrada/http/servidor.go`:44 |
 | DELETE | `/v1/opt-outs` | `api/openapi.yaml` (contrato) |
-| DELETE | `/v1/opt-outs` | `internal/adaptadores/entrada/http/servidor.go`:43 |
+| DELETE | `/v1/opt-outs` | `internal/adaptadores/entrada/http/servidor.go`:46 |
 | POST | `/v1/opt-outs` | `api/openapi.yaml` (contrato) |
-| POST | `/v1/opt-outs` | `internal/adaptadores/entrada/http/servidor.go`:42 |
-| POST | `/webhooks/sendgrid` | `internal/adaptadores/entrada/webhooks/webhooks.go`:58 |
-| POST | `/webhooks/twilio` | `internal/adaptadores/entrada/webhooks/webhooks.go`:59 |
-| GET | `/webhooks/whatsapp` | `internal/adaptadores/entrada/webhooks/webhooks.go`:61 |
-| POST | `/webhooks/whatsapp` | `internal/adaptadores/entrada/webhooks/webhooks.go`:62 |
+| POST | `/v1/opt-outs` | `internal/adaptadores/entrada/http/servidor.go`:45 |
+| POST | `/webhooks/sendgrid` | `internal/adaptadores/entrada/webhooks/webhooks.go`:61 |
+| POST | `/webhooks/twilio` | `internal/adaptadores/entrada/webhooks/webhooks.go`:62 |
+| GET | `/webhooks/whatsapp` | `internal/adaptadores/entrada/webhooks/webhooks.go`:63 |
+| POST | `/webhooks/whatsapp` | `internal/adaptadores/entrada/webhooks/webhooks.go`:64 |
 
 ## Chamadas HTTP de saída (2)
 
@@ -76,7 +82,7 @@ graph LR
 
 - Migrations: `migrations`
 - Schemas/modelos: —
-- Arquivos .sql: 10
+- Arquivos .sql: 11
 
 ## Infra
 

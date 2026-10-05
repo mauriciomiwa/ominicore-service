@@ -146,7 +146,7 @@ func TestWhatsAppLigadoComTodasAsCredenciais(t *testing.T) {
 	kv["/v1/kv/data/ominicore/webhooks"]["meta_app_secret"] = "s"
 	kv["/v1/kv/data/ominicore/webhooks"]["meta_verify_token"] = "v"
 	seg, err := openbao.Carregar(context.Background(), openbao.Config{Endereco: kvFalso(t, kv), Token: "t"})
-	if err != nil || !seg.WhatsAppLigado || seg.WhatsApp["phone_number_id"] != "1" || seg.Webhooks["meta_verify_token"] != "v" {
+	if err != nil || !seg.WhatsAppLigado || seg.WhatsApp["phone_number_id"] != "1" || seg.WhatsApp["meta_verify_token"] != "v" {
 		t.Fatalf("segredos = %+v err = %v", seg, err)
 	}
 }

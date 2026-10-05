@@ -26,7 +26,10 @@ BAO=(podman exec -i -e BAO_TOKEN -e BAO_ADDR=http://127.0.0.1:8200 openbao bao)
 "${BAO[@]}" write "auth/$AUTH_MOUNT/config" \
   jwks_url="http://keycloak:8080/realms/$REALM/protocol/openid-connect/certs" \
   bound_issuer="https://auth.flipapi.com.br/realms/$REALM" >/dev/null
-printf 'path "kv/data/%s/*" { capabilities = ["read"] }\n' "$PREFIXO" | "${BAO[@]}" policy write "$ROLE" - >/dev/null
+# leitura de tudo; escrita só na configuração do WhatsApp, pela API do
+# Operador (ADR 0005, RN-11)
+printf 'path "kv/data/%s/*" { capabilities = ["read"] }\npath "kv/data/%s/whatsapp" { capabilities = ["create", "update", "read", "delete"] }\n' \
+  "$PREFIXO" "$PREFIXO" | "${BAO[@]}" policy write "$ROLE" - >/dev/null
 "${BAO[@]}" write "auth/$AUTH_MOUNT/role/$ROLE" - >/dev/null <<JSON
 {"role_type": "jwt", "user_claim": "azp", "bound_claims": {"azp": "ominicore-app"},
  "bound_audiences": ["openbao"], "token_policies": ["$ROLE"], "token_ttl": "1h"}

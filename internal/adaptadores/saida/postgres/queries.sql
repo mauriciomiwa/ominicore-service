@@ -119,3 +119,7 @@ RETURNING n.id;
 SELECT count(*) FROM notificacoes
 WHERE anonimizada_em IS NULL AND criada_em < $1 AND status = 'pendente';
 
+
+-- name: InserirEventoConfig :exec
+-- Troca da configuração de um Canal pela API, sem segredo (REQ-27).
+INSERT INTO config_eventos (canal, acao, provedor, por) VALUES ($1, $2, $3, $4);

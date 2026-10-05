@@ -63,11 +63,16 @@ func NovoComBackchannel(emissor, realmInterno, publico string, cache Cache) *Val
 	return v
 }
 
-// SistemaOrigem valida o token e devolve o client que o pediu (`azp`).
-func (v *Validador) SistemaOrigem(ctx context.Context, token string) (string, error) {
+// Identificar valida o token e devolve o client que o pediu (`azp`) e os
+// papéis do realm (`realm_access.roles`), que dão permissões como a do
+// Operador (REQ-25).
+func (v *Validador) Identificar(ctx context.Context, token string) (string, []string, error) {
 	claims := struct {
 		jwt.RegisteredClaims
-		AZP string `json:"azp"`
+		AZP         string `json:"azp"`
+		RealmAccess struct {
+			Roles []string `json:"roles"`
+		} `json:"realm_access"`
 	}{}
 	_, err := jwt.ParseWithClaims(token, &claims, func(t *jwt.Token) (any, error) {
 		kid, _ := t.Header["kid"].(string)
@@ -80,12 +85,12 @@ func (v *Validador) SistemaOrigem(ctx context.Context, token string) (string, er
 		jwt.WithLeeway(30*time.Second),
 	)
 	if err != nil {
-		return "", fmt.Errorf("%w: %w", ErrNaoAutenticado, err)
+		return "", nil, fmt.Errorf("%w: %w", ErrNaoAutenticado, err)
 	}
 	if claims.AZP == "" {
-		return "", fmt.Errorf("%w: token sem azp", ErrNaoAutenticado)
+		return "", nil, fmt.Errorf("%w: token sem azp", ErrNaoAutenticado)
 	}
-	return claims.AZP, nil
+	return claims.AZP, claims.RealmAccess.Roles, nil
 }
 
 // chave procura o kid no JWKS em cache; kid desconhecido força nova leitura

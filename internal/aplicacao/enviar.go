@@ -26,6 +26,16 @@ type SendMessageUseCase struct {
 	// ProvedorWhatsApp ativo decide a forma exigida da versão WhatsApp
 	// (REQ-11); vazio vale Meta.
 	ProvedorWhatsApp dominio.ProvedorWhatsApp
+	// Estado, quando dado, substitui Desligados e ProvedorWhatsApp e é lido a
+	// cada pedido: a configuração muda sem reiniciar (REQ-26).
+	Estado portas.EstadoCanais
+}
+
+func (uc SendMessageUseCase) estado() (map[dominio.Canal]bool, dominio.ProvedorWhatsApp) {
+	if uc.Estado != nil {
+		return uc.Estado.Desligados(), uc.Estado.ProvedorWhatsApp()
+	}
+	return uc.Desligados, uc.ProvedorWhatsApp
 }
 
 // Pedir valida o pedido contra o Template e registra a Notificação com a
@@ -39,6 +49,7 @@ func (uc SendMessageUseCase) Pedir(ctx context.Context, p PedidoNotificacao) (po
 	if err := tpl.ValidarDados(p.Dados); err != nil {
 		return portas.Registro{}, err
 	}
+	desligados, provedor := uc.estado()
 	ordem := tpl.OrdemCanais
 	if len(p.Canais) > 0 {
 		ordem = p.Canais
@@ -48,8 +59,8 @@ func (uc SendMessageUseCase) Pedir(ctx context.Context, p PedidoNotificacao) (po
 		if !ok {
 			return portas.Registro{}, fmt.Errorf("%w: %s", dominio.ErrCanalSemVersao, c)
 		}
-		if c == dominio.CanalWhatsApp && !uc.Desligados[c] {
-			if err := uc.ProvedorWhatsApp.Servir(conteudo); err != nil {
+		if c == dominio.CanalWhatsApp && !desligados[c] {
+			if err := provedor.Servir(conteudo); err != nil {
 				return portas.Registro{}, err
 			}
 		}
@@ -59,7 +70,7 @@ func (uc SendMessageUseCase) Pedir(ctx context.Context, p PedidoNotificacao) (po
 		return portas.Registro{}, err
 	}
 	p.Destinatario.OptOut = optOut
-	p.Destinatario.Desligados = uc.Desligados
+	p.Destinatario.Desligados = desligados
 	primeiro, ok := p.Destinatario.PrimeiroComContato(ordem, 0)
 	if !ok {
 		if c, desligado := p.Destinatario.PrimeiroDesligado(ordem); desligado {
