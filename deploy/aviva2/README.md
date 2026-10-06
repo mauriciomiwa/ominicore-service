@@ -11,6 +11,20 @@ em `ambientes/hml.sh` e `ambientes/prod.sh`.
 
 ## Ordem (uma vez por ambiente)
 
+**Antes de tudo, uma vez por host — client de deploy no Keycloak.** O admin
+humano do realm `master` tem OTP, e o `kcadm` (login direto) não passa por
+OTP. Os scripts de `keycloak/` entram pelo client de serviço `ominicore-deploy`
+(`keycloak/lib-admin.sh`):
+1. Console admin (`https://auth.flipapi.com.br/admin`), realm **master** ›
+   Clients › Create client: Client ID `ominicore-deploy`; Client authentication
+   **ligado**; só **Service accounts roles** marcado (Standard flow e Direct
+   access desligados).
+2. Aba *Service accounts roles* › Assign role › filtro *realm roles* ›
+   **`create-realm`** (cria realms e administra só os que criou; não enxerga
+   `wbem`/`lara`).
+3. Aba *Credentials*: copie o Client secret e grave no host (pede sem eco):
+   `ssh -t -i ~/.ssh/aviva2.0.pem ubuntu@44.209.101.158 'read -r -s -p "client secret: " s; echo; printf %s "$s" | sudo podman secret create ominicore-kc-deploy -'`
+
 | # | Etapa | Onde | Quem | Credencial |
 |---|---|---|---|---|
 | 1 | DNS `notify-hml.flipapi.com.br` → aviva2.0, proxy da Cloudflare ligado | Cloudflare | dono | conta Cloudflare |
