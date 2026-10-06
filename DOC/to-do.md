@@ -16,6 +16,7 @@ ficam no `System/backlog-mvp.md` (cada uma é uma change do OpenSpec); furos de 
 - [ ] Caminho do módulo Go (`ominicore` → `github.com/<org>/ominicore`) quando o repositório existir.
 
 ## Fatia 11 — Console do Operador (change `11-console-operador`) — fora do escopo, para decidir depois
+- [ ] Criar o hml (DNS `notify-hml`, realm/cofre/schema `-hml`) e devolver Homologação ao `web/console/src/console/ambientes-publicados.json` (prod foi publicado primeiro, decisão de 2026-10-06).
 - [ ] Configuração por cliente da casa (W Bem, Lara), cada um com o próprio WhatsApp: change de backend própria, antes de o Console ganhar o seletor de cliente.
 - [ ] Email, SMS, status da instância e QR no Console (entram quando a API tiver as rotas).
 - [ ] Worker intermediário (BFF) com Cloudflare Tunnel, se a rota pública de `/v1/config/*` deixar de ser aceitável.

@@ -5,6 +5,17 @@ registro vira suposição de alguém daqui a seis meses.
 
 Entradas antigas: `log/arquivo-AAAA.md` (`tools/arquiva_log.py`).
 
+## 2026-10-06 — Decisão: primeiro deploy direto em prod, hml adiado
+- O dono decidiu publicar o OminiCore e o Console direto em prod
+  (`notify.flipapi.com.br`, realm `ominicore`, cofre `kv/ominicore`, schema
+  `ominicore`), sem passar por hml, para testar o Console; ainda não há Sistema
+  de origem usando o OminiCore. Contraria o "hml primeiro" do contrato, agora
+  anotado em `Infra/AMBIENTES.md` §1. Recusada a alternativa de usar o nome
+  `notify` com os dados de hml e trocar depois (mistura de Ambientes).
+- O Console publicado lista só Produção (`ambientes-publicados.json`) até o
+  hml existir. O wrangler usa *route* sobre o registro DNS `ominicore` criado
+  no painel, em vez de `custom_domain`.
+
 ## 2026-10-05 — Fatia 11 (`11-console-operador`) implementada: 42/45
 - API: `portas.Identidade` (client, pessoa, papéis); CORS só em `/v1/config/*`
   para `OMINICORE_CONSOLE_ORIGEM`; token de `OMINICORE_CONSOLE_CLIENT` recusado

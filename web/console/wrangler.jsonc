@@ -10,8 +10,9 @@
     // rota desconhecida cai no index.html (SPA), inclusive /callback/<ambiente>
     "not_found_handling": "single-page-application"
   },
+  // route sobre o registro DNS ominicore (proxied) criado no painel da Cloudflare
   "routes": [
-    { "pattern": "ominicore.flipapi.com.br", "custom_domain": true }
+    { "pattern": "ominicore.flipapi.com.br/*", "zone_name": "flipapi.com.br" }
   ],
   "observability": { "enabled": true }
 }

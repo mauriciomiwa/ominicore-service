@@ -10,6 +10,8 @@ no aviva2.0 é tratada como prod.
 
 ## 1. Quais ambientes existem
 
+> **2026-10-06 — prod antes de hml (decisão do dono):** o primeiro deploy é direto em prod (`notify.flipapi.com.br`, realm `ominicore`), sem Sistema de origem usando ainda; o hml fica adiado e entra depois como Ambiente novo (DNS `notify-hml`, realm `ominicore-hml`), sem mexer no de prod. Até lá, o Console publicado lista só Produção. Ver `log.md` 2026-10-06.
+
 | Ambiente | Para que serve | Quem usa | Dado real? |
 |---|---|---|---|
 | local | desenvolvimento (`deploy/local/compose.yaml`) | dev | não |

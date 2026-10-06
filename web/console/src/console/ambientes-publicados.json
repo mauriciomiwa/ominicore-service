@@ -1,12 +1,5 @@
 [
   {
-    "id": "hml",
-    "producao": false,
-    "issuer": "https://auth.flipapi.com.br/realms/ominicore-hml",
-    "clientId": "ominicore-console",
-    "api": "https://notify-hml.flipapi.com.br"
-  },
-  {
     "id": "prod",
     "producao": true,
     "issuer": "https://auth.flipapi.com.br/realms/ominicore",
