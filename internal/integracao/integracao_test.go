@@ -1,4 +1,4 @@
-// Package integracao prova, contra um Postgres real (testcontainers), o que o
+// Package integracao prova, contra um Postgres e um Keycloak reais (testcontainers), o que o
 // repositório em memória não alcança: transação, SKIP LOCKED e a idempotência
 // sob concorrência. Pula sozinho sem runtime de containers (Docker/Podman);
 // com Podman: `make itest`.

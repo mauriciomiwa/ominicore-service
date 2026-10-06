@@ -1,6 +1,6 @@
 # Webhooks públicos, API de envio só na rede interna
 
-Status: aceita (2026-09-28)
+Status: aceita (2026-09-28); revisada pela 0006 (`/v1/config/*` público só do escritório)
 
 O OminiCore é interno, mas SendGrid e Twilio precisam alcançar os webhooks de
 status pela internet. Só `/webhooks/*` ganha rota pública no Traefik (atrás da

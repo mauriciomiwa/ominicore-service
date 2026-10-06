@@ -128,3 +128,12 @@ type EventoConfig struct {
 type RegistroConfigPort interface {
 	RegistrarEventoConfig(ctx context.Context, e EventoConfig) error
 }
+
+// Identidade é quem chamou a API, lida do token do Keycloak: o client (`azp`),
+// a pessoa (`preferred_username`, vazio em token de client) e os papéis do
+// realm (REQ-1, REQ-25, REQ-36).
+type Identidade struct {
+	Client  string
+	Usuario string
+	Papeis  []string
+}

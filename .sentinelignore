@@ -1,2 +1,15 @@
 # código gerado pelo sqlc (fonte: internal/adaptadores/saida/postgres/queries.sql)
 internal/adaptadores/saida/postgres/db/
+
+# Console do Operador: template Materio free (ThemeSelection, MIT) sem alteração
+# nossa e arquivos gerados pelo build (unplugin, iconify). O que foi alterado do
+# template (src/@layouts, layouts/, plugins/router, plugins/i18n) segue auditado.
+web/console/src/@core/
+web/console/src/assets/
+web/console/src/plugins/iconify/
+web/console/src/plugins/vuetify/
+web/console/auto-imports.d.ts
+web/console/components.d.ts
+web/console/env.d.ts
+web/console/shims.d.ts
+web/console/bun.lock

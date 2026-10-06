@@ -88,17 +88,26 @@ func TestIdentificarDevolveOsPapeisDoRealm(t *testing.T) {
 		"realm_access": map[string]any{"roles": []string{"default-roles-ominicore", "ominicore-config"}},
 		"exp":          time.Now().Add(time.Minute).Unix(),
 	})
-	azp, papeis, err := v.Identificar(context.Background(), tok)
-	if err != nil || azp != "ops-a" || len(papeis) != 2 || papeis[1] != "ominicore-config" {
-		t.Fatalf("azp = %q papeis = %v err = %v", azp, papeis, err)
+	id, err := v.Identificar(context.Background(), tok)
+	if err != nil || id.Client != "ops-a" || id.Usuario != "" || len(id.Papeis) != 2 || id.Papeis[1] != "ominicore-config" {
+		t.Fatalf("identidade = %+v err = %v", id, err)
 	}
-	if _, papeis, err := v.Identificar(context.Background(), e.Valido(t, "sistema-a")); err != nil || len(papeis) != 0 {
-		t.Fatalf("sem realm_access: papeis = %v err = %v", papeis, err)
+	if id, err := v.Identificar(context.Background(), e.Valido(t, "sistema-a")); err != nil || len(id.Papeis) != 0 {
+		t.Fatalf("sem realm_access: identidade = %+v err = %v", id, err)
+	}
+}
+
+func TestIdentificarDevolveAPessoaDoTokenDeUsuario(t *testing.T) {
+	e := emissor.Novo(t)
+	v := keycloak.Novo(e.URL, "ominicore", &emissor.Cache{})
+	id, err := v.Identificar(context.Background(), e.DeUsuario(t, "ominicore-console", "ana", "ominicore-config"))
+	if err != nil || id.Client != "ominicore-console" || id.Usuario != "ana" || len(id.Papeis) != 1 {
+		t.Fatalf("identidade = %+v err = %v", id, err)
 	}
 }
 
 // sistemaOrigem é o azp do token validado (REQ-1).
 func sistemaOrigem(v *keycloak.Validador, ctx context.Context, token string) (string, error) {
-	azp, _, err := v.Identificar(ctx, token)
-	return azp, err
+	id, err := v.Identificar(ctx, token)
+	return id.Client, err
 }

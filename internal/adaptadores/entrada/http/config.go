@@ -58,7 +58,7 @@ func (s Servidor) gravarConfig(w http.ResponseWriter, r *http.Request) {
 		problema(w, http.StatusBadRequest, "corpo inválido", "esperado um objeto JSON com campos de texto")
 		return
 	}
-	cfg, err := s.Config.Gravar(r.Context(), corpo["provedor"], corpo, r.Context().Value(chaveOrigem{}).(string))
+	cfg, err := s.Config.Gravar(r.Context(), corpo["provedor"], corpo, r.Context().Value(chaveQuem{}).(string))
 	if s.falhaDeConfig(w, r, err) {
 		return
 	}
@@ -66,7 +66,7 @@ func (s Servidor) gravarConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Servidor) apagarConfig(w http.ResponseWriter, r *http.Request) {
-	if s.falhaDeConfig(w, r, s.Config.Apagar(r.Context(), r.Context().Value(chaveOrigem{}).(string))) {
+	if s.falhaDeConfig(w, r, s.Config.Apagar(r.Context(), r.Context().Value(chaveQuem{}).(string))) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

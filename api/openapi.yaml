@@ -67,6 +67,12 @@ paths:
           $ref: "#/components/responses/Problema"
         "401":
           $ref: "#/components/responses/Problema"
+        "403":
+          description: Token do Console do Operador; ele não pede Notificações nem mexe em Opt-out (REQ-36).
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
         "422":
           $ref: "#/components/responses/Problema"
         "500":
@@ -96,6 +102,12 @@ paths:
                 $ref: "#/components/schemas/Consulta"
         "401":
           $ref: "#/components/responses/Problema"
+        "403":
+          description: Token do Console do Operador; ele não pede Notificações nem mexe em Opt-out (REQ-36).
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
         "404":
           $ref: "#/components/responses/Problema"
         "500":
@@ -124,6 +136,12 @@ paths:
           $ref: "#/components/responses/Problema"
         "401":
           $ref: "#/components/responses/Problema"
+        "403":
+          description: Token do Console do Operador; ele não pede Notificações nem mexe em Opt-out (REQ-36).
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
         "500":
           $ref: "#/components/responses/Problema"
     delete:
@@ -146,9 +164,52 @@ paths:
           $ref: "#/components/responses/Problema"
         "401":
           $ref: "#/components/responses/Problema"
+        "403":
+          description: Token do Console do Operador; ele não pede Notificações nem mexe em Opt-out (REQ-36).
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
         "500":
           $ref: "#/components/responses/Problema"
   /v1/config/whatsapp:
+    options:
+      operationId: preflightConfigWhatsApp
+      summary: Preflight de CORS do Console do Operador
+      description: |
+        Responde o preflight do navegador antes da autenticação (o navegador
+        não manda o token aqui). Só a origem do Console do Operador
+        (`OMINICORE_CONSOLE_ORIGEM`) é autorizada; outra origem recebe 403 sem
+        cabeçalho de CORS (REQ-34). As rotas de envio e de Opt-out não têm CORS.
+      security: []
+      parameters:
+        - name: Origin
+          in: header
+          required: true
+          schema:
+            type: string
+          example: https://ominicore.flipapi.com.br
+      responses:
+        "204":
+          description: Origem do Console autorizada.
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+            Access-Control-Allow-Methods:
+              schema:
+                type: string
+              example: GET, PUT, DELETE
+            Access-Control-Allow-Headers:
+              schema:
+                type: string
+              example: Authorization, Content-Type
+            Access-Control-Max-Age:
+              schema:
+                type: integer
+              example: 600
+        "403":
+          $ref: "#/components/responses/Problema"
     get:
       operationId: consultarConfigWhatsApp
       summary: Consultar a configuração do Canal WhatsApp (Operador)

@@ -66,6 +66,15 @@ func (e *Emissor) Valido(t *testing.T, azp string) string {
 	return e.Token(t, jwt.MapClaims{"iss": e.URL, "aud": []string{"ominicore"}, "azp": azp, "exp": time.Now().Add(5 * time.Minute).Unix()})
 }
 
+// DeUsuario emite o token de uma pessoa que entrou por um client público
+// (Console do Operador): azp do client, preferred_username e papéis do realm.
+func (e *Emissor) DeUsuario(t *testing.T, azp, usuario string, papeis ...string) string {
+	return e.Token(t, jwt.MapClaims{
+		"iss": e.URL, "aud": []string{"ominicore"}, "azp": azp, "preferred_username": usuario,
+		"realm_access": map[string]any{"roles": papeis}, "exp": time.Now().Add(5 * time.Minute).Unix(),
+	})
+}
+
 // Token assina as claims com a chave do realm (kid k1).
 func (e *Emissor) Token(t *testing.T, claims jwt.MapClaims) string {
 	t.Helper()

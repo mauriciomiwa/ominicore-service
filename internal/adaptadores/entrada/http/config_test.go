@@ -38,10 +38,12 @@ func novoConfig(t *testing.T, inicial dominio.ConfigWhatsApp) ambienteConfig {
 	a.atual = aplicacao.NovaConfigWhatsAppAtual(inicial, func(dominio.ConfigWhatsApp) portas.MessageSenderPort { return nil })
 	log := slog.New(slog.NewTextHandler(a.log, nil))
 	a.h = entradahttp.Servidor{
-		Auth:   keycloak.Novo(a.realm.URL, "ominicore", &emissor.Cache{}),
-		Enviar: aplicacao.SendMessageUseCase{Repo: a.repo, Estado: a.atual},
-		Config: &aplicacao.ConfigurarUseCase{Cofre: a.cofre, Registro: a.repo, Atual: a.atual, Log: log},
-		Log:    log,
+		Auth:          keycloak.Novo(a.realm.URL, "ominicore", &emissor.Cache{}),
+		Enviar:        aplicacao.SendMessageUseCase{Repo: a.repo, Estado: a.atual},
+		Config:        &aplicacao.ConfigurarUseCase{Cofre: a.cofre, Registro: a.repo, Atual: a.atual, Log: log},
+		ConsoleOrigem: origemConsole,
+		ConsoleClient: clientConsole,
+		Log:           log,
 	}.Handler()
 	return a
 }
@@ -229,5 +231,16 @@ func TestEventoQueFalhaViraErroComOLogComoRegistro(t *testing.T) {
 	}
 	if cfg, _ := a.cofre.LerWhatsApp(t.Context()); cfg.Provedor != dominio.WhatsAppZAPI {
 		t.Fatalf("a troca valeu e não deve ser desfeita: %+v", cfg)
+	}
+}
+
+func TestT120_TrocaPeloConsoleRegistraAPessoa(t *testing.T) {
+	a := novoConfig(t, ultraMsg())
+	rec := a.chamar(http.MethodPut, a.realm.DeUsuario(t, clientConsole, "ana", entradahttp.PapelOperador), corpoZAPI)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d: %s", rec.Code, rec.Body)
+	}
+	if ev := a.repo.Eventos(); len(ev) != 1 || ev[0].Por != "ana" {
+		t.Fatalf("eventos = %+v, quero o Operador ana", ev)
 	}
 }

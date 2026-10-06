@@ -1,0 +1,75 @@
+{
+  "app": {
+    "nome": "OminiCore",
+    "subtitulo": "Console do Operador",
+    "carregando": "Carregando…"
+  },
+  "ambiente": {
+    "titulo": "Escolha o Ambiente",
+    "explicacao": "Você entra com a sua conta no Keycloak do Ambiente escolhido. Trocar de Ambiente pede um novo login.",
+    "local": "Local",
+    "hml": "Homologação",
+    "prod": "Produção",
+    "entrar": "Entrar em {ambiente}",
+    "trocar": "Trocar de Ambiente",
+    "faixaProducao": "Você está em PRODUÇÃO: as mudanças valem para os envios reais",
+    "atual": "Ambiente: {ambiente}"
+  },
+  "sessao": {
+    "sair": "Sair",
+    "concluindo": "Concluindo o login…",
+    "falhou": "Não foi possível concluir o login. Tente entrar de novo.",
+    "voltar": "Voltar à escolha do Ambiente"
+  },
+  "menu": {
+    "canais": "Canais",
+    "whatsapp": "WhatsApp"
+  },
+  "whatsapp": {
+    "titulo": "WhatsApp",
+    "estado": "Estado do Canal",
+    "ligado": "Ligado",
+    "desligado": "Desligado",
+    "provedorAtivo": "Provedor ativo",
+    "semProvedor": "Nenhum Provedor configurado",
+    "configurado": "configurado",
+    "naoConfigurado": "não configurado",
+    "trocar": "Configurar o Provedor",
+    "explicacaoSegredos": "Os segredos nunca são mostrados. Para gravar, informe todos os campos do Provedor de novo.",
+    "provedor": "Provedor",
+    "gravar": "Gravar",
+    "desligar": "Desligar o WhatsApp",
+    "gravado": "Configuração gravada. Vale em até 30 segundos, sem reinício.",
+    "desligadoOk": "WhatsApp desligado.",
+    "recusada": "A API recusou a configuração: {detalhe}",
+    "campoFaltando": "Falta o campo {campo}",
+    "obrigatorio": "obrigatório",
+    "opcional": "opcional",
+    "semPermissao": "Sua conta não tem o papel de Operador neste Ambiente. Peça o acesso ao responsável.",
+    "falha": "A API não respondeu como esperado (status {status}). Tente de novo.",
+    "provedores": {
+      "meta": "Meta (Cloud API)",
+      "ultramsg": "UltraMsg",
+      "zapi": "Z-API"
+    },
+    "campos": {
+      "phone_number_id": "ID do número (phone_number_id)",
+      "token": "Token",
+      "meta_app_secret": "App Secret do webhook",
+      "meta_verify_token": "Verify token do webhook",
+      "instance_id": "Instância",
+      "client_token": "Token de segurança da conta"
+    }
+  },
+  "confirmar": {
+    "titulo": "Confirme",
+    "gravarProducao": "Gravar esta configuração em PRODUÇÃO?",
+    "desligar": "Desligar o WhatsApp em {ambiente}? Pedidos só por WhatsApp passam a ser recusados.",
+    "sim": "Confirmar",
+    "nao": "Cancelar"
+  },
+  "erro": {
+    "naoEncontrada": "Página não encontrada",
+    "inicio": "Voltar ao início"
+  }
+}

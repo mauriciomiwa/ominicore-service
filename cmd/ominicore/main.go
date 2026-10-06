@@ -115,6 +115,8 @@ type config struct {
 	Schema        string // search_path no Postgres: ominicore (prod) ou ominicore_hml
 	WebhookURL    string // origem pública dos webhooks (https://notify-hml.flipapi.com.br); vazia no local
 	RetencaoDias  string // OMINICORE_RETENCAO_DIAS, padrão 30 (RN-9)
+	ConsoleOrigem string // OMINICORE_CONSOLE_ORIGEM: única origem com CORS em /v1/config/* (REQ-34); vazia = sem CORS
+	ConsoleClient string // OMINICORE_CONSOLE_CLIENT: client público do Console (REQ-36, REQ-27)
 }
 
 func lerConfig(env func(string) string) config {
@@ -150,6 +152,8 @@ func lerConfig(env func(string) string) config {
 		Schema:        padrao("OMINICORE_DB_SCHEMA", postgres.SchemaPadrao),
 		WebhookURL:    strings.TrimRight(env("OMINICORE_WEBHOOK_URL"), "/"),
 		RetencaoDias:  padrao("OMINICORE_RETENCAO_DIAS", "30"),
+		ConsoleOrigem: strings.TrimRight(env("OMINICORE_CONSOLE_ORIGEM"), "/"),
+		ConsoleClient: padrao("OMINICORE_CONSOLE_CLIENT", "ominicore-console"),
 	}
 }
 
@@ -218,7 +222,9 @@ func rodarAPI(ctx context.Context, cfg config, seg openbao.Segredos, atual *apli
 				OptOut:   aplicacao.OptOutUseCase{Repo: repo},
 				Log:      log,
 			},
-			Log: log,
+			ConsoleOrigem: cfg.ConsoleOrigem,
+			ConsoleClient: cfg.ConsoleClient,
+			Log:           log,
 		}.Handler(),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,

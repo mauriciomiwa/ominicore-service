@@ -1,10 +1,25 @@
 {
- "gerado_em": "2026-10-05T13:36:49",
+ "gerado_em": "2026-10-05T21:25:48",
  "raiz": "ominicore",
  "stack": [
   {
    "manifesto": "go.mod",
    "linguagem": "go",
+   "frameworks": [],
+   "dependencias": 0
+  },
+  {
+   "manifesto": "web/console/package.json",
+   "linguagem": "js/ts",
+   "frameworks": [
+    "vue@^3.5.13",
+    "vue-router@^4.5.0"
+   ],
+   "dependencias": 46
+  },
+  {
+   "manifesto": "web/console/src/plugins/iconify/package.json",
+   "linguagem": "js/ts",
    "frameworks": [],
    "dependencias": 0
   }
@@ -15,15 +30,84 @@
    "importa": []
   },
   "internal": {
-   "arquivos": 66,
+   "arquivos": 70,
    "importa": []
   },
   "migrations": {
    "arquivos": 1,
    "importa": []
+  },
+  "web": {
+   "arquivos": 56,
+   "importa": []
   }
  },
- "rotas": [],
+ "rotas": [
+  {
+   "path": "/",
+   "nome": null,
+   "titulo": null,
+   "componente": "src/layouts/blank.vue",
+   "arquivo": "web/console/src/plugins/router/routes.ts",
+   "linha": 2
+  },
+  {
+   "path": "",
+   "nome": null,
+   "titulo": null,
+   "componente": "src/pages/index.vue",
+   "arquivo": "web/console/src/plugins/router/routes.ts",
+   "linha": 2
+  },
+  {
+   "path": "/callback/:ambiente",
+   "nome": null,
+   "titulo": null,
+   "componente": "src/layouts/blank.vue",
+   "arquivo": "web/console/src/plugins/router/routes.ts",
+   "linha": 3
+  },
+  {
+   "path": "",
+   "nome": null,
+   "titulo": null,
+   "componente": "src/pages/callback.vue",
+   "arquivo": "web/console/src/plugins/router/routes.ts",
+   "linha": 3
+  },
+  {
+   "path": "/",
+   "nome": null,
+   "titulo": null,
+   "componente": "src/layouts/default.vue",
+   "arquivo": "web/console/src/plugins/router/routes.ts",
+   "linha": 5
+  },
+  {
+   "path": "whatsapp",
+   "nome": null,
+   "titulo": null,
+   "componente": "src/pages/whatsapp.vue",
+   "arquivo": "web/console/src/plugins/router/routes.ts",
+   "linha": 9
+  },
+  {
+   "path": "/:pathMatch(.*)*",
+   "nome": null,
+   "titulo": null,
+   "componente": "src/layouts/blank.vue",
+   "arquivo": "web/console/src/plugins/router/routes.ts",
+   "linha": 12
+  },
+  {
+   "path": "",
+   "nome": null,
+   "titulo": null,
+   "componente": "src/pages/erro.vue",
+   "arquivo": "web/console/src/plugins/router/routes.ts",
+   "linha": 12
+  }
+ ],
  "endpoints": [
   {
    "metodo": "POST",
@@ -78,56 +162,56 @@
    "metodo": "GET",
    "path": "/healthz",
    "arquivo": "internal/adaptadores/entrada/http/servidor.go",
-   "linha": 42,
+   "linha": 49,
    "tipo": "go"
   },
   {
    "metodo": "POST",
    "path": "/v1/notificacoes",
    "arquivo": "internal/adaptadores/entrada/http/servidor.go",
-   "linha": 43,
+   "linha": 50,
    "tipo": "go"
   },
   {
    "metodo": "GET",
    "path": "/v1/notificacoes/{id}",
    "arquivo": "internal/adaptadores/entrada/http/servidor.go",
-   "linha": 44,
+   "linha": 51,
    "tipo": "go"
   },
   {
    "metodo": "POST",
    "path": "/v1/opt-outs",
    "arquivo": "internal/adaptadores/entrada/http/servidor.go",
-   "linha": 45,
+   "linha": 52,
    "tipo": "go"
   },
   {
    "metodo": "DELETE",
    "path": "/v1/opt-outs",
    "arquivo": "internal/adaptadores/entrada/http/servidor.go",
-   "linha": 46,
+   "linha": 53,
    "tipo": "go"
   },
   {
    "metodo": "GET",
    "path": "/v1/config/whatsapp",
    "arquivo": "internal/adaptadores/entrada/http/servidor.go",
-   "linha": 48,
+   "linha": 56,
    "tipo": "go"
   },
   {
    "metodo": "PUT",
    "path": "/v1/config/whatsapp",
    "arquivo": "internal/adaptadores/entrada/http/servidor.go",
-   "linha": 49,
+   "linha": 57,
    "tipo": "go"
   },
   {
    "metodo": "DELETE",
    "path": "/v1/config/whatsapp",
    "arquivo": "internal/adaptadores/entrada/http/servidor.go",
-   "linha": 50,
+   "linha": 58,
    "tipo": "go"
   },
   {
@@ -186,6 +270,9 @@
   ],
   "KEY": [
    "deploy/aviva2/publicar.sh"
+  ],
+  "NODE_ENV": [
+   "web/console/.eslintrc.cjs"
   ],
   "SENDGRID_API_KEY": [
    "deploy/local/bootstrap.sh"
@@ -249,6 +336,7 @@
   ],
   "nomad": [],
   "ci": [
+   ".github/workflows/console.yml",
    ".github/workflows/dependabot-automerge.yml",
    ".github/workflows/go.yml",
    ".github/workflows/sdd-checks.yml"

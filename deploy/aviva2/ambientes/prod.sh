@@ -7,3 +7,5 @@ SCHEMA=ominicore
 AUTH_MOUNT=jwt-ominicore
 ROLE=ominicore
 HOST_WEBHOOK=notify.flipapi.com.br
+# Console do Operador: um só para os dois Ambientes (RN-12); origem do CORS e do client.
+HOST_CONSOLE=ominicore.flipapi.com.br

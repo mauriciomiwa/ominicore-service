@@ -29,8 +29,9 @@ Versões e decisões detalhadas: `Padroes/stack-tecnologico.md`.
 | Provedor / data center | AWS EC2 `i-044194deaab7ca807` (aviva2.0, t4g arm64) | o mesmo host |
 | Cluster / servidor | quadlets Podman `ominicore-hml-{api,worker}` na rede `aviva` | quadlets `ominicore-{api,worker}` |
 | Região | us-east-1 (host); banco em sa-east-1 | idem |
-| Como se chega (VPN, bastion, público) | API só pela rede `aviva`; SSH com `~/.ssh/aviva2.0.pem`; webhooks públicos via Traefik + Cloudflare | idem |
-| URL da aplicação | `http://ominicore-api-hml:8080` (interna) · `https://notify-hml.flipapi.com.br/webhooks/*` | `http://ominicore-api:8080` · `https://notify.flipapi.com.br/webhooks/*` |
+| Como se chega (VPN, bastion, público) | API só pela rede `aviva`; SSH com `~/.ssh/aviva2.0.pem`; webhooks públicos via Traefik + Cloudflare; `/v1/config/*` e o Console do Operador públicos só do IP do escritório (WAF, ADR 0006). A 443 do host só aceita a Cloudflare (security group; `../flip/infra/aviva2.0/traefik/traefik.yml`), e o `auth.flipapi.com.br` tem `ipAllowList` própria no Traefik (`../flip/infra/aviva2.0/traefik/dynamic/keycloak.yml`) | idem |
+| URL da aplicação | `http://ominicore-api-hml:8080` (interna) · `https://notify-hml.flipapi.com.br/webhooks/*` · `https://notify-hml.flipapi.com.br/v1/config/*` (só escritório) | `http://ominicore-api:8080` · `https://notify.flipapi.com.br/webhooks/*` · `https://notify.flipapi.com.br/v1/config/*` (só escritório) |
+| Console do Operador | `https://ominicore.flipapi.com.br` (Cloudflare Workers Static Assets, um só para os dois Ambientes; WAF só do escritório) | idem |
 
 ## Bancos de dados
 
@@ -70,6 +71,9 @@ o binário, só aditivas. Quem pode escrever em prod: só o dono (`AMBIENTES.md`
 graph LR
   S[Sistemas de origem] -->|rede aviva, JWT| API[ominicore-api]
   P[Provedores] -->|Cloudflare + Traefik, /webhooks/*| API
+  O[Operador no escritório] -->|Console ominicore.flipapi.com.br| C[Console: Workers Static Assets]
+  O -->|login + OTP, só escritório| KC
+  C -.->|navegador: WAF só escritório, /v1/config/*, JWT + CORS| API
   API --> PG[(Aurora new_aviva / ominicore)]
   W[ominicore-worker] --> PG
   W --> SG[SendGrid / Twilio / Meta, UltraMsg ou Z-API]

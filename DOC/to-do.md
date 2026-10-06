@@ -15,6 +15,15 @@ ficam no `System/backlog-mvp.md` (cada uma é uma change do OpenSpec); furos de 
 - [ ] Decidir se envio duplicado na janela de queda (Provedor aceitou, commit falhou) é aceitável: hoje o despacho é "pelo menos uma vez".
 - [ ] Caminho do módulo Go (`ominicore` → `github.com/<org>/ominicore`) quando o repositório existir.
 
+## Fatia 11 — Console do Operador (change `11-console-operador`) — fora do escopo, para decidir depois
+- [ ] Configuração por cliente da casa (W Bem, Lara), cada um com o próprio WhatsApp: change de backend própria, antes de o Console ganhar o seletor de cliente.
+- [ ] Email, SMS, status da instância e QR no Console (entram quando a API tiver as rotas).
+- [ ] Worker intermediário (BFF) com Cloudflare Tunnel, se a rota pública de `/v1/config/*` deixar de ser aceitável.
+- [ ] Outros idiomas no Console (hoje só pt-BR).
+- [ ] Tema do Keycloak com a cara do Console; hoje o login, o OTP e o perfil (nome e sobrenome pedidos no primeiro login pelo Keycloak 26) usam o tema padrão.
+- [ ] Deploy (dono): IP do escritório na IP List da Cloudflare e no `ipAllowList` do `auth.flipapi.com.br` (repositório `flip`), regra de WAF, secrets `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` e environment `console` no GitHub.
+- [ ] Materio free fixado na 2.3.0 (01/2025), com ESLint 8 legado: migrar para o ESLint 9 (flat config) quando o template ou o Dependabot pedirem.
+
 ## Fatia 10 — Configuração do WhatsApp pela API (change `10-config-whatsapp-api`) — fora do escopo, para decidir depois
 - [ ] Status da instância e QR do UltraMsg e da Z-API pela API (hoje só no painel do Provedor).
 - [ ] Testar a credencial no Provedor antes de gravar (hoje só os campos são conferidos).

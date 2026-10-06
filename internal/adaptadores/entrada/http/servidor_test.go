@@ -21,6 +21,11 @@ import (
 	entradahttp "ominicore/internal/adaptadores/entrada/http"
 )
 
+const (
+	origemConsole = "https://ominicore.flipapi.com.br"
+	clientConsole = "ominicore-console"
+)
+
 const corpoValido = `{"template_id":"boas-vindas","destinatario":{"email":"ana@exemplo.com"},"dados":{"nome":"Ana"}}`
 
 type ambiente struct {
@@ -33,11 +38,13 @@ func novo(t *testing.T) ambiente {
 	realm := emissor.Novo(t)
 	repo := memoria.Novo()
 	h := entradahttp.Servidor{
-		Auth:      keycloak.Novo(realm.URL, "ominicore", &emissor.Cache{}),
-		Enviar:    aplicacao.SendMessageUseCase{Repo: repo},
-		Consultar: aplicacao.ConsultarUseCase{Repo: repo},
-		OptOut:    aplicacao.OptOutUseCase{Repo: repo},
-		Log:       slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Auth:          keycloak.Novo(realm.URL, "ominicore", &emissor.Cache{}),
+		Enviar:        aplicacao.SendMessageUseCase{Repo: repo},
+		Consultar:     aplicacao.ConsultarUseCase{Repo: repo},
+		OptOut:        aplicacao.OptOutUseCase{Repo: repo},
+		ConsoleOrigem: origemConsole,
+		ConsoleClient: clientConsole,
+		Log:           slog.New(slog.NewTextHandler(io.Discard, nil)),
 	}.Handler()
 	return ambiente{realm: realm, repo: repo, h: h}
 }
@@ -367,5 +374,32 @@ func versaoSemTextoVira422(t *testing.T, prov dominio.ProvedorWhatsApp) {
 	}
 	if n, _ := repo.Contar(); n != 0 {
 		t.Fatalf("registrou %d notificações", n)
+	}
+}
+
+func TestT119_TokenDoConsoleRecusadoNoEnvioENoOptOut(t *testing.T) {
+	a := novo(t)
+	token := a.realm.DeUsuario(t, clientConsole, "ana", entradahttp.PapelOperador)
+	if rec := a.pedir(token, "abc-1", corpoValido); rec.Code != http.StatusForbidden {
+		t.Fatalf("pedido: status = %d, quero 403", rec.Code)
+	}
+	chamadas := []*http.Request{
+		httptest.NewRequest(http.MethodGet, "/v1/notificacoes/00000000-0000-0000-0000-000000000000", nil),
+		httptest.NewRequest(http.MethodPost, "/v1/opt-outs", strings.NewReader(`{"canal":"sms","contato":"+5511999998888"}`)),
+		httptest.NewRequest(http.MethodDelete, "/v1/opt-outs", strings.NewReader(`{"canal":"sms","contato":"+5511999998888"}`)),
+	}
+	for _, req := range chamadas {
+		req.Header.Set("Authorization", "Bearer "+token)
+		rec := httptest.NewRecorder()
+		a.h.ServeHTTP(rec, req)
+		if rec.Code != http.StatusForbidden {
+			t.Fatalf("%s %s: status = %d, quero 403", req.Method, req.URL.Path, rec.Code)
+		}
+	}
+	if n, _ := a.repo.Contar(); n != 0 || a.repo.QuantosOptOuts() != 0 {
+		t.Fatalf("criou %d notificações e %d opt-outs", n, a.repo.QuantosOptOuts())
+	}
+	if rec := a.pedir(a.realm.Valido(t, "sistema-a"), "abc-2", corpoValido); rec.Code != http.StatusAccepted {
+		t.Fatalf("Sistema de origem comum: status = %d, quero 202", rec.Code)
 	}
 }

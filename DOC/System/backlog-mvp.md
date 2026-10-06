@@ -102,6 +102,14 @@ Cobre: RN-11 (REQ-22 a REQ-28)
 Depende de: Fatias 8 e 9 arquivadas
 Pronto quando: T-92 a T-105 passando e change arquivada.
 
+### Fatia 11 — Console do Operador
+Change: `11-console-operador`
+Valor: o Operador configura o WhatsApp de homologação ou de produção por uma
+página web em `ominicore.flipapi.com.br`, só do escritório, com a própria conta.
+Cobre: RN-12 (REQ-29 a REQ-36 e REQ-27 modificado)
+Depende de: Fatia 10 arquivada
+Pronto quando: T-106 a T-120 passando e change arquivada.
+
 ## Trilha de infraestrutura (não é fatia)
 
 Deploy no aviva2.0 (quadlets `ominicore-api` e `ominicore-worker`, rota

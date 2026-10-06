@@ -5,6 +5,42 @@ registro vira suposição de alguém daqui a seis meses.
 
 Entradas antigas: `log/arquivo-AAAA.md` (`tools/arquiva_log.py`).
 
+## 2026-10-05 — Fatia 11 (`11-console-operador`) implementada: 42/45
+- API: `portas.Identidade` (client, pessoa, papéis); CORS só em `/v1/config/*`
+  para `OMINICORE_CONSOLE_ORIGEM`; token de `OMINICORE_CONSOLE_CLIENT` recusado
+  no envio e no Opt-out; troca pelo Console registra o `preferred_username`.
+- Keycloak: `lib-console.sh` (client público PKCE S256 + fluxo `navegador-otp`
+  com OTP obrigatório por override; a atualização das execuções preserva a
+  `priority`, senão o OTP vai para antes da senha — achado no login local) e
+  `criar-console.sh`/`criar-operador.sh`; o Keycloak 26 pede nome e sobrenome
+  no primeiro login.
+- Console `web/console`: Materio free 2.3.0 enxuto, Vite 6, Vuetify 3.13,
+  `oidc-client-ts`, `vue-i18n` pt-BR, CSP em `_headers`, Worker só com assets.
+- Borda: rota `/v1/config/` no Traefik, `verificar-exposicao.sh` (T-113 a T-115,
+  CI de fora do escritório), runbook C1–C8, ADR 0006. Fatos: a 443 do host só
+  aceita a Cloudflare; o `auth.flipapi.com.br` tem `ipAllowList` própria.
+- CVE (política em `Infra/seguranca-dependencias.md`): `bun audit` acusa 6
+  altas em `minimatch`, `braces` e `extract-zip`, todas em ferramentas de build
+  e lint do Console (ESLint 8, sass/chokidar, `@iconify/tools`), sem correção
+  compatível publicada (`braces` 3.0.3 e `extract-zip` 2.0.1 são as últimas).
+  Mitigação: uso não exposto (rodam só no build local e no CI, sobre arquivos
+  do próprio repositório); nada disso vai no bundle publicado. Revisitar na
+  migração para o ESLint 9 ou quando o Dependabot abrir PR (dono: Mauricio Miwa).
+- Pendentes: 1.2 (archive da 10), 7.3 (T-113 a T-115 só depois do deploy).
+
+## 2026-10-05 — Sabatina do Console do Operador fechada; change `11-console-operador` proposta
+- Respostas do dono: só WhatsApp; template Materio free (Vuexy é pago);
+  `/v1/config/*` público em `notify[-hml].flipapi.com.br` (opção a, não BFF),
+  WAF só do IP fixo do escritório + JWT + CORS para
+  `https://ominicore.flipapi.com.br`; client público `ominicore-console`
+  (PKCE, token em memória); seletor escolhe o Ambiente (hml/prod), não
+  cliente; conta por pessoa com OTP; só pt-BR. Termos novos no glossário:
+  Console do Operador, Ambiente. A abrir: RN-12, ADR 0006 (revisa a 0003),
+  change. Configuração por cliente (W Bem, Lara) fica fora.
+- Na proposta: token do client do Console recusado no envio e no Opt-out
+  (REQ-36); `config_eventos` registra o usuário da pessoa nas trocas pelo
+  Console (REQ-27 modificado); OTP obrigatório por override de fluxo no client.
+
 ## 2026-10-05 — Fatia 10 (`10-config-whatsapp-api`) implementada: 33/33
 - `dominio.ConfigWhatsApp` (campos e segredos por Provedor, validação única
   para boot, releitura e API); `openbao.Cofre` (ler, gravar, apagar, re-login

@@ -8,7 +8,12 @@ haver dois lugares a manter. Tipo: **Exemplo** (caso concreto) ou
 **Propriedade** (invariante). Status: pendente / escrito (não rodado) /
 passando.
 
-T-1 a T-62 vigentes desde 2026-10-02 e T-63 a T-69 desde 2026-10-05 (`openspec/specs/{autenticacao-origem,notificacoes,segredos}`); T-70 a T-81 na change ativa `08-whatsapp-ultramsg`; T-82 a T-91 na change ativa `09-whatsapp-zapi`; T-92 a T-105 na change ativa `10-config-whatsapp-api`.
+T-1 a T-62 vigentes desde 2026-10-02 e T-63 a T-69 desde 2026-10-05 (`openspec/specs/{autenticacao-origem,notificacoes,segredos}`); T-70 a T-81 na change ativa `08-whatsapp-ultramsg`; T-82 a T-91 na change ativa `09-whatsapp-zapi`; T-92 a T-105 na change ativa `10-config-whatsapp-api`; T-106 a T-120 na change ativa `11-console-operador`.
+
+Console do Operador (`web/console`): Vitest + `@vue/test-utils` + happy-dom,
+`bun run test`; o nome do teste começa pelo T-n (`it('T-106 …')`). T-113 a
+T-115 são verificações de borda (`curl` contra os hosts reais) que só valem de
+fora do escritório: rodam no GitHub Actions depois do deploy e uma vez por dia.
 
 Nome do teste em Go cita o T-n: `func TestT7_ReenvioComAMesmaChaveNaoDuplica(t *testing.T)`.
 Unitários com fakes (`internal/testes/`: repositório em memória, realm JWT,
@@ -123,3 +128,18 @@ rode com `make itest` (Docker Desktop, Colima ou Podman: usa o socket do context
 | T-103 | Exemplo | `cmd/ominicore/config_test.go` | passando (change 10 ativa) |
 | T-104 | Exemplo | `internal/adaptadores/entrada/http/config_test.go` · `internal/integracao/integracao_test.go` (Postgres) | passando (change 10 ativa) |
 | T-105 | Exemplo | `internal/adaptadores/saida/openbao/cofre_test.go` | passando (change 10 ativa) |
+| T-106 | Exemplo | `web/console/src/console/sessao.spec.ts` (Vitest, `oidc-client-ts` real) | passando |
+| T-107 | Exemplo | `web/console/src/console/sessao.spec.ts` (Vitest) | passando |
+| T-108 | Exemplo | `web/console/src/pages/whatsapp.spec.ts` (Vitest) | passando |
+| T-109 | Exemplo | `web/console/src/pages/whatsapp.spec.ts` (Vitest) | passando |
+| T-110 | Exemplo | `web/console/src/pages/whatsapp.spec.ts` (Vitest) | passando |
+| T-111 | Exemplo | `web/console/src/pages/whatsapp.spec.ts` (Vitest) | passando |
+| T-112 | Exemplo | `web/console/src/pages/whatsapp.spec.ts` (Vitest) | passando |
+| T-113 | Exemplo | `deploy/aviva2/verificar-exposicao.sh` (CI `console.yml`, de fora do escritório) | escrito (roda depois do deploy) |
+| T-114 | Exemplo | `deploy/aviva2/verificar-exposicao.sh` (CI `console.yml`, de fora do escritório) | escrito (roda depois do deploy) |
+| T-115 | Exemplo | `deploy/aviva2/verificar-exposicao.sh` (CI `console.yml`, de fora do escritório) | escrito (roda depois do deploy) |
+| T-116 | Exemplo | `internal/adaptadores/entrada/http/cors_test.go` | passando |
+| T-117 | Exemplo | `internal/adaptadores/entrada/http/cors_test.go` | passando |
+| T-118 | Exemplo | `internal/integracao/keycloak_test.go` (testcontainers, Keycloak 26.3) | passando |
+| T-119 | Exemplo | `internal/adaptadores/entrada/http/servidor_test.go` | passando |
+| T-120 | Exemplo | `internal/adaptadores/entrada/http/config_test.go` | passando |

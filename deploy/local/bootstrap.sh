@@ -70,12 +70,23 @@ printf 'path "kv/data/ominicore/*" { capabilities = ["read"] }\npath "kv/data/om
  "bound_audiences": ["openbao"], "token_policies": ["ominicore"], "token_ttl": "1h"}
 JSON
 
+echo ">> Console do Operador no Keycloak local (RN-12): client, OTP obrigatório e a pessoa operador.local"
+# a mesma biblioteca de hml/prod, com o kcadm do container
+# shellcheck source=../aviva2/keycloak/lib-console.sh
+. ../aviva2/keycloak/lib-console.sh
+KC=("${COMPOSE_CMD[@]}" -f compose.yaml exec -T keycloak /opt/keycloak/bin/kcadm.sh)
+"${KC[@]}" config credentials --server http://localhost:8080 --realm master --user admin --password admin-local >/dev/null
+configurar_console ominicore http://localhost:5173
+# a senha temporária sai uma vez; no primeiro login a pessoa troca a senha e configura o OTP
+criar_operador ominicore operador.local operador@localhost
+
 echo ">> pronto. Variáveis para rodar o binário no host:"
 cat <<'EOF'
 export OMINICORE_BAO_ADDR=http://127.0.0.1:8200
 export OMINICORE_BAO_TOKEN=dev-root          # só local; hml/prod usam JWT (ADR 0002)
 export OMINICORE_KC_ISSUER=http://localhost:8081/realms/ominicore
 export OMINICORE_REDIS_ADDR=127.0.0.1:6380
+export OMINICORE_CONSOLE_ORIGEM=http://localhost:5173   # Console em `bun run dev` (web/console)
 # para testar o login jwt (caminho de hml/prod), troque o token por:
 #   unset OMINICORE_BAO_TOKEN; export OMINICORE_KC_CLIENT_SECRET=ominicore-app-secret
 EOF

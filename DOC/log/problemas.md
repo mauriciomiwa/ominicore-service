@@ -1,6 +1,11 @@
 # Problemas abertos
 
-> Gerado em 2026-10-05 13:40 a partir da última execução de cada script. Não edite: rode os scripts de novo.
+> Gerado em 2026-10-05 21:30 a partir da última execução de cada script. Não edite: rode os scripts de novo.
+
+## checa_projeto-local — 2026-10-05 21:30
+
+- [ ] **ALERTA** [estrutura] DOC/log.md com 16 KB (> 15 KB) — arquive as entradas mais antigas: python3 DOC/tools/arquiva_log.py DOC
+- [ ] **ALERTA** [novo-projeto-sdd] T-n de changes ativas ainda sem teste (em curso): T-114
 
 ## verifica-projeto — 2026-10-05 12:10
 

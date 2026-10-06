@@ -25,6 +25,9 @@ graph LR
   API --> KC[Keycloak JWKS]
   API --> RD[(Redis: cache JWKS)]
   API & W --> BAO[OpenBao: segredos no boot]
+  OP[Operador no escritório] --> CON[Console web/console]
+  CON -->|OIDC + PKCE| KC
+  CON -->|/v1/config/whatsapp, CORS| API
 ```
 Camadas: `internal/dominio` (sem dependência externa) · `internal/aplicacao` e
 `internal/portas` · `internal/adaptadores/{entrada,saida}/*` · `cmd/ominicore`
@@ -35,6 +38,7 @@ Camadas: `internal/dominio` (sem dependência externa) · `internal/aplicacao` e
 | Área | O que faz | Entradas (rotas/endpoints) | Depende de |
 |---|---|---|---|
 | [Envio](envio.md) | pedido de Notificação por Template e despacho por Email, SMS e WhatsApp, com Retentativa e fallback | `POST`/`GET /v1/notificacoes`, `/v1/opt-outs`, `/v1/config/whatsapp`, `/webhooks/*`, worker | Keycloak, OpenBao, Postgres, Redis, SendGrid, Twilio, Meta, UltraMsg, Z-API |
+| [Console do Operador](console.md) | página web (Vue + Vuetify, Materio) em que o Operador escolhe o Ambiente, entra com conta pessoal e OTP e configura o WhatsApp pela API | `/`, `/callback/:ambiente`, `/whatsapp` (rotas do front); chama `GET`/`PUT`/`DELETE`/`OPTIONS /v1/config/whatsapp` | Keycloak (OIDC + PKCE), API do Ambiente, Cloudflare (Workers, WAF) |
 
 ## Integrações externas
 | Sistema | Como é chamado | Onde |

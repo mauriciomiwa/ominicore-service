@@ -1,0 +1,17 @@
+{
+  // Console do Operador (RN-12): Worker só com Static Assets, sem `main`.
+  // Um só Console para homologação e produção; o WAF da Cloudflare libera só o
+  // IP do escritório (ADR 0006). Deploy: .github/workflows/console.yml.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ominicore-console",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    // rota desconhecida cai no index.html (SPA), inclusive /callback/<ambiente>
+    "not_found_handling": "single-page-application"
+  },
+  "routes": [
+    { "pattern": "ominicore.flipapi.com.br", "custom_domain": true }
+  ],
+  "observability": { "enabled": true }
+}

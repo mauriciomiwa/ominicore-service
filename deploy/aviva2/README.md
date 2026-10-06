@@ -104,6 +104,34 @@ Credencial nunca vai para o repositório, para o chat nem para argumento de
 linha de comando: os scripts pedem no terminal (`read -s`) e gravam direto no
 OpenBao ou em podman secret.
 
+## Console do Operador (fatia 11, RN-12)
+
+O Console (`https://ominicore.flipapi.com.br`) é um só para os dois Ambientes:
+o Operador escolhe homologação ou produção e entra no realm daquele Ambiente.
+Desde a fatia 11, o `publicar.sh` instala também a rota pública de
+`/v1/config/*` (ADR 0006). Por isso, **o WAF vem antes do primeiro
+`publicar.sh` desta versão**, para não haver janela aberta.
+
+| # | Etapa | Onde | Quem | Credencial |
+|---|---|---|---|---|
+| C1 | IP List `escritorio` com o IP fixo do escritório (Manage Account › Configurations › Lists) | Cloudflare | dono | conta Cloudflare |
+| C2 | Regra de WAF (Security › WAF › Custom rules) na zona `flipapi.com.br`, ação **Block**: `(http.host eq "ominicore.flipapi.com.br" or (http.host in {"notify.flipapi.com.br" "notify-hml.flipapi.com.br"} and starts_with(http.request.uri.path, "/v1/"))) and not ip.src in $escritorio` | Cloudflare | dono | conta Cloudflare |
+| C3 | IP do escritório no `keycloak-allowlist` de `../flip/infra/aviva2.0/traefik/dynamic/keycloak.yml` (repositório `flip`); sem ele, o login pelo Console é recusado | repositório `flip` + host | dono | chave SSH |
+| C4 | Client público: `sudo keycloak/criar-console.sh hml` (PKCE, OTP obrigatório pelo fluxo `navegador-otp`; idempotente) | host | dono | senha admin do Keycloak |
+| C5 | Uma conta por pessoa: `sudo keycloak/criar-operador.sh hml <usuario> <email>`. A senha temporária sai uma vez; no primeiro login a pessoa cadastra o OTP, troca a senha e informa nome e sobrenome. Para tirar o acesso, desabilite a pessoa no Keycloak | host | dono | senha admin do Keycloak |
+| C6 | `./deploy/aviva2/publicar.sh hml` (rota `/v1/config/*` e `OMINICORE_CONSOLE_ORIGEM`) | máquina local → host | dono ou Claude, com bloco de alvo | chave SSH |
+| C7 | GitHub: environment `console` com os secrets `CLOUDFLARE_API_TOKEN` (permissão Workers Scripts: Edit e Workers Routes: Edit na zona) e `CLOUDFLARE_ACCOUNT_ID`; depois Actions › console › Run workflow com "publicar" marcado (a `main` precisa estar verde); depois do primeiro deploy, a variável de repositório `CONSOLE_PUBLICADO=true` liga a verificação diária | GitHub | dono | conta Cloudflare |
+| C8 | O próprio workflow roda `verificar-exposicao.sh hml` e `prod` de fora do escritório (T-113 a T-115). Do escritório: entrar, consultar e gravar em homologação | GitHub + escritório | dono | — |
+
+Repita C4 a C6 em prod (skill `ambientes`). **Trocar o IP do escritório**: só
+a IP List `escritorio` (C1) e o `keycloak-allowlist` (C3); até lá, o Console
+fica inacessível, o que é uma falha segura.
+
+**Rollback do Console:** `bunx wrangler rollback` em `web/console` (versão
+anterior) ou `bunx wrangler delete` (tira do ar). Para fechar a configuração
+de fora na hora, apague o router `ominicore<sufixo>-config` de
+`/etc/traefik/dynamic/ominicore<sufixo>.yml` no host; o Traefik relê sozinho.
+
 ## Conferir que está no ar (hml)
 
 ```bash
@@ -134,5 +162,5 @@ anterior roda sobre o schema novo.
 |---|---|
 | `quadlet/ominicore.container.tmpl` | `/etc/containers/systemd/ominicore<sufixo>-{api,worker}.container` |
 | `ominicore.env.tmpl` | `/etc/ominicore<sufixo>/ominicore.env` |
-| `traefik/ominicore.yml.tmpl` | `/etc/traefik/dynamic/ominicore<sufixo>.yml` (só `/webhooks/*`) |
+| `traefik/ominicore.yml.tmpl` | `/etc/traefik/dynamic/ominicore<sufixo>.yml` (`/webhooks/*` e `/v1/config/*`, ADR 0006) |
 | binário | `/opt/ominicore<sufixo>/ominicore` (+ `.anterior`) |
