@@ -88,8 +88,7 @@ configurar_console() {
   else
     "${KC[@]}" update "clients/$id" -r "$realm" -f - <<<"$json"
   fi
-  "${KC[@]}" get "clients/$id/protocol-mappers/models" -r "$realm" --fields name --format csv --noquotes |
-    grep -qx audience-ominicore ||
+  "${KC[@]}" get "clients/$id/protocol-mappers/models" -r "$realm" --fields name --format csv --noquotes | grep -x audience-ominicore >/dev/null ||
     "${KC[@]}" create "clients/$id/protocol-mappers/models" -r "$realm" -f - >/dev/null <<'JSON'
 {"name": "audience-ominicore", "protocol": "openid-connect", "protocolMapper": "oidc-audience-mapper",
  "config": {"included.custom.audience": "ominicore", "access.token.claim": "true", "id.token.claim": "false"}}

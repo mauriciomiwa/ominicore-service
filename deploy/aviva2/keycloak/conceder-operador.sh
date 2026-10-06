@@ -23,7 +23,7 @@ entrar_admin_keycloak
 "${KC[@]}" get "roles/$PAPEL" -r "$REALM" >/dev/null 2>&1 ||
   "${KC[@]}" create roles -r "$REALM" -s name="$PAPEL" -s 'description=Operador: configura os Canais pela API (RN-11)' >/dev/null
 CONTA="service-account-$CLIENT"
-"${KC[@]}" get users -r "$REALM" -q username="$CONTA" --fields id --format csv --noquotes | grep -q . ||
+"${KC[@]}" get users -r "$REALM" -q username="$CONTA" --fields id --format csv --noquotes | grep . >/dev/null ||
   { echo "!! $CLIENT não existe ou não tem service account em $REALM" >&2; exit 1; }
 if [ "$ACAO" = --revogar ]; then
   "${KC[@]}" remove-roles -r "$REALM" --uusername "$CONTA" --rolename "$PAPEL"

@@ -20,8 +20,8 @@ read -r -s -p "token de admin do OpenBao: " BAO_TOKEN; echo
 export BAO_TOKEN
 BAO=(podman exec -i -e BAO_TOKEN -e BAO_ADDR=http://127.0.0.1:8200 openbao bao)
 
-"${BAO[@]}" secrets list -format=json | grep -q '"kv/"' || "${BAO[@]}" secrets enable -path=kv kv-v2
-"${BAO[@]}" auth list -format=json | grep -q "\"$AUTH_MOUNT/\"" || "${BAO[@]}" auth enable -path="$AUTH_MOUNT" jwt
+"${BAO[@]}" secrets list -format=json | grep '"kv/"' >/dev/null || "${BAO[@]}" secrets enable -path=kv kv-v2
+"${BAO[@]}" auth list -format=json | grep "\"$AUTH_MOUNT/\"" >/dev/null || "${BAO[@]}" auth enable -path="$AUTH_MOUNT" jwt
 # JWKS pelo backchannel da rede aviva; o iss dos tokens é o host público.
 "${BAO[@]}" write "auth/$AUTH_MOUNT/config" \
   jwks_url="http://keycloak:8080/realms/$REALM/protocol/openid-connect/certs" \
