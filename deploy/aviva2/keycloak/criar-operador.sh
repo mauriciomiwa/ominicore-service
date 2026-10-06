@@ -17,8 +17,7 @@ EMAIL="${3:?informe o e-mail}"
 . "../ambientes/$1.sh"
 # shellcheck source=lib-console.sh
 . ./lib-console.sh
-read -r -s -p "senha do admin do Keycloak (realm master): " KC_ADMIN; echo
-KC=(podman exec -i keycloak /opt/keycloak/bin/kcadm.sh)
-"${KC[@]}" config credentials --server http://localhost:8080 --realm master --user admin --password "$KC_ADMIN" >/dev/null
-unset KC_ADMIN
+# shellcheck source=lib-admin.sh
+. ./lib-admin.sh
+entrar_admin_keycloak
 criar_operador "$REALM" "$USUARIO" "$EMAIL"

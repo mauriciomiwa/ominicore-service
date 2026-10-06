@@ -10,10 +10,9 @@ CLIENT="${2:?informe o client-id do Sistema de origem}"
 [[ "$CLIENT" =~ ^[a-z][a-z0-9-]{2,40}$ ]] || { echo "client-id inválido" >&2; exit 2; }
 # shellcheck source=/dev/null
 . "../ambientes/$1.sh"
-read -r -s -p "senha do admin do Keycloak (realm master): " KC_ADMIN; echo
-KC=(podman exec -i keycloak /opt/keycloak/bin/kcadm.sh)
-"${KC[@]}" config credentials --server http://localhost:8080 --realm master --user admin --password "$KC_ADMIN" >/dev/null
-unset KC_ADMIN
+# shellcheck source=lib-admin.sh
+. ./lib-admin.sh
+entrar_admin_keycloak
 "${KC[@]}" create clients -r "$REALM" -f - <<JSON
 {"clientId": "$CLIENT", "enabled": true, "protocol": "openid-connect", "publicClient": false,
  "clientAuthenticatorType": "client-secret", "serviceAccountsEnabled": true,

@@ -15,7 +15,7 @@ em `ambientes/hml.sh` e `ambientes/prod.sh`.
 |---|---|---|---|---|
 | 1 | DNS `notify-hml.flipapi.com.br` → aviva2.0, proxy da Cloudflare ligado | Cloudflare | dono | conta Cloudflare |
 | 2 | Schema e role: `aurora/criar-schema.sql` (bloco do ambiente) | DBeaver, como master | dono | senha master do Aurora |
-| 3 | Realm + client `ominicore-app` + podman secret: `sudo keycloak/criar-realm.sh hml` | host | dono | senha admin do Keycloak |
+| 3 | Realm + client `ominicore-app` + podman secret: `sudo keycloak/criar-realm.sh hml` | host | dono | nenhuma: os scripts de `keycloak/` entram como `bootstrap-admin` com o podman secret `kc-admin-password` (`lib-admin.sh`) |
 | 4 | Cofre: `sudo openbao/configurar-openbao.sh hml` (auth `jwt-ominicore-hml`, policy, role, segredos). "Configurar WhatsApp agora? [s/N]": sem conta Meta, responda N — o core sobe com o WhatsApp desligado | host | dono | token admin do OpenBao; chaves SendGrid/Twilio de sandbox (Meta só se ligar o WhatsApp) |
 | 5 | `./deploy/aviva2/publicar.sh hml` (build arm64, migrate, quadlets, rota) | máquina local → host | dono ou Claude, com bloco de alvo | chave SSH `~/.ssh/aviva2.0.pem` |
 | 5b | Cadastrar os webhooks nos painéis: SendGrid Event Webhook → `https://notify-hml.flipapi.com.br/webhooks/sendgrid` (eventos delivered, bounce, dropped; **Signed Event Webhook** ligado); Meta (só com o WhatsApp ligado) → `https://notify-hml.flipapi.com.br/webhooks/whatsapp` com o verify token do passo 4 (campo `messages`). O Twilio não precisa: cada SMS leva a `StatusCallback` | painéis SendGrid e Meta | dono | contas dos Provedores |
