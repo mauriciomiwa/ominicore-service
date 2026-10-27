@@ -14,6 +14,9 @@ Entradas antigas: `log/arquivo-AAAA.md` (`tools/arquiva_log.py`).
   `CMD-SHELL` e a imagem distroless não tem `/bin/sh`. Corrigido em `45a39b3`
   (forma de array, validada no gerador do quadlet em dry-run); publicado em
   `ac762e0` (por Claude, com o "pode" do dono): api e worker "healthy".
+- Achado: dois `publicar.sh prod` sobrepostos cortaram o
+  `/opt/ominicore/ominicore.anterior` (segfault; o `--voltar` derrubaria a API).
+  Recriado pelo dono a partir do binário atual; melhoria do script no `to-do.md`.
 - Achado: de fora do escritório (186.204.15.26) o Console abriu (200) e
   `/v1/config/*` chegou à API (401): o WAF não bloqueou — a confirmar com o dono
   se esse IP está na lista `escritorio`.
