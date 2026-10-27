@@ -11,6 +11,9 @@
 ## 3. Reinício dos serviços
 - [x] 3.1 `deploy/aviva2/quadlet/ominicore.container.tmpl`: `StartLimitIntervalSec=0` em `[Unit]` e `RestartSec=10s` em `[Service]`; runbook `deploy/aviva2/README.md` (conferência com `systemctl show`) — arquivo gerado pelo `publicar.sh` conferido com o `perl` do script
 
+- [x] 3.2 Healthcheck na forma de array (`HealthCmd=["/ominicore","--version"]`): a forma de texto vira `CMD-SHELL`, e a imagem distroless não tem `/bin/sh`, então o container ficava sempre "unhealthy" (visto em prod em 2026-10-27; incluído na change a pedido do dono) — arquivo gerado conferido com o `perl` do `publicar.sh`
+- [ ] 3.3 Depois do `publicar.sh prod`, conferir no host `podman healthcheck run ominicore-api` com código 0 e status "healthy" nos dois containers
+
 ## 4. Console com a API fora (REQ-43)
 - [x] 4.1 `api.ts` devolve `falha` com status 0 quando o `fetch` lança; a tela mostra `semResposta`/`falha` com "Tentar de novo" e encerra o carregamento em `finally`; textos em `pt-BR.json` — `bun run lint` e `bun run typecheck`
 - [x] 4.2 Teste T-137 (rede falha, depois "Tentar de novo" mostra a configuração; sem carregamento infinito)

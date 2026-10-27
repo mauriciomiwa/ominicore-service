@@ -47,6 +47,13 @@ limite.
 - *Alternativa:* `RestartSec=30s` com limite de 1 h. Recusada: exigiria
   intervenção humana depois de uma queda longa, que foi o problema de 16/10.
 
+### D2b — Healthcheck sem shell
+`HealthCmd` na forma de array JSON (`["/ominicore","--version"]`): o Podman a
+executa direto, sem `/bin/sh -c`. A forma de texto vira `CMD-SHELL`, que a
+imagem distroless não consegue rodar, e deixava os containers sempre
+"unhealthy" (visto em prod em 2026-10-27). O healthcheck continua sem efeito
+de reinício (sem `HealthOnFailure`): só informa o status.
+
 ### D3 — Console com a API fora
 - `criarApi.chamar` captura a exceção do `fetch` e devolve
   `{ tipo: 'falha', status: 0 }`. Os demais `!r.ok` já viram

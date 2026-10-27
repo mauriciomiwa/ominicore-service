@@ -22,7 +22,9 @@ Secret=ominicore${SUFIXO}-kc-secret,type=env,target=OMINICORE_KC_CLIENT_SECRET
 Secret=redis-password,type=env,target=OMINICORE_REDIS_PASSWORD
 Exec=/ominicore ${PAPEL}
 PodmanArgs=--memory=256m
-HealthCmd=/ominicore --version
+# forma de array (exec, sem shell): a imagem distroless não tem /bin/sh, e a forma
+# de texto vira CMD-SHELL e falha sempre ("unhealthy" mesmo com o binário bom)
+HealthCmd=["/ominicore","--version"]
 HealthInterval=60s
 
 [Service]
