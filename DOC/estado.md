@@ -1,25 +1,24 @@
 # Estado — ominicore
 
-> Atualizado em 2026-10-05 por Mauricio Miwa + Claude (change 11 implementada, sem commit)
+> Atualizado em 2026-10-27 por Mauricio Miwa + Claude (changes 12 e 13 propostas; spec notificacoes ajustada)
 
 ## Em curso
-- Change `11-console-operador`: 43/45 na branch `fatia/11-console-operador` (sem commit); sentinel: aprovado com ressalvas.
-- Faltam: 1.2 (archive da 10 antes do archive da 11: o REQ-27 MODIFIED exige `configuracao-canais` vigente) e 7.3 (T-113 a T-115 só rodam depois do deploy).
-- Próximo passo: commitar a 11; fechar 5.2 (08) e 5.3 (09) com instâncias reais; `/opsx:archive` 08 → 09 → 10 → 11.
-- Deploy (skill ambientes): runbook `deploy/aviva2/README.md` seção Console (C1–C8). WAF antes do `publicar.sh`.
+- Prod no ar desde 2026-10-06 (`notify.flipapi.com.br`, Console em `ominicore.flipapi.com.br`); hml adiado (`log.md` 2026-10-06).
+- Change `13-webhooks-zapi` proposta (1/39): Avisos de status da Z-API (RN-4/RN-5 revisadas, REQ-37 a REQ-42, REQ-21 modificado, T-121 a T-136). Implementar **depois** da change 12.
+- Change `12-defeitos-prod` implementada 11/12 na branch `fatia/12-defeitos-prod` (sem commit; sentinel com ressalvas; `make itest` passando, inclusive o T-98 no OpenBao real). Falta 1.1 (archive 08→11).
+- Próximo passo: commit e `publicar.sh prod` + `wrangler deploy` (skill ambientes); o archive da 12 e da 13 exige arquivar antes 08 → 09 → 10 → 11 (a 08 falta 5.2; a 11 falta 1.2 e 7.3).
+- Sem commit: change `ajuste-texto-notificacoes` (arquivada), change 13, DOC desta sessão e as mudanças de 27/10 de outra sessão (`to-do.md`, `fontes-externas.md`, tasks da 09).
 
 ## Decisões recentes
-- Console: Materio free 2.3.0 em `web/console/` (Vite 6, Vuetify 3.13, `oidc-client-ts`, `vue-i18n` pt-BR), Worker só com assets em `ominicore.flipapi.com.br` (ADR 0006).
-- `/v1/config/*` público só do IP do escritório (WAF) + JWT + CORS do Console; token do Console recusado no envio/Opt-out; troca registra a pessoa.
-- OTP obrigatório pelo fluxo `navegador-otp` (override no client); a atualização das execuções preserva a `priority`.
+- Webhooks da Z-API: segredo na URL + `instanceId`, 404 sem efeito; cadastro automático na Z-API a cada gravação; botão "Cadastrar de novo" (`log.md` 2026-10-27; ADR 0007 a escrever).
+- REQ-2 e REQ-14 reescritos abaixo de 500 caracteres (OpenSpec 1.15 reprova no `--strict`).
 
 ## Bloqueios e pendências
-- Dono: IP fixo do escritório na IP List da Cloudflare e no `keycloak-allowlist` do repositório `flip`; secrets `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` no environment `console`.
-- 6 CVEs altas só em ferramentas de build do Console, sem correção publicada (mitigação no `log.md`).
-- Instância de trial do UltraMsg (5.2 da 08); `shellcheck` não roda local nem no CI.
+- Caminho da API de cadastro de webhook da Z-API não documentado: tarefa 2.1 da 13, com a instância real.
+- WAF do Console: confirmar de fora do escritório (4G) que dá 403.
+- Email e SMS em prod com credenciais `pendente`; trocar a senha do role `aviva_back` (esteve no cofre do OminiCore).
 
 ## Arquivos que importam agora
-- `openspec/changes/11-console-operador/` — proposta, deltas, design, tarefas
-- `web/console/src/console/` — Ambientes, sessão OIDC, cliente da API
-- `deploy/aviva2/keycloak/lib-console.sh` — client do Console, OTP e Operadores
-- `deploy/aviva2/README.md` — runbook do Console (C1–C8)
+- `openspec/changes/13-webhooks-zapi/` — proposta, deltas, design, tarefas
+- `DOC/to-do.md` — seção "Prod — operação (2026-10-27)" (escopo da change 12)
+- `internal/adaptadores/entrada/webhooks/whatsapp.go` — modelo do adaptador de avisos

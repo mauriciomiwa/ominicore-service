@@ -1,5 +1,5 @@
 {
- "gerado_em": "2026-10-05T21:25:48",
+ "gerado_em": "2026-10-27T19:42:59",
  "raiz": "ominicore",
  "stack": [
   {
@@ -12,8 +12,8 @@
    "manifesto": "web/console/package.json",
    "linguagem": "js/ts",
    "frameworks": [
-    "vue@^3.5.13",
-    "vue-router@^4.5.0"
+    "vue@^3.5.43",
+    "vue-router@^4.6.4"
    ],
    "dependencias": 46
   },
@@ -30,7 +30,7 @@
    "importa": []
   },
   "internal": {
-   "arquivos": 70,
+   "arquivos": 71,
    "importa": []
   },
   "migrations": {
@@ -267,6 +267,12 @@
   ],
   "HOST": [
    "deploy/aviva2/publicar.sh"
+  ],
+  "KC_ADMIN_USUARIO": [
+   "deploy/aviva2/keycloak/lib-admin.sh"
+  ],
+  "KC_DEPLOY_CLIENT": [
+   "deploy/aviva2/keycloak/lib-admin.sh"
   ],
   "KEY": [
    "deploy/aviva2/publicar.sh"

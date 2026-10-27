@@ -6,6 +6,9 @@
 Description=OminiCore ${PAPEL} (${AMBIENTE})
 After=network-online.target keycloak.service openbao.service redis.service
 Wants=network-online.target
+# Religa para sempre (change 12): sem isto o systemd desistiu depois de 5
+# falhas em 10 s com o Keycloak fora, e api e worker ficaram parados de 16/10 a 27/10.
+StartLimitIntervalSec=0
 
 [Container]
 ContainerName=ominicore${SUFIXO}-${PAPEL}
@@ -24,6 +27,8 @@ HealthInterval=60s
 
 [Service]
 Restart=always
+# uma tentativa a cada 10 s enquanto Keycloak, OpenBao ou Aurora estiverem fora
+RestartSec=10s
 TimeoutStartSec=120
 
 [Install]

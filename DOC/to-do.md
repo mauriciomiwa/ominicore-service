@@ -15,6 +15,18 @@ ficam no `System/backlog-mvp.md` (cada uma é uma change do OpenSpec); furos de 
 - [ ] Decidir se envio duplicado na janela de queda (Provedor aceitou, commit falhou) é aceitável: hoje o despacho é "pelo menos uma vez".
 - [ ] Caminho do módulo Go (`ominicore` → `github.com/<org>/ominicore`) quando o repositório existir.
 
+## Prod — operação (2026-10-27)
+- [x] (change `12-defeitos-prod`: quadlet com `RestartSec=10s` e `StartLimitIntervalSec=0`; Console com "Tentar de novo"; falta publicar) api e worker ficaram parados de 16/10 a 27/10: subiram com o Keycloak fora, o systemd estourou o limite de reinícios (quadlet sem `RestartSec`) e desistiu. Corrigir no `deploy/aviva2/quadlet/ominicore.container.tmpl` (intervalo + limite) e fazer o Console mostrar erro quando a API não responde — change 12.
+- [ ] Sistema de origem `wbem` criado no realm `ominicore` (prod); credenciais em `kv/aviva/wbem-ominicore` (`client_id`, `client_secret`, `token_url`, `api_url`). Falta a integração no aviva-back.
+- [x] (change `12-defeitos-prod`: `LerWhatsApp` trata a versão apagada como desligado; falta publicar e o T-98 contra o OpenBao real) Defeito: "Desligar o WhatsApp" (DELETE `/v1/config/whatsapp`) faz soft delete no KV v2 e `LerWhatsApp` (`internal/adaptadores/saida/openbao/segredos.go`) lê a versão apagada como "incompleta: sem o campo token" → GET 503 no Console e worker preso na configuração anterior. Em 27/10 restaurado com `kv undelete` (versão 2). Tratar versão apagada como desligado + teste — change 12. Até lá, não usar o botão.
+- [ ] Apagar o client `teste-zapi` (prod) se não for mais usado.
+
+## Furos de validação
+- [x] `openspec validate --all --strict` reprova `spec/notificacoes`: requirements[0] e [11] têm texto > 500 caracteres (warning vira erro no strict). Encurtar movendo exemplos e bordas para cenários — numa change (ex.: junto do archive 08→11), não editando a spec vigente à mão. Visto em 2026-10-08. Causa (2026-10-27): o OpenSpec 1.15.0 passou o aviso de texto longo de INFO para WARNING, e o `--strict` reprova warning — a spec não mudou. Resolvido em 2026-10-27 pela change `ajuste-texto-notificacoes` (arquivada).
+
+## Fatia 13 — Avisos de status da Z-API — fora do escopo
+- [ ] Avisos de status do UltraMsg (formato e autenticação a levantar; a resposta do envio ainda nem foi conferida — 5.2 da 08).
+
 ## Fatia 11 — Console do Operador (change `11-console-operador`) — fora do escopo, para decidir depois
 - [ ] Criar o hml (DNS `notify-hml`, realm/cofre/schema `-hml`) e devolver Homologação ao `web/console/src/console/ambientes-publicados.json` (prod foi publicado primeiro, decisão de 2026-10-06).
 - [ ] Configuração por cliente da casa (W Bem, Lara), cada um com o próprio WhatsApp: change de backend própria, antes de o Console ganhar o seletor de cliente.
@@ -31,7 +43,7 @@ ficam no `System/backlog-mvp.md` (cada uma é uma change do OpenSpec); furos de 
 - [ ] Configuração de Email (SendGrid) e SMS (Twilio) pela API do Operador.
 
 ## Fatia 09 — WhatsApp pela Z-API (change `09-whatsapp-zapi`, 26/27; auditada em 2026-10-05: aprovado com ressalvas)
-- [ ] Webhooks *Ao enviar* (`DeliveryCallback`) e *Status* da Z-API com segredo na URL: detectariam número sem WhatsApp e shadow ban depois do aceite e disparariam o fallback, mas a Z-API não documenta assinatura — exige revisar a RN-5 (aviso sem assinatura válida é descartado). Decisão do negócio.
+- [x] (decidido em 2026-10-27, change `13-webhooks-zapi`) Webhooks *Ao enviar* (`DeliveryCallback`) e *Status* da Z-API com segredo na URL: detectariam número sem WhatsApp e shadow ban depois do aceite e disparariam o fallback, mas a Z-API não documenta assinatura — exige revisar a RN-5 (aviso sem assinatura válida é descartado). Decisão do negócio.
 - [x] Auditar com a sentinel o diff de código da 09 (`cmd/ominicore`, `internal/adaptadores/saida/{openbao,ultramsg,zapi}`, `internal/dominio`, `internal/testes/zapifake`, scripts de `deploy/`) e registrar o veredito quando a sessão que implementa fechar as tarefas — auditar no meio da escrita não vale (o veredito se amarra ao conteúdo atual).
 
 ## Fatia 08 — WhatsApp por UltraMsg (change `08-whatsapp-ultramsg`, 31/32; auditada em 2026-10-05: aprovado com ressalvas)

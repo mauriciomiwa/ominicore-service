@@ -47,6 +47,8 @@
     "opcional": "opcional",
     "semPermissao": "Sua conta não tem o papel de Operador neste Ambiente. Peça o acesso ao responsável.",
     "falha": "A API não respondeu como esperado (status {status}). Tente de novo.",
+    "semResposta": "A API de {ambiente} não respondeu. Confira a conexão ou tente de novo em instantes.",
+    "tentarDeNovo": "Tentar de novo",
     "provedores": {
       "meta": "Meta (Cloud API)",
       "ultramsg": "UltraMsg",

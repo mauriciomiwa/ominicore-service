@@ -31,7 +31,7 @@
 ## 5. Deploy e operação
 - [x] 5.1 `deploy/aviva2/openbao/configurar-openbao.sh` (opção `zapi` na pergunta e no `--so-whatsapp`; `instance_id`, `token` e o opcional `client_token` pelo stdin; segredos da Meta só com `meta`) e `deploy/local/bootstrap.sh` (`WHATSAPP_PROVEDOR=zapi` com `ZAPI_INSTANCE_ID`, `ZAPI_TOKEN`, `ZAPI_CLIENT_TOKEN`) — `bash -n` nos dois (`shellcheck` não instalado localmente nem no CI: pendente)
 - [x] 5.2 Runbook `deploy/aviva2/README.md` (instância e número por ambiente, ordem cofre → reiniciar → ativar Client-Token no painel, rotação do token, monitorar instância desconectada, rollback pelo cofre) e `DOC/Infra/AMBIENTES.md` — seções presentes
-- [ ] 5.3 Conferir com uma instância real da Z-API a resposta de sucesso e a de token inválido; ajustar o teste de classificação se divergir e registrar o formato em `DOC/Padroes/fontes-externas.md`
+- [x] 5.3 Conferir com uma instância real da Z-API a resposta de sucesso e a de token inválido; ajustar o teste de classificação se divergir e registrar o formato em `DOC/Padroes/fontes-externas.md`
 - [x] 5.4 `DOC/System/plano-de-testes.md` (T-82 a T-91) e mapa (`python3 DOC/tools/mapeia_projeto.py`) — gerados sem furo
 - [x] 5.5 `go test -race ./...` e `make itest` passando
 

@@ -181,3 +181,42 @@ it('401 com token novo leva ao login uma vez e, repetindo, mostra a falha sem la
   expect(segunda.sessao.entrar).not.toHaveBeenCalled()
   expect(el('falha')!.textContent).toContain('401')
 })
+
+describe('API do Ambiente sem resposta (REQ-43)', () => {
+  it('T-137 API fora do ar e nova tentativa', async () => {
+    const { pinia } = sessaoAberta(prod)
+    let chamadas = 0
+
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      chamadas++
+      if (chamadas === 1)
+        throw new TypeError('Failed to fetch')
+
+      return resposta(200, zapi)
+    }))
+
+    await montar(Whatsapp, pinia)
+    await assentar()
+
+    expect(el('falha')!.textContent).toContain('A API de Produção não respondeu')
+    expect(document.body.querySelector('.v-progress-linear')).toBeNull()
+    expect(el('estado')).toBeNull()
+
+    await clicar('tentar-de-novo')
+
+    expect(chamadas).toBe(2)
+    expect(el('falha')).toBeNull()
+    expect(el('provedor-ativo')!.textContent).toContain('Z-API')
+  })
+
+  it('T-138 Erro do servidor mostra o status', async () => {
+    const { pinia } = sessaoAberta(prod)
+
+    api(resposta(503, { status: 503, title: 'cofre indisponível' }))
+    await montar(Whatsapp, pinia)
+    await assentar()
+
+    expect(el('falha')!.textContent).toContain('503')
+    expect(el('tentar-de-novo')).not.toBeNull()
+  })
+})

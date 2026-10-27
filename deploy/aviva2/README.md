@@ -156,6 +156,17 @@ ssh -i ~/.ssh/aviva2.0.pem ubuntu@44.209.101.158 'sudo podman ps --filter name=o
 — isto é, o login `jwt` no OpenBao, a leitura dos segredos e a conexão com o
 Aurora deram certo.
 
+**Religar depois de uma queda (change 12).** O quadlet tenta a cada 10 s e não
+desiste (`RestartSec=10s`, `StartLimitIntervalSec=0`): se o Keycloak, o OpenBao
+ou o Aurora caírem, api e worker voltam sozinhos quando eles voltarem.
+Conferir depois do `publicar.sh`:
+
+```bash
+ssh -i ~/.ssh/aviva2.0.pem ubuntu@44.209.101.158 'systemctl show ominicore-api ominicore-worker -p RestartUSec -p StartLimitIntervalUSec'
+```
+
+Esperado: `RestartUSec=10s` e `StartLimitIntervalUSec=0` nos dois.
+
 ## Chave do Opt-out — não rotacionar
 
 `kv/<prefixo>/optout` guarda a chave do HMAC dos contatos em Opt-out (RN-8,

@@ -8,7 +8,7 @@ haver dois lugares a manter. Tipo: **Exemplo** (caso concreto) ou
 **Propriedade** (invariante). Status: pendente / escrito (não rodado) /
 passando.
 
-T-1 a T-62 vigentes desde 2026-10-02 e T-63 a T-69 desde 2026-10-05 (`openspec/specs/{autenticacao-origem,notificacoes,segredos}`); T-70 a T-81 na change ativa `08-whatsapp-ultramsg`; T-82 a T-91 na change ativa `09-whatsapp-zapi`; T-92 a T-105 na change ativa `10-config-whatsapp-api`; T-106 a T-120 na change ativa `11-console-operador`.
+T-1 a T-62 vigentes desde 2026-10-02 e T-63 a T-69 desde 2026-10-05 (`openspec/specs/{autenticacao-origem,notificacoes,segredos}`); T-70 a T-81 na change ativa `08-whatsapp-ultramsg`; T-82 a T-91 na change ativa `09-whatsapp-zapi`; T-92 a T-105 na change ativa `10-config-whatsapp-api`; T-106 a T-120 na change ativa `11-console-operador`; T-121 a T-136 na change ativa `13-webhooks-zapi`; T-137 e T-138 na change ativa `12-defeitos-prod`.
 
 Console do Operador (`web/console`): Vitest + `@vue/test-utils` + happy-dom,
 `bun run test`; o nome do teste começa pelo T-n (`it('T-106 …')`). T-113 a
@@ -120,7 +120,7 @@ rode com `make itest` (Docker Desktop, Colima ou Podman: usa o socket do context
 | T-95 | Exemplo | `internal/adaptadores/entrada/http/config_test.go` | passando (change 10 ativa) |
 | T-96 | Exemplo | `internal/adaptadores/entrada/http/config_test.go` | passando (change 10 ativa) |
 | T-97 | Exemplo | `internal/adaptadores/entrada/http/config_test.go` | passando (change 10 ativa) |
-| T-98 | Exemplo | `internal/adaptadores/entrada/http/config_test.go` | passando (change 10 ativa) |
+| T-98 | Exemplo | `internal/adaptadores/entrada/http/config_test.go` (memória) · `internal/adaptadores/saida/openbao/segredos_test.go` (KV v2 falso com soft delete) · `internal/integracao/openbao_test.go` (OpenBao 2.6.3 real) | passando (memória, KV falso e OpenBao 2.6.3 real; `make itest` 2026-10-27, Docker Desktop) |
 | T-99 | Exemplo | `internal/adaptadores/entrada/http/config_test.go` | passando (change 10 ativa) |
 | T-100 | Exemplo | `internal/adaptadores/entrada/http/config_test.go` | passando (change 10 ativa) |
 | T-101 | Exemplo | `cmd/ominicore/config_test.go` | passando (change 10 ativa) |
@@ -143,3 +143,21 @@ rode com `make itest` (Docker Desktop, Colima ou Podman: usa o socket do context
 | T-118 | Exemplo | `internal/integracao/keycloak_test.go` (testcontainers, Keycloak 26.3) | passando |
 | T-119 | Exemplo | `internal/adaptadores/entrada/http/servidor_test.go` | passando |
 | T-120 | Exemplo | `internal/adaptadores/entrada/http/config_test.go` | passando |
+| T-121 | Exemplo | `internal/adaptadores/entrada/webhooks/zapi_test.go` | pendente |
+| T-122 | Exemplo | `internal/adaptadores/entrada/webhooks/zapi_test.go` | pendente |
+| T-123 | Exemplo | `internal/adaptadores/entrada/webhooks/zapi_test.go` | pendente |
+| T-124 | Exemplo | `internal/adaptadores/entrada/webhooks/zapi_test.go` | pendente |
+| T-125 | Exemplo | `internal/adaptadores/entrada/webhooks/zapi_test.go` | pendente |
+| T-126 | Exemplo | `internal/adaptadores/entrada/webhooks/zapi_test.go` | pendente |
+| T-127 | Exemplo | `internal/adaptadores/entrada/webhooks/zapi_test.go` | pendente |
+| T-128 | Exemplo | `internal/adaptadores/entrada/webhooks/zapi_test.go` · `internal/integracao/integracao_test.go` (Postgres) | pendente |
+| T-129 | Exemplo | `internal/adaptadores/entrada/webhooks/zapi_test.go` | pendente |
+| T-130 | Exemplo | `internal/adaptadores/entrada/webhooks/zapi_test.go` | pendente |
+| T-131 | Exemplo | `internal/adaptadores/entrada/http/config_test.go` | pendente |
+| T-132 | Exemplo | `internal/adaptadores/entrada/http/config_test.go` | pendente |
+| T-133 | Exemplo | `internal/adaptadores/entrada/http/config_test.go` | pendente |
+| T-134 | Exemplo | `internal/adaptadores/entrada/http/config_test.go` | pendente |
+| T-135 | Exemplo | `internal/adaptadores/entrada/http/config_test.go` | pendente |
+| T-136 | Exemplo | `web/console/src/pages/whatsapp.spec.ts` (Vitest) | pendente |
+| T-137 | Exemplo | `web/console/src/pages/whatsapp.spec.ts` (Vitest) | passando |
+| T-138 | Exemplo | `web/console/src/pages/whatsapp.spec.ts` (Vitest) | passando |

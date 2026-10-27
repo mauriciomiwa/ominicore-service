@@ -36,11 +36,18 @@ export function criarApi(sessao: FonteDeSessao, buscar: typeof fetch = (...a) =>
     if (corpo)
       headers['Content-Type'] = 'application/json'
 
-    const r = await buscar(`${sessao.ambiente.api}${caminho}`, {
-      method: metodo,
-      headers,
-      body: corpo ? JSON.stringify(corpo) : undefined,
-    })
+    let r: Response
+    try {
+      r = await buscar(`${sessao.ambiente.api}${caminho}`, {
+        method: metodo,
+        headers,
+        body: corpo ? JSON.stringify(corpo) : undefined,
+      })
+    }
+    catch {
+      // rede, DNS, CORS ou API fora: status 0 = sem resposta (REQ-43)
+      return { tipo: 'falha', status: 0 }
+    }
 
     if (r.status === 401)
       return { tipo: 'sem-sessao' }

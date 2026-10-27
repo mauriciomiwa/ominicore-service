@@ -1,6 +1,6 @@
 # Inventário do código — ominicore
 
-> GERADO por `tools/mapeia_projeto.py` em 2026-10-05T21:25:48. Não edite: rode o script de novo.
+> GERADO por `tools/mapeia_projeto.py` em 2026-10-27T19:42:59. Não edite: rode o script de novo.
 > A interpretação (o que cada área faz, fluxos, RN candidatas) está nas outras páginas desta pasta.
 
 ## Stack
@@ -8,7 +8,7 @@
 | Manifesto | Linguagem | Frameworks | Deps |
 |---|---|---|---|
 | `go.mod` | go | — | — |
-| `web/console/package.json` | js/ts | vue@^3.5.13, vue-router@^4.5.0 | 46 |
+| `web/console/package.json` | js/ts | vue@^3.5.43, vue-router@^4.6.4 | 46 |
 | `web/console/src/plugins/iconify/package.json` | js/ts | — | — |
 
 ## Módulos
@@ -16,14 +16,14 @@
 ```mermaid
 graph LR
   cmd["cmd (3)"]
-  internal["internal (70)"]
+  internal["internal (71)"]
   migrations["migrations (1)"]
   web["web (56)"]
 ```
 
 | Módulo | Arquivos | Importa |
 |---|---|---|
-| `internal` | 70 | — |
+| `internal` | 71 | — |
 | `web` | 56 | — |
 | `cmd` | 3 | — |
 | `migrations` | 1 | — |
@@ -72,12 +72,14 @@ graph LR
 | POST | `/protocol/openid-connect/token` | `internal/adaptadores/saida/keycloak/token.go:17` |
 | POST | `/v3/mail/send` | `internal/adaptadores/saida/sendgrid/sendgrid.go:78` |
 
-## Variáveis de ambiente lidas no código (19)
+## Variáveis de ambiente lidas no código (21)
 
 | Variável | Declarada em .env* | Onde é lida |
 |---|---|---|
 | `COMPOSE` | **não** | `deploy/local/bootstrap.sh` |
 | `HOST` | **não** | `deploy/aviva2/publicar.sh` |
+| `KC_ADMIN_USUARIO` | **não** | `deploy/aviva2/keycloak/lib-admin.sh` |
+| `KC_DEPLOY_CLIENT` | **não** | `deploy/aviva2/keycloak/lib-admin.sh` |
 | `KEY` | **não** | `deploy/aviva2/publicar.sh` |
 | `NODE_ENV` | **não** | `web/console/.eslintrc.cjs` |
 | `SENDGRID_API_KEY` | **não** | `deploy/local/bootstrap.sh` |

@@ -282,3 +282,19 @@
 {"data": "2026-10-05T21:30:44", "script": "checa_projeto-local", "rc": 0, "faltas": 0, "alertas": 3, "erro": false, "detalhe": "execucoes/2026-10-05_213044_checa_projeto-local.json", "furos": 0}
 {"data": "2026-10-05T21:30:55", "script": "mapeia_projeto-check", "rc": 0, "faltas": 0, "alertas": 0, "erro": false, "detalhe": "execucoes/2026-10-05_213055_mapeia_projeto-check.json", "surgiu": 0, "sumiu": 0}
 {"data": "2026-10-05T21:30:57", "script": "checa_projeto-local", "rc": 0, "faltas": 0, "alertas": 2, "erro": false, "detalhe": "execucoes/2026-10-05_213057_checa_projeto-local.json", "furos": 0}
+{"data": "2026-10-27T19:28:48", "script": "mapeia_projeto-check", "rc": 1, "faltas": 0, "alertas": 2, "erro": false, "detalhe": "execucoes/2026-10-27_192848_mapeia_projeto-check.json", "surgiu": 2, "sumiu": 0}
+{"data": "2026-10-27T19:28:48", "script": "checa_projeto-local", "rc": 0, "faltas": 0, "alertas": 3, "erro": false, "detalhe": "execucoes/2026-10-27_192848_checa_projeto-local.json", "furos": 0}
+{"data": "2026-10-27T19:30:45", "script": "mapeia_projeto-check", "rc": 1, "faltas": 0, "alertas": 2, "erro": false, "detalhe": "execucoes/2026-10-27_193045_mapeia_projeto-check.json", "surgiu": 2, "sumiu": 0}
+{"data": "2026-10-27T19:30:45", "script": "checa_projeto-local", "rc": 0, "faltas": 0, "alertas": 3, "erro": false, "detalhe": "execucoes/2026-10-27_193045_checa_projeto-local.json", "furos": 0}
+{"data": "2026-10-27T19:33:42", "script": "mapeia_projeto-check", "rc": 1, "faltas": 0, "alertas": 2, "erro": false, "detalhe": "execucoes/2026-10-27_193342_mapeia_projeto-check.json", "surgiu": 2, "sumiu": 0}
+{"data": "2026-10-27T19:33:42", "script": "checa_projeto-local", "rc": 0, "faltas": 0, "alertas": 3, "erro": false, "detalhe": "execucoes/2026-10-27_193342_checa_projeto-local.json", "furos": 0}
+{"data": "2026-10-27T19:36:54", "script": "mapeia_projeto-check", "rc": 1, "faltas": 0, "alertas": 2, "erro": false, "detalhe": "execucoes/2026-10-27_193654_mapeia_projeto-check.json", "surgiu": 2, "sumiu": 0}
+{"data": "2026-10-27T19:36:54", "script": "checa_projeto-local", "rc": 0, "faltas": 0, "alertas": 3, "erro": false, "detalhe": "execucoes/2026-10-27_193654_checa_projeto-local.json", "furos": 0}
+{"data": "2026-10-27T19:42:52", "script": "mapeia_projeto-check", "rc": 1, "faltas": 0, "alertas": 2, "erro": false, "detalhe": "execucoes/2026-10-27_194252_mapeia_projeto-check.json", "surgiu": 2, "sumiu": 0}
+{"data": "2026-10-27T19:42:52", "script": "checa_projeto-local", "rc": 0, "faltas": 0, "alertas": 4, "erro": false, "detalhe": "execucoes/2026-10-27_194252_checa_projeto-local.json", "furos": 0}
+{"data": "2026-10-27T19:42:59", "script": "mapeia_projeto", "rc": 0, "faltas": 0, "alertas": 0, "erro": false, "detalhe": "execucoes/2026-10-27_194259_mapeia_projeto.json", "modulos": 4, "rotas": 8, "endpoints": 19, "chamadas_http": 2, "env": 21}
+{"data": "2026-10-27T19:42:59", "script": "mapa_html", "rc": 0, "faltas": 0, "alertas": 0, "erro": false, "detalhe": "execucoes/2026-10-27_194259_mapa_html.json", "areas": 2, "regras_candidatas": 1}
+{"data": "2026-10-27T19:43:43", "script": "mapeia_projeto-check", "rc": 0, "faltas": 0, "alertas": 0, "erro": false, "detalhe": "execucoes/2026-10-27_194343_mapeia_projeto-check.json", "surgiu": 0, "sumiu": 0}
+{"data": "2026-10-27T19:43:44", "script": "checa_projeto-local", "rc": 0, "faltas": 0, "alertas": 2, "erro": false, "detalhe": "execucoes/2026-10-27_194344_checa_projeto-local.json", "furos": 0}
+{"data": "2026-10-27T19:45:43", "script": "mapeia_projeto-check", "rc": 0, "faltas": 0, "alertas": 0, "erro": false, "detalhe": "execucoes/2026-10-27_194543_mapeia_projeto-check.json", "surgiu": 0, "sumiu": 0}
+{"data": "2026-10-27T19:45:44", "script": "checa_projeto-local", "rc": 0, "faltas": 0, "alertas": 2, "erro": false, "detalhe": "execucoes/2026-10-27_194544_checa_projeto-local.json", "furos": 0}

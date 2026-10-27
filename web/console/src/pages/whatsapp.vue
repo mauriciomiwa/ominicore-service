@@ -91,10 +91,16 @@ async function tratar<T>(r: Resultado<T>): Promise<boolean> {
 
 async function carregar() {
   carregando.value = true
+  falha.value = null
 
-  const r = await api.consultar()
-
-  carregando.value = false
+  let r: Resultado<ConfigWhatsApp>
+  try {
+    r = await api.consultar()
+  }
+  finally {
+    // nunca carregando para sempre (REQ-43)
+    carregando.value = false
+  }
   if (await tratar(r))
     return
   if (r.tipo === 'ok') {
@@ -179,8 +185,18 @@ onMounted(carregar)
       v-else-if="falha !== null"
       data-teste="falha"
       type="error"
-      :text="$t('whatsapp.falha', { status: falha })"
-    />
+      :text="falha === 0 ? $t('whatsapp.semResposta', { ambiente: nomeAmbiente }) : $t('whatsapp.falha', { status: falha })"
+    >
+      <template #append>
+        <VBtn
+          data-teste="tentar-de-novo"
+          variant="outlined"
+          @click="carregar"
+        >
+          {{ $t('whatsapp.tentarDeNovo') }}
+        </VBtn>
+      </template>
+    </VAlert>
 
     <template v-else>
       <VAlert

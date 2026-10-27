@@ -5,6 +5,44 @@ registro vira suposição de alguém daqui a seis meses.
 
 Entradas antigas: `log/arquivo-AAAA.md` (`tools/arquiva_log.py`).
 
+## 2026-10-27 — Change `12-defeitos-prod` implementada (11/12; falta publicar e arquivar)
+- Desligar o WhatsApp: o KV v2 só marca a versão como apagada (soft delete), e
+  o `LerWhatsApp` a lia como "incompleta: sem o campo token" (o erro de prod).
+  Agora versão apagada ou sem dados = Canal desligado. O `baofake` passou a
+  simular o soft delete como o real (antes apagava de verdade, por isso o
+  defeito passou); o T-98 ganhou teste no cofre e de integração com o OpenBao
+  2.6.3 real — `make itest` passando (rodado pelo dono no Docker Desktop).
+- Quadlet: `RestartSec=10s` e `StartLimitIntervalSec=0` — religa para sempre.
+- Console: API sem resposta (status 0) ou 5xx mostra a mensagem e "Tentar de
+  novo"; carregamento termina em `finally` (REQ-43, T-137 e T-138).
+
+## 2026-10-27 — Decisão: Avisos de status da Z-API (sabatina fechada; change 13)
+- Eventos: "Ao enviar" (DeliveryCallback) com `error` → Tentativa falhou
+  ("Phone number does not exist"/"invalid phone number" = contato inválido; o
+  resto = recusado pelo Provedor) e fallback; "Status" (MessageStatusCallback)
+  RECEIVED → entregue, READ/PLAYED → lida; SENT e READ_BY_ME ignorados. "Ao
+  receber" (RN-6), conexão e presença fora.
+- Autenticação: segredo de 32 bytes na URL (`/webhooks/zapi/<segredo>`) +
+  `instanceId` igual ao configurado; senão 404 sem efeito. Aviso autêntico →
+  200 `{"value": true}` sempre (desconhecido, repetido ou atrasado só vai para
+  o log). RN-4 e RN-5 revisadas na especificação.
+- Segredo novo a cada gravação da Z-API; o OminiCore cadastra as duas URLs na
+  Z-API pela API dela (caminho a conferir com a instância real); falha no
+  cadastro não desfaz a gravação, e o Console mostra o estado e "Cadastrar de
+  novo". ADR 0007 a escrever na change.
+- Ordem: change 12 (defeitos de produção) antes; esta é a 13. UltraMsg fica fora
+  (to-do).
+
+## 2026-10-27 — Change `ajuste-texto-notificacoes` arquivada (só redação)
+- O OpenSpec 1.15.0 passou o aviso de texto de requisito acima de 500
+  caracteres de INFO para WARNING, e o `validate --all --strict` (CI,
+  pre-commit, hook Stop) reprovava `spec/notificacoes`.
+- REQ-2 (pedido por Template) e REQ-14 (consulta) reescritos mais enxutos (493
+  e 480 caracteres), com as mesmas obrigações e os mesmos cenários (T-4 a T-6,
+  T-15 a T-18, T-43, T-44, T-56), sem REQ novo. Separar em REQ novos não deu: o
+  OpenSpec 1.15 recusa MODIFIED que larga cenários.
+- `openspec validate --all --strict`: 7/7.
+
 ## 2026-10-06 — Decisão: primeiro deploy direto em prod, hml adiado
 - O dono decidiu publicar o OminiCore e o Console direto em prod
   (`notify.flipapi.com.br`, realm `ominicore`, cofre `kv/ominicore`, schema

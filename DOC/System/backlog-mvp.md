@@ -110,6 +110,25 @@ Cobre: RN-12 (REQ-29 a REQ-36 e REQ-27 modificado)
 Depende de: Fatia 10 arquivada
 Pronto quando: T-106 a T-120 passando e change arquivada.
 
+### Fatia 12 — Defeitos de produção
+Change: `12-defeitos-prod`
+Valor: desligar o WhatsApp pelo Console funciona, api e worker voltam sozinhos
+depois de uma queda e o Console avisa quando a API não responde.
+Cobre: RN-11 (REQ-24, sem mudar a spec) e RN-12 (REQ-43)
+Depende de: Fatia 11 arquivada
+Pronto quando: T-98 contra o OpenBao real, T-137 e T-138 passando, quadlet
+publicado e change arquivada.
+
+### Fatia 13 — Avisos de status da Z-API
+Change: `13-webhooks-zapi`
+Valor: com a Z-API, o OminiCore sabe quando a mensagem foi entregue ou lida e,
+se o número não tem WhatsApp ou a Z-API recusa depois do aceite, passa ao
+próximo Canal; o Console cadastra os webhooks sozinho.
+Cobre: RN-4 e RN-5 revisadas (REQ-37 a REQ-42 e REQ-21 modificado)
+Depende de: change 12 (defeitos de produção) e Fatias 10 e 11 arquivadas
+Pronto quando: T-121 a T-136 passando, webhooks conferidos com a instância
+real e change arquivada.
+
 ## Trilha de infraestrutura (não é fatia)
 
 Deploy no aviva2.0 (quadlets `ominicore-api` e `ominicore-worker`, rota

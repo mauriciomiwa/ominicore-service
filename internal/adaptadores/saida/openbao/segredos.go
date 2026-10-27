@@ -132,14 +132,19 @@ func (c *Cofre) Carregar(ctx context.Context) (Segredos, error) {
 // caminho dos webhooks (REQ-28). Configuração incompleta é erro que cita o campo.
 func (c *Cofre) LerWhatsApp(ctx context.Context) (dominio.ConfigWhatsApp, error) {
 	var dados map[string]any
+	apagada := false
 	err := c.comSessao(ctx, func(cli *bao.Client) error {
 		s, err := cli.KVv2(c.mount).Get(ctx, c.prefixo+"/whatsapp")
 		if err == nil {
 			dados = s.Data
+			apagada = s.VersionMetadata != nil && !s.VersionMetadata.DeletionTime.IsZero()
 		}
 		return err
 	})
-	if errors.Is(err, bao.ErrSecretNotFound) {
+	// Desligar é soft delete no KV v2 (REQ-24): a versão apagada continua lá,
+	// sem dados e com deletion_time — é Canal desligado, não configuração
+	// incompleta. Gravar de novo cria uma versão nova e religa.
+	if errors.Is(err, bao.ErrSecretNotFound) || (err == nil && (apagada || len(dados) == 0)) {
 		return dominio.ConfigWhatsApp{}, nil
 	}
 	if err != nil {
