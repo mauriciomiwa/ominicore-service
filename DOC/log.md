@@ -5,6 +5,18 @@ registro vira suposição de alguém daqui a seis meses.
 
 Entradas antigas: `log/arquivo-AAAA.md` (`tools/arquiva_log.py`).
 
+## 2026-10-27 — Change 12 em produção
+- `a9a3bf9` publicado pelo dono (`HOST=aviva publicar.sh prod`, túnel SSM na
+  porta 2222 — o SSH público não aceita IP fora do escritório). Conferido no
+  host: `RestartUSec=10s` e `StartLimitIntervalUSec=0` em api e worker.
+- Console publicado (`wrangler deploy`, versão 76eed4ae) com "Tentar de novo".
+- Achado: healthcheck sempre "unhealthy" — `HealthCmd` de texto vira
+  `CMD-SHELL` e a imagem distroless não tem `/bin/sh`. Corrigido em `45a39b3`
+  (forma de array, validada no gerador do quadlet em dry-run); falta publicar.
+- Achado: de fora do escritório (186.204.15.26) o Console abriu (200) e
+  `/v1/config/*` chegou à API (401): o WAF não bloqueou — a confirmar com o dono
+  se esse IP está na lista `escritorio`.
+
 ## 2026-10-27 — Change `12-defeitos-prod` implementada (11/12; falta publicar e arquivar)
 - Desligar o WhatsApp: o KV v2 só marca a versão como apagada (soft delete), e
   o `LerWhatsApp` a lia como "incompleta: sem o campo token" (o erro de prod).

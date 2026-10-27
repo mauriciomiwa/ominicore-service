@@ -6,7 +6,7 @@
 - Prod no ar desde 2026-10-06 (`notify.flipapi.com.br`, Console em `ominicore.flipapi.com.br`); hml adiado (`log.md` 2026-10-06).
 - Change `13-webhooks-zapi` proposta (1/39): Avisos de status da Z-API (RN-4/RN-5 revisadas, REQ-37 a REQ-42, REQ-21 modificado, T-121 a T-136). Implementar **depois** da change 12.
 - Change `12-defeitos-prod` implementada 11/12 na branch `fatia/12-defeitos-prod` (sem commit; sentinel com ressalvas; `make itest` passando, inclusive o T-98 no OpenBao real). Falta 1.1 (archive 08→11).
-- Próximo passo: commit e `publicar.sh prod` + `wrangler deploy` (skill ambientes); o archive da 12 e da 13 exige arquivar antes 08 → 09 → 10 → 11 (a 08 falta 5.2; a 11 falta 1.2 e 7.3).
+- Em prod: `a9a3bf9` (API, quadlet) e Console 76eed4ae. Próximo passo: `HOST=aviva ./deploy/aviva2/publicar.sh prod` para o healthcheck (`45a39b3`, tarefa 3.3) e confirmar o WAF; o archive da 12 e da 13 exige arquivar antes 08 → 09 → 10 → 11 (a 08 falta 5.2; a 11 falta 1.2 e 7.3).
 - Sem commit: change `ajuste-texto-notificacoes` (arquivada), change 13, DOC desta sessão e as mudanças de 27/10 de outra sessão (`to-do.md`, `fontes-externas.md`, tasks da 09).
 
 ## Decisões recentes
