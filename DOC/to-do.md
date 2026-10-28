@@ -22,6 +22,12 @@ ficam no `System/backlog-mvp.md` (cada uma é uma change do OpenSpec); furos de 
 - [ ] Apagar o client `teste-zapi` (prod) se não for mais usado.
 - [ ] `publicar.sh` à prova de execução duplicada: em 2026-10-27 dois `publicar.sh prod` sobrepostos deixaram `/opt/ominicore/ominicore.anterior` cortado no meio (segfault) — o `--voltar` derrubaria a API. Trava no host (`flock`) e cópia atômica do `.anterior` (`cp` para temporário + `mv`). Até lá: um deploy por vez. O `.anterior` foi recriado pelo dono a partir do binário atual (ac762e0, sha256 igual) em 2026-10-27.
 
+## WAF e origem fixa (2026-10-28)
+- [ ] Cloudflare: lista `escritorio` = `72.60.159.29` (túnel na Hostinger); regra de WAF ativa, ação Block, expressão da ADR 0006 — hoje não bloqueia (dono).
+- [ ] Rotear `ominicore.flipapi.com.br` e `notify.flipapi.com.br` pelo túnel da Hostinger, como o `auth.flipapi.com.br` (dono).
+- [ ] Repositório `flip`: `traefik/dynamic/keycloak.yml` com o `72.60.159.29`, hoje só no host.
+- [ ] Reteste: celular no 4G → 403 no Console e em `/v1/config/*`; depois fechar a 7.3 da change 11 (`verificar-exposicao.sh` no CI).
+
 ## Furos de validação
 - [x] `openspec validate --all --strict` reprova `spec/notificacoes`: requirements[0] e [11] têm texto > 500 caracteres (warning vira erro no strict). Encurtar movendo exemplos e bordas para cenários — numa change (ex.: junto do archive 08→11), não editando a spec vigente à mão. Visto em 2026-10-08. Causa (2026-10-27): o OpenSpec 1.15.0 passou o aviso de texto longo de INFO para WARNING, e o `--strict` reprova warning — a spec não mudou. Resolvido em 2026-10-27 pela change `ajuste-texto-notificacoes` (arquivada).
 

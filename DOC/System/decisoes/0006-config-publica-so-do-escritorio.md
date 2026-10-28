@@ -28,3 +28,8 @@ a verificação diária do CI (`deploy/aviva2/verificar-exposicao.sh`) existe
 para pegar isso. A troca do IP do escritório se faz na IP List da Cloudflare,
 e o mesmo IP precisa estar no `ipAllowList` do `auth.flipapi.com.br`
 (`../flip/infra/aviva2.0/traefik/dynamic/keycloak.yml`).
+
+Atualização (2026-10-28): o escritório deixou de ter IP fixo. A origem fixa
+passa a ser o túnel exclusivo do dono na Hostinger (`72.60.159.29`), que entra
+na lista `escritorio` e no `ipAllowList` do Keycloak; o Console e a API são
+roteados por ele. A decisão não muda: só a origem.

@@ -5,6 +5,16 @@ registro vira suposição de alguém daqui a seis meses.
 
 Entradas antigas: `log/arquivo-AAAA.md` (`tools/arquiva_log.py`).
 
+## 2026-10-28 — Decisão: origem fixa do Console é o túnel na Hostinger
+- O escritório não sai mais pelo `177.69.185.193`. O dono usa uma máquina
+  própria e exclusiva na Hostinger só como túnel para ter IP fixo:
+  `72.60.159.29` (já liberado no `keycloak-allowlist` do host; falta no
+  repositório `flip`). Esse IP passa a ser a lista `escritorio` da Cloudflare,
+  e `ominicore.flipapi.com.br` e `notify.flipapi.com.br` passam pelo túnel.
+- Achado: a regra de WAF não bloqueava — de `186.204.15.26` (fora da lista) o
+  Console abriu (200) e `/v1/config/*` chegou à API (401). A conferir e ativar
+  pelo dono; reteste pelo celular no 4G (403 esperado).
+
 ## 2026-10-27 — Change 12 em produção
 - `a9a3bf9` publicado pelo dono (`HOST=aviva publicar.sh prod`, túnel SSM na
   porta 2222 — o SSH público não aceita IP fora do escritório). Conferido no

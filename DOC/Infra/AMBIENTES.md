@@ -81,7 +81,8 @@ não enxerga o schema `ominicore`, e nenhum dos dois enxerga os schemas alheios.
   client secret do Keycloak (`ominicore-app`) como podman secret no host (ADR 0002).
 - **Operadores (pessoas):** uma conta por pessoa em cada realm, criada por
   `criar-operador.sh <amb> <usuario> <email>`, com OTP obrigatório no Console;
-  o acesso de fora só sai do IP do escritório (WAF + `ipAllowList` do Keycloak).
+  o acesso de fora só sai da origem fixa do Operador — hoje o túnel do dono na
+  Hostinger, `72.60.159.29` (lista `escritorio` do WAF + `ipAllowList` do Keycloak).
 - **Quem pode ler/escrever valor de prod:** escrever — só o dono (Mauricio
   Miwa), com token de admin do OpenBao; ler — só o app, pela role `jwt` presa
   ao `azp` `ominicore-app` do realm `ominicore`.
