@@ -137,6 +137,13 @@ Desde a fatia 11, o `publicar.sh` instala também a rota pública de
 | C7 | GitHub: environment `console` com os secrets `CLOUDFLARE_API_TOKEN` (permissão Workers Scripts: Edit e Workers Routes: Edit na zona) e `CLOUDFLARE_ACCOUNT_ID`; depois Actions › console › Run workflow com "publicar" marcado (a `main` precisa estar verde); depois do primeiro deploy, a variável de repositório `CONSOLE_PUBLICADO=true` liga a verificação diária | GitHub | dono | conta Cloudflare |
 | C8 | O próprio workflow roda `verificar-exposicao.sh hml` e `prod` de fora do escritório (T-113 a T-115). Do escritório: entrar, consultar e gravar em homologação | GitHub + escritório | dono | — |
 
+**Acesso pela origem fixa (túnel na Hostinger, `72.60.159.29`).** O túnel leva
+só o TCP dos IPs da Cloudflare do `flipapi`; o HTTP/3 (QUIC, UDP) sai direto e
+aparece com o IP real — o Keycloak responde "Forbidden" e o WAF bloqueia. Use um
+navegador que fique em HTTP/2 (Edge funcionou) ou desligue o HTTP/3 no Safari
+(*Desenvolvedor › Sinalizadores de recurso*). Conferir: `https://auth.flipapi.com.br/cdn-cgi/trace`
+tem de mostrar `ip=72.60.159.29`.
+
 Repita C4 a C6 em prod (skill `ambientes`). **Trocar o IP do escritório**: só
 a IP List `escritorio` (C1) e o `keycloak-allowlist` (C3); até lá, o Console
 fica inacessível, o que é uma falha segura.

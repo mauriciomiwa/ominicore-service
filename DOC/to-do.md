@@ -26,6 +26,7 @@ ficam no `System/backlog-mvp.md` (cada uma é uma change do OpenSpec); furos de 
 - [ ] Cloudflare: lista `escritorio` = `72.60.159.29` (túnel na Hostinger); regra de WAF ativa, ação Block, expressão da ADR 0006 — hoje não bloqueia (dono).
 - [ ] Rotear `ominicore.flipapi.com.br` e `notify.flipapi.com.br` pelo túnel da Hostinger, como o `auth.flipapi.com.br` (dono).
 - [ ] Repositório `flip`: `traefik/dynamic/keycloak.yml` com o `72.60.159.29`, hoje só no host.
+- [ ] Túnel da Hostinger levar UDP (HTTP/3): hoje o Safari sai direto e leva "Forbidden"; o Edge (HTTP/2) passa (2026-10-29).
 - [ ] Reteste: celular no 4G → 403 no Console e em `/v1/config/*`; depois fechar a 7.3 da change 11 (`verificar-exposicao.sh` no CI).
 
 ## Furos de validação
