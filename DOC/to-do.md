@@ -29,6 +29,11 @@ ficam no `System/backlog-mvp.md` (cada uma é uma change do OpenSpec); furos de 
 - [ ] Túnel da Hostinger levar UDP (HTTP/3): hoje o Safari sai direto e leva "Forbidden"; o Edge (HTTP/2) passa (2026-10-29).
 - [ ] Reteste: celular no 4G → 403 no Console e em `/v1/config/*`; depois fechar a 7.3 da change 11 (`verificar-exposicao.sh` no CI).
 
+## Fatia 14 — Templates do wbem (em andamento noutra sessão, 2026-10-29)
+- [x] (resolvido em 29/10: commit `1a123da` e change `14-templates-wbem` com RN-13, REQ-44, T-139 e T-140) `migrations/00011_templates_wbem.sql` (templates `wbem-link-tomador` e `wbem-otp-tomador`, só WhatsApp) está fora do Git na branch `fatia/14-templates-wbem` e **sem change no OpenSpec**: abrir a change (RN/REQ/T-n — mudança de comportamento: Templates novos) e auditar com a sentinel quando a sessão que a escreve fechar a tarefa. Auditar no meio da escrita não vale.
+- [ ] Furos da fatia 14 apontados pelo hook em 2026-10-29 (trabalho da outra sessão, ainda em escrita): REQ-44 da change `14-templates-wbem` cita a RN-13, que não existe em `especificacao-negocio.md`; `internal/integracao/integracao_test.go` alterado sem auditoria da sentinel. Fechar na sessão da fatia 14 (criar a RN-13 ou corrigir a referência; auditar o diff).
+- [ ] Rastreabilidade: o REQ-21 aparece como MODIFIED na change `09-whatsapp-zapi`, mas ainda não existe na spec vigente (nasce na `08-whatsapp-ultramsg`, não arquivada). Some ao arquivar na ordem 08 → 09 → 10 → 11 → 12 → 13; antes disso, a 08 precisa da 5.2 (UltraMsg) e a 11, da 1.2 e da 7.3.
+
 ## Console — deploy (2026-10-29)
 - [ ] O login OAuth do `wrangler` expira em dias; trocar por um API Token da Cloudflare só com Workers (secret `CLOUDFLARE_API_TOKEN` do environment `console`) e publicar pelo `console.yml` no GitHub Actions.
 

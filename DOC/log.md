@@ -5,6 +5,14 @@ registro vira suposição de alguém daqui a seis meses.
 
 Entradas antigas: `log/arquivo-AAAA.md` (`tools/arquiva_log.py`).
 
+## 2026-10-29 — Change `14-templates-wbem` (Templates do aviva-back)
+- Pedido do aviva-back (change `whatsapp-pelo-ominicore` de lá): link de acesso
+  e código de acesso do tomador pelo WhatsApp. Decisões do dono na sabatina do
+  aviva-back: dois Templates de texto curto, só WhatsApp, por migration (o
+  cadastro por API segue em aberto). RN-13, REQ-44, T-139 e T-140.
+- Migration `00011_templates_wbem.sql` (commit `1a123da`, antes da change:
+  furo apontado no `to-do.md` e fechado aqui). Falta publicar (tarefa 3.1).
+
 ## 2026-10-29 — Change 13 em produção
 - API `4f1d1b8` (`HOST=aviva publicar.sh prod`, por Claude com o "pode" do dono):
   healthy; `.anterior` = `ac762e0` íntegro; `/webhooks/zapi/<errado>` → 404.

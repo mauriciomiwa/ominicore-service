@@ -129,6 +129,15 @@ Depende de: change 12 (defeitos de produção) e Fatias 10 e 11 arquivadas
 Pronto quando: T-121 a T-136 passando, webhooks conferidos com a instância
 real e change arquivada.
 
+### Fatia 14 — Templates do wbem
+Change: `14-templates-wbem`
+Valor: o aviva-back manda ao tomador, pelo WhatsApp, o link de acesso e o
+código de acesso pelos Templates `wbem-link-tomador` e `wbem-otp-tomador`.
+Cobre: RN-13 (REQ-44)
+Depende de: nada (migration aditiva; Z-API em produção)
+Pronto quando: T-139 e T-140 passando, migration publicada nos dois schemas e
+um pedido real do aviva-back entregue.
+
 ## Trilha de infraestrutura (não é fatia)
 
 Deploy no aviva2.0 (quadlets `ominicore-api` e `ominicore-worker`, rota
