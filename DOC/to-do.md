@@ -29,6 +29,9 @@ ficam no `System/backlog-mvp.md` (cada uma é uma change do OpenSpec); furos de 
 - [ ] Túnel da Hostinger levar UDP (HTTP/3): hoje o Safari sai direto e leva "Forbidden"; o Edge (HTTP/2) passa (2026-10-29).
 - [ ] Reteste: celular no 4G → 403 no Console e em `/v1/config/*`; depois fechar a 7.3 da change 11 (`verificar-exposicao.sh` no CI).
 
+## Console — deploy (2026-10-29)
+- [ ] O login OAuth do `wrangler` expira em dias; trocar por um API Token da Cloudflare só com Workers (secret `CLOUDFLARE_API_TOKEN` do environment `console`) e publicar pelo `console.yml` no GitHub Actions.
+
 ## Furos de validação
 - [x] `openspec validate --all --strict` reprova `spec/notificacoes`: requirements[0] e [11] têm texto > 500 caracteres (warning vira erro no strict). Encurtar movendo exemplos e bordas para cenários — numa change (ex.: junto do archive 08→11), não editando a spec vigente à mão. Visto em 2026-10-08. Causa (2026-10-27): o OpenSpec 1.15.0 passou o aviso de texto longo de INFO para WARNING, e o `--strict` reprova warning — a spec não mudou. Resolvido em 2026-10-27 pela change `ajuste-texto-notificacoes` (arquivada).
 

@@ -5,6 +5,12 @@ registro vira suposição de alguém daqui a seis meses.
 
 Entradas antigas: `log/arquivo-AAAA.md` (`tools/arquiva_log.py`).
 
+## 2026-10-29 — Change 13 em produção
+- API `4f1d1b8` (`HOST=aviva publicar.sh prod`, por Claude com o "pode" do dono):
+  healthy; `.anterior` = `ac762e0` íntegro; `/webhooks/zapi/<errado>` → 404.
+- Console publicado (versão 57674d31) com o estado dos webhooks e "Cadastrar
+  de novo". Falta a 7.4: cadastrar pelo Console e conferir um aviso real.
+
 ## 2026-10-29 — Change `13-webhooks-zapi` implementada (31/35; falta conferir a Z-API real e publicar)
 - Rota `POST /webhooks/zapi/{segredo}` (segredo em tempo constante + `instanceId`;
   404 sem efeito; aviso autêntico → 200 `{"value":true}`): "Ao enviar" com
