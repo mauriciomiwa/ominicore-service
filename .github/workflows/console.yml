@@ -1,8 +1,9 @@
 name: console
 
 # Console do Operador (RN-12): web/console. CI em todo PR que mexe nele; deploy
-# manual (workflow_dispatch) na main, seguido da verificação de exposição; e a
-# verificação diária, que pega regra de WAF desligada à mão (ADR 0006).
+# manual (workflow_dispatch) na main, seguido da verificação de exposição; a
+# verificação avulsa (workflow_dispatch sem publicar); e a verificação diária,
+# que pega regra de WAF desligada à mão (ADR 0006).
 on:
   pull_request:
     paths: ["web/console/**", ".github/workflows/console.yml", "deploy/aviva2/verificar-exposicao.sh"]
@@ -74,12 +75,15 @@ jobs:
   exposicao:
     needs: [publicar]
     # o agendamento só vale depois do primeiro deploy (variável do repositório CONSOLE_PUBLICADO=true)
-    if: always() && ((github.event_name == 'schedule' && vars.CONSOLE_PUBLICADO == 'true') || needs.publicar.result == 'success')
+    if: >-
+      always() && ((github.event_name == 'schedule' && vars.CONSOLE_PUBLICADO == 'true')
+      || (github.event_name == 'workflow_dispatch' && !inputs.publicar)
+      || needs.publicar.result == 'success')
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        ambiente: [hml, prod]
+        ambiente: [prod] # hml adiado (log.md 2026-10-06); volta junto do ambiente
     steps:
       - uses: actions/checkout@v4
       - name: T-113 a T-115 de fora do escritório
