@@ -47,7 +47,7 @@
     "eslint-plugin-regex": "^1.11.0",
     "eslint-plugin-regexp": "^2.10.0",
     "eslint-plugin-sonarjs": "^0.24.0",
-    "eslint-plugin-unicorn": "^51.0.1",
+    "eslint-plugin-unicorn": "^79.0.0",
     "eslint-plugin-vue": "^9.33.0",
     "happy-dom": "^20.14.5",
     "sass": "~1.76.0",
