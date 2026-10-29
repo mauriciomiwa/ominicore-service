@@ -10,6 +10,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -849,5 +850,52 @@ func TestT104_TrocasDeConfiguracaoNoPostgresSemSegredo(t *testing.T) {
 	}
 	if err := repo.RegistrarEventoConfig(ctx, portas.EventoConfig{Canal: dominio.CanalWhatsApp, Acao: "trocada", Por: "x"}); err == nil {
 		t.Fatal("ação fora de gravada/apagada/webhooks aceita")
+	}
+}
+
+func TestT139_TemplatesDoWbemPreenchemOTextoDoWhatsApp(t *testing.T) {
+	repo := postgres.Repositorio{Pool: banco(t)}
+	casos := []struct{ id, variavel, valor string }{
+		{"wbem-link-tomador", "link", "https://app.wbem.com.br/j/acesso/?t=abc"},
+		{"wbem-otp-tomador", "codigo", "482915"},
+	}
+	for _, caso := range casos {
+		tpl, err := repo.BuscarTemplate(context.Background(), caso.id)
+		if err != nil {
+			t.Fatalf("%s: %v", caso.id, err)
+		}
+		if len(tpl.OrdemCanais) != 1 || tpl.OrdemCanais[0] != dominio.CanalWhatsApp || len(tpl.Conteudos) != 1 {
+			t.Fatalf("%s: ordem %v e %d versões, quer só WhatsApp", caso.id, tpl.OrdemCanais, len(tpl.Conteudos))
+		}
+		c, err := tpl.Preencher(dominio.CanalWhatsApp, map[string]string{caso.variavel: caso.valor})
+		if err != nil || !strings.Contains(c.Corpo, caso.valor) || !strings.HasPrefix(c.Corpo, "WBem: ") {
+			t.Fatalf("%s: corpo = %q err = %v", caso.id, c.Corpo, err)
+		}
+		if dominio.WhatsAppZAPI.Servir(c) != nil || dominio.WhatsAppUltraMsg.Servir(c) != nil {
+			t.Fatalf("%s: o texto não serve à Z-API e ao UltraMsg", caso.id)
+		}
+	}
+}
+
+func TestT140_PedidoSemAVariavelOuPorOutroCanalERecusado(t *testing.T) {
+	pool := banco(t)
+	uc := aplicacao.SendMessageUseCase{Repo: postgres.Repositorio{Pool: pool}, ProvedorWhatsApp: dominio.WhatsAppZAPI}
+	tel := dominio.Destinatario{Telefone: "+5511999998888"}
+	_, err := uc.Pedir(context.Background(), aplicacao.PedidoNotificacao{
+		SistemaOrigem: "wbem", ChaveIdempotencia: "t140-a", TemplateID: "wbem-otp-tomador",
+		Destinatario: tel, Dados: map[string]string{},
+	})
+	if !errors.Is(err, dominio.ErrVariavelFaltando) {
+		t.Fatalf("sem codigo: err = %v, quer variável faltando", err)
+	}
+	_, err = uc.Pedir(context.Background(), aplicacao.PedidoNotificacao{
+		SistemaOrigem: "wbem", ChaveIdempotencia: "t140-b", TemplateID: "wbem-otp-tomador",
+		Destinatario: tel, Dados: map[string]string{"codigo": "482915"}, Canais: []dominio.Canal{dominio.CanalSMS},
+	})
+	if !errors.Is(err, dominio.ErrCanalSemVersao) {
+		t.Fatalf("por SMS: err = %v, quer canal sem versão", err)
+	}
+	if n, ten := contar(t, pool); n != 0 || ten != 0 {
+		t.Fatalf("nada devia ser registrado: %d notificações, %d tentativas", n, ten)
 	}
 }

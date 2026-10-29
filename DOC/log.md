@@ -5,6 +5,24 @@ registro vira suposição de alguém daqui a seis meses.
 
 Entradas antigas: `log/arquivo-AAAA.md` (`tools/arquiva_log.py`).
 
+## 2026-10-29 — Fatia 14 em produção; aviso real da Z-API confere
+- API `c3bcb0c` (`HOST=aviva publicar.sh prod`, pelo dono): goose na versão 11,
+  `wbem-link-tomador` e `wbem-otp-tomador` no schema `ominicore`.
+- Envio real com o Sistema de origem `wbem` (client já existente no realm
+  `ominicore`) para o celular do dono: 202, notificação `83e8a763…`, Tentativa
+  de WhatsApp `entregue` pelo aviso da Z-API — o `messageId` do aviso é o da
+  resposta de envio. Fecha a 3.1 da change 14 e a 7.4 da change 13.
+- Do host, `auth.flipapi.com.br` dá 403 (WAF da Cloudflare): token e chamadas de
+  teste saem pela rede `aviva` (`keycloak:8080`, `ominicore-api:8080`, podman rootful).
+
+## 2026-10-29 — Change `14-templates-wbem` (Templates do aviva-back)
+- Pedido do aviva-back (change `whatsapp-pelo-ominicore` de lá): link de acesso
+  e código de acesso do tomador pelo WhatsApp. Decisões do dono na sabatina do
+  aviva-back: dois Templates de texto curto, só WhatsApp, por migration (o
+  cadastro por API segue em aberto). RN-13, REQ-44, T-139 e T-140.
+- Migration `00011_templates_wbem.sql` (commit `1a123da`, antes da change:
+  furo apontado no `to-do.md` e fechado aqui). Falta publicar (tarefa 3.1).
+
 ## 2026-10-29 — Change 13 em produção
 - API `4f1d1b8` (`HOST=aviva publicar.sh prod`, por Claude com o "pode" do dono):
   healthy; `.anterior` = `ac762e0` íntegro; `/webhooks/zapi/<errado>` → 404.

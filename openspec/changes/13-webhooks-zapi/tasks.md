@@ -47,7 +47,7 @@
 - [x] 7.1 `deploy/aviva2/README.md` (seção Z-API: os webhooks são cadastrados pelo Console; conferir no painel; rollback) e `DOC/Infra/AMBIENTES.md` (`webhook_segredo` em `kv/<p>/whatsapp`) — seções presentes
 - [x] 7.2 `DOC/System/plano-de-testes.md` (T-121 a T-136) e mapa (`python3 DOC/tools/mapeia_projeto.py .`, rota nova) — linhas presentes
 - [x] 7.3 `go test -race ./...`, `make itest`, `golangci-lint run`, `make contrato`, `bun run lint`, `bun run test` e `bun run build` passando
-- [ ] 7.4 Depois do deploy: "Cadastrar de novo" no Console mostra cadastrados e o painel da Z-API mostra as duas URLs (confirma o `PUT`); uma Notificação real por WhatsApp passa a entregue ou lida (confirma que o `messageId` dos avisos é o da resposta de envio; se não for, o aviso cai como desconhecido e o envio passa a guardar o id certo)
+- [x] 7.4 Depois do deploy: "Cadastrar de novo" no Console mostra cadastrados e o painel da Z-API mostra as duas URLs (confirma o `PUT`); uma Notificação real por WhatsApp passa a entregue ou lida (confirma que o `messageId` dos avisos é o da resposta de envio; se não for, o aviso cai como desconhecido e o envio passa a guardar o id certo)
 
 ## 8. Fechamento
 - [x] 8.1 Rodar `openspec validate --all --strict` e `python3 DOC/tools/valida_rastreabilidade.py DOC` sem furo
