@@ -148,9 +148,11 @@ os avisos que chegarem são ignorados; limpar os campos no painel, se quiser.
 
 **Acesso pela origem fixa (túnel na Hostinger, `72.60.159.29`).** O túnel leva
 só o TCP dos IPs da Cloudflare do `flipapi`; o HTTP/3 (QUIC, UDP) sai direto e
-aparece com o IP real — o Keycloak responde "Forbidden" e o WAF bloqueia. Use um
-navegador que fique em HTTP/2 (Edge funcionou) ou desligue o HTTP/3 no Safari
-(*Desenvolvedor › Sinalizadores de recurso*). Conferir: `https://auth.flipapi.com.br/cdn-cgi/trace`
+aparece com o IP real — o Keycloak responde "Forbidden" e o WAF bloqueia. Desligue o
+HTTP/3 (QUIC) no navegador: Edge/Chrome em `edge://flags/#enable-quic` (ou
+`chrome://flags/#enable-quic`) → Disabled; Safari em *Desenvolvedor › Sinalizadores
+de recurso*. Só trocar de navegador não basta: depois do primeiro acesso por
+HTTP/2, a Cloudflare anuncia o HTTP/3 e o navegador passa a usá-lo. Conferir: `https://auth.flipapi.com.br/cdn-cgi/trace`
 tem de mostrar `ip=72.60.159.29`.
 
 Repita C4 a C6 em prod (skill `ambientes`). **Trocar o IP do escritório**: só
