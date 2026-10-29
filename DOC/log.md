@@ -5,6 +5,19 @@ registro vira suposição de alguém daqui a seis meses.
 
 Entradas antigas: `log/arquivo-AAAA.md` (`tools/arquiva_log.py`).
 
+## 2026-10-29 — WAF do Console estava desligado; corrigido
+- A verificação de exposição pelo CI (primeira vez, de fora do escritório) deu
+  200 no Console e 401 em `/v1/config/whatsapp`. Na Cloudflare, a lista
+  `escritorio` e a regra C2 não existiam: a zona `flipapi.com.br` está no plano
+  Free, com as 5 regras personalizadas em uso. O que protegia a configuração era
+  só o JWT, o papel e o OTP, o risco já previsto na ADR 0006.
+- Correção, feita pelo dono no painel: o IP `72.60.159.29` entrou direto na regra
+  "Block specific paths", com um `or`, sem lista. CI depois: T-113 a T-115 com
+  403 (fecha a 7.3 da change 11). Variável `CONSOLE_PUBLICADO=true` criada para
+  a verificação diária.
+- O ajuste da IA no painel foi barrado pelo modo automático (recurso de produção
+  compartilhado); a IA leu a configuração pela API e o dono aplicou.
+
 ## 2026-10-29 — Fatia 14 em produção; aviso real da Z-API confere
 - API `c3bcb0c` (`HOST=aviva publicar.sh prod`, pelo dono): goose na versão 11,
   `wbem-link-tomador` e `wbem-otp-tomador` no schema `ominicore`.
