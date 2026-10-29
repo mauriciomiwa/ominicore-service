@@ -1,7 +1,7 @@
 # Tasks
 
 ## 1. Pré-requisitos
-- [ ] 1.1 Conferir que a 08, a 09, a 10 e a 11 estão arquivadas (`console-operador` vigente) — `openspec validate 12-defeitos-prod --strict` sem o aviso de "Archive would refuse"
+- [x] 1.1 Conferir que a 08, a 09, a 10 e a 11 estão arquivadas (`console-operador` vigente) — `openspec validate 12-defeitos-prod --strict` sem o aviso de "Archive would refuse"
 
 ## 2. Desligar o WhatsApp (REQ-24)
 - [x] 2.1 Teste T-98 contra o OpenBao 2.6.3 real (testcontainers, modo dev) em `internal/integracao/`: grava a Z-API, desliga pela API, a consulta mostra desligado e a releitura não dá erro — falha antes da correção (`make itest`)

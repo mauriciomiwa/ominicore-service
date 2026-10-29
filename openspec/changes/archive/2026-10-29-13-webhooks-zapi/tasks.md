@@ -2,7 +2,7 @@
 
 ## 1. Pré-requisitos e documentação de origem
 - [x] 1.1 RN-4 e RN-5 revisadas em `DOC/Negocio/especificacao-negocio.md`, Fatia 13 em `DOC/System/backlog-mvp.md`, decisões no `DOC/log.md` (feitos na sabatina) — `python3 DOC/tools/checa_projeto.py .` sem furo
-- [ ] 1.2 Conferir que a change 12 está implementada e que a 08, a 09, a 10 e a 11 estão arquivadas (o REQ-21 e as capacidades `configuracao-canais` e `console-operador` vigentes) — `openspec validate 13-webhooks-zapi --strict` sem o aviso de "Archive would refuse"
+- [x] 1.2 Conferir que a change 12 está implementada e que a 08, a 09, a 10 e a 11 estão arquivadas (o REQ-21 e as capacidades `configuracao-canais` e `console-operador` vigentes) — `openspec validate 13-webhooks-zapi --strict` sem o aviso de "Archive would refuse"
 - [x] 1.3 ADR `DOC/System/decisoes/0007-aviso-sem-assinatura-por-segredo-na-url.md` (revisa a RN-5 nos gateways sem assinatura; risco aceito; alternativas) e status da 0003 apontando para ela — arquivo presente e citado no `DOC/log.md`
 
 ## 2. Fatos da Z-API (antes do código)
