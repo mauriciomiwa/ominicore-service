@@ -8,50 +8,50 @@
         "@fontsource/inter": "^5.3.0",
         "@vueuse/core": "^10.11.1",
         "oidc-client-ts": "^3.5.0",
-        "pinia": "^2.3.0",
-        "vue": "^3.5.13",
+        "pinia": "^2.3.1",
+        "vue": "^3.5.43",
         "vue-i18n": "^11.4.13",
-        "vue-router": "^4.5.0",
+        "vue-router": "^4.6.4",
         "vue3-perfect-scrollbar": "^2.0.0",
         "vuetify": "^3.13.6",
       },
       "devDependencies": {
         "@antfu/eslint-config-vue": "^0.43.1",
         "@antfu/utils": "^0.7.10",
-        "@iconify-json/ri": "^1.2.1",
-        "@iconify/tools": "^4.0.7",
-        "@iconify/utils": "^2.1.13",
+        "@iconify-json/ri": "^1.2.10",
+        "@iconify/tools": "^4.2.0",
+        "@iconify/utils": "^3.1.7",
         "@iconify/vue": "4.1.2",
         "@intlify/eslint-plugin-vue-i18n": "^3.2.0",
-        "@types/node": "^22.10.2",
+        "@types/node": "^22.20.5",
         "@typescript-eslint/eslint-plugin": "^7.18.0",
         "@typescript-eslint/parser": "^7.18.0",
-        "@vitejs/plugin-vue": "^5.2.1",
+        "@vitejs/plugin-vue": "^5.2.4",
         "@vue/test-utils": "^2.5.1",
         "eslint": "^8.57.1",
         "eslint-config-airbnb-base": "^15.0.0",
-        "eslint-import-resolver-typescript": "^3.6.1",
+        "eslint-import-resolver-typescript": "^3.10.1",
         "eslint-plugin-case-police": "^0.6.1",
-        "eslint-plugin-import": "^2.31.0",
+        "eslint-plugin-import": "^2.32.0",
         "eslint-plugin-promise": "^6.6.0",
-        "eslint-plugin-regex": "^1.10.0",
-        "eslint-plugin-regexp": "^2.6.0",
+        "eslint-plugin-regex": "^1.11.0",
+        "eslint-plugin-regexp": "^2.10.0",
         "eslint-plugin-sonarjs": "^0.24.0",
         "eslint-plugin-unicorn": "^51.0.1",
-        "eslint-plugin-vue": "^9.32.0",
+        "eslint-plugin-vue": "^9.33.0",
         "happy-dom": "^20.14.5",
         "sass": "~1.76.0",
-        "tsx": "^4.19.2",
-        "type-fest": "^4.30.1",
-        "typescript": "^5.7.2",
+        "tsx": "^4.23.15",
+        "type-fest": "^4.41.0",
+        "typescript": "^5.9.3",
         "unplugin-auto-import": "^0.18.6",
         "unplugin-vue-components": "^0.27.5",
-        "vite": "^6.4",
+        "vite": "^6.4.3",
         "vite-plugin-vue-layouts": "^0.11.0",
         "vite-plugin-vuetify": "^2.1.3",
-        "vite-svg-loader": "^5.1.0",
+        "vite-svg-loader": "^5.1.3",
         "vitest": "^5.0.3",
-        "vue-tsc": "^2.1.10",
+        "vue-tsc": "^2.2.12",
         "wrangler": "^4.147.0",
       },
     },
@@ -66,7 +66,7 @@
 
     "@antfu/eslint-config-vue": ["@antfu/eslint-config-vue@0.43.1", "", { "dependencies": { "@antfu/eslint-config-basic": "0.43.1", "@antfu/eslint-config-ts": "0.43.1", "eslint-plugin-vue": "^9.17.0", "local-pkg": "^0.4.3" }, "peerDependencies": { "eslint": ">=7.4.0" } }, "sha512-HxOfe8Vl+DPrzssbs5LHRDCnBtCy1LSA1DIeV71IC+iTpzoASFahSsVX5qckYu1InFgUm93XOhHCWm34LzPsvg=="],
 
-    "@antfu/install-pkg": ["@antfu/install-pkg@1.1.0", "", { "dependencies": { "package-manager-detector": "^1.3.0", "tinyexec": "^1.0.1" } }, "sha512-MGQsmw10ZyI+EJo45CdSER4zEb+p31LpDAFp2Z3gkSd1yqVZGi0Ebx++YTEMonJy4oChEMLsxZ64j8FH6sSqtQ=="],
+    "@antfu/install-pkg": ["@antfu/install-pkg@2.1.0", "", { "dependencies": { "package-manager-detector": "^1.8.0", "tinyexec": "^1.3.1" } }, "sha512-sdg9NxU3zR4Mnawfbc/x6GB5Wf17WYud5qOuEuxXjaKpYpMkISSJEjItGebXJ2bQ4DIcly4NYH23mtkGJjvKUw=="],
 
     "@antfu/utils": ["@antfu/utils@0.7.10", "", {}, "sha512-+562v9k4aI80m1+VuMHehNJWLOFjBnXn3tdOitzD0il5b7smkSBal4+a3oKiQTbrwMmN/TBUMDvbdoWDehgOww=="],
 
@@ -180,7 +180,7 @@
 
     "@iconify/types": ["@iconify/types@2.0.0", "", {}, "sha512-+wluvCrRhXrhyOmRDJ3q8mux9JkKy5SJ/v8ol2tu4FVjyYvtEzkc/3pK15ET6RKg4b4w4BmTk1+gsCUhf21Ykg=="],
 
-    "@iconify/utils": ["@iconify/utils@2.3.0", "", { "dependencies": { "@antfu/install-pkg": "^1.0.0", "@antfu/utils": "^8.1.0", "@iconify/types": "^2.0.0", "debug": "^4.4.0", "globals": "^15.14.0", "kolorist": "^1.8.0", "local-pkg": "^1.0.0", "mlly": "^1.7.4" } }, "sha512-GmQ78prtwYW6EtzXRU1rY+KwOKfz32PD7iJh6Iyqw68GiKuoZ2A6pRtzWONz5VQJbp50mEjXh/7NkumtrAgRKA=="],
+    "@iconify/utils": ["@iconify/utils@3.1.7", "", { "dependencies": { "@antfu/install-pkg": "^2.0.1", "@iconify/types": "^2.0.0", "import-meta-resolve": "^4.2.0" } }, "sha512-JZHlwdID+dy+lTgbYC8NEC4zeugqeYsc6jewvzb4c58kHauJn+X7rNwQjxz5p2qSjqaEeQoLkCIQ9v/H4PK0/w=="],
 
     "@iconify/vue": ["@iconify/vue@4.1.2", "", { "dependencies": { "@iconify/types": "^2.0.0" }, "peerDependencies": { "vue": ">=3" } }, "sha512-CQnYqLiQD5LOAaXhBrmj1mdL2/NCJvwcC4jtW2Z8ukhThiFkLDkutarTOV2trfc9EXqUqRs0KqXOL9pZ/IyysA=="],
 
@@ -862,6 +862,8 @@
 
     "import-fresh": ["import-fresh@3.3.1", "", { "dependencies": { "parent-module": "^1.0.0", "resolve-from": "^4.0.0" } }, "sha512-TR3KfrTZTYLPB6jUjfx6MF9WcWrHL9su5TObK4ZkYgBdWKPOFoSoQIdEuTuR82pmtxH2spWG9h6etwfr1pLBqQ=="],
 
+    "import-meta-resolve": ["import-meta-resolve@4.2.0", "", {}, "sha512-Iqv2fzaTQN28s/FwZAoFq0ZSs/7hMAHJVX+w8PZl3cY19Pxk6jFFalxQoIfW2826i/fDLXv8IiEZRIT0lDuWcg=="],
+
     "imurmurhash": ["imurmurhash@0.1.4", "", {}, "sha512-JmXMZ6wuvDmLiHEml9ykzqO6lwFbof0GG4IkcGaENdCRDDmMVnny7s5HsIgHCbaq0w2MyPhDqkhTUgS2LU2PHA=="],
 
     "indent-string": ["indent-string@4.0.0", "", {}, "sha512-EdDDZu4A2OyIK7Lr/2zG+w5jmbuk1DVBnEwREQvBzspBJkCEbRa8GxU1lghYcaGJCnRWibjDXlq779X1/y5xwg=="],
@@ -1436,11 +1438,9 @@
 
     "@eslint/eslintrc/ignore": ["ignore@5.3.2", "", {}, "sha512-hsBTNUqQTDwkWtcdYI2i06Y/nUBEsNEDJKjWdigLvegy8kDuJAS8uRlpkkcQpyEXL0Z/pjDy5HBmMjRCJ2gq+g=="],
 
+    "@iconify/tools/@iconify/utils": ["@iconify/utils@2.3.0", "", { "dependencies": { "@antfu/install-pkg": "^1.0.0", "@antfu/utils": "^8.1.0", "@iconify/types": "^2.0.0", "debug": "^4.4.0", "globals": "^15.14.0", "kolorist": "^1.8.0", "local-pkg": "^1.0.0", "mlly": "^1.7.4" } }, "sha512-GmQ78prtwYW6EtzXRU1rY+KwOKfz32PD7iJh6Iyqw68GiKuoZ2A6pRtzWONz5VQJbp50mEjXh/7NkumtrAgRKA=="],
+
     "@iconify/tools/local-pkg": ["local-pkg@1.2.1", "", { "dependencies": { "mlly": "^1.7.4", "pkg-types": "^2.3.0", "quansync": "^0.2.11" } }, "sha512-++gUqRDEvcnN6Zhqrr+y/CkVEHhlrR96vZn3nZZPYzMcBUyBtTKzB9NadClFIsIVSsu+3i9tfk/erqy9kAmt7Q=="],
-
-    "@iconify/utils/@antfu/utils": ["@antfu/utils@8.1.1", "", {}, "sha512-Mex9nXf9vR6AhcXmMrlz/HVgYYZpVGJ6YlPgwl7UnaFpnshXs6EK/oa5Gpf3CzENMjkvEx2tQtntGnb7UtSTOQ=="],
-
-    "@iconify/utils/local-pkg": ["local-pkg@1.2.1", "", { "dependencies": { "mlly": "^1.7.4", "pkg-types": "^2.3.0", "quansync": "^0.2.11" } }, "sha512-++gUqRDEvcnN6Zhqrr+y/CkVEHhlrR96vZn3nZZPYzMcBUyBtTKzB9NadClFIsIVSsu+3i9tfk/erqy9kAmt7Q=="],
 
     "@img/sharp-wasm32/@emnapi/runtime": ["@emnapi/runtime@1.11.3", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-Xz4Tpyki7XyrpbUK1jR1AhdAdaXyhhY4lZ3neLodmhpuWfy2PAQN5B46sAiU4liOXGLkHypn/qU+jvfWSCYYLA=="],
 
@@ -1639,6 +1639,10 @@
     "@antfu/eslint-config-ts/@typescript-eslint/parser/@typescript-eslint/visitor-keys": ["@typescript-eslint/visitor-keys@6.21.0", "", { "dependencies": { "@typescript-eslint/types": "6.21.0", "eslint-visitor-keys": "^3.4.1" } }, "sha512-JJtkDduxLi9bivAB+cYOVMtbkqdPOhZ+ZI5LC47MIRrDV4Yn2o+ZnW10Nkmr28xRpSpdJ6Sm42Hjf2+REYXm0A=="],
 
     "@eslint/eslintrc/espree/eslint-visitor-keys": ["eslint-visitor-keys@4.2.1", "", {}, "sha512-Uhdk5sfqcee/9H/rCOJikYz67o0a2Tw2hGRPOG2Y1R2dg7brRe1uG0yaNQDHu+TO/uQPF/5eCapvYSmHUjt7JQ=="],
+
+    "@iconify/tools/@iconify/utils/@antfu/install-pkg": ["@antfu/install-pkg@1.1.0", "", { "dependencies": { "package-manager-detector": "^1.3.0", "tinyexec": "^1.0.1" } }, "sha512-MGQsmw10ZyI+EJo45CdSER4zEb+p31LpDAFp2Z3gkSd1yqVZGi0Ebx++YTEMonJy4oChEMLsxZ64j8FH6sSqtQ=="],
+
+    "@iconify/tools/@iconify/utils/@antfu/utils": ["@antfu/utils@8.1.1", "", {}, "sha512-Mex9nXf9vR6AhcXmMrlz/HVgYYZpVGJ6YlPgwl7UnaFpnshXs6EK/oa5Gpf3CzENMjkvEx2tQtntGnb7UtSTOQ=="],
 
     "@intlify/devtools-types/@intlify/core-base/@intlify/message-compiler": ["@intlify/message-compiler@11.4.13", "", { "dependencies": { "@intlify/shared": "11.4.13", "source-map-js": "^1.0.2" } }, "sha512-cjKsDeWUD/i3mj0QtC8hydLCFP5mgZtTU1xZZaN9/O3FG94EXc0rTbecYpifglp26rpoJoIjSlW137VejLKsZw=="],
 
