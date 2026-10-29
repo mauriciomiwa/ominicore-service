@@ -56,7 +56,9 @@ func (s Servidor) Handler() http.Handler {
 		mux.Handle("GET /v1/config/whatsapp", operador(s.consultarConfig))
 		mux.Handle("PUT /v1/config/whatsapp", operador(s.gravarConfig))
 		mux.Handle("DELETE /v1/config/whatsapp", operador(s.apagarConfig))
-		mux.HandleFunc("OPTIONS /v1/config/whatsapp", s.preflight)
+		mux.HandleFunc("OPTIONS /v1/config/whatsapp", s.preflight("GET, PUT, DELETE"))
+		mux.Handle("POST /v1/config/whatsapp/webhooks", operador(s.recadastrarWebhooks))
+		mux.HandleFunc("OPTIONS /v1/config/whatsapp/webhooks", s.preflight("POST"))
 	}
 	if s.Webhooks != nil {
 		s.Webhooks.Registrar(mux)

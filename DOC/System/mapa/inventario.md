@@ -1,6 +1,6 @@
 # Inventário do código — ominicore
 
-> GERADO por `tools/mapeia_projeto.py` em 2026-10-27T19:42:59. Não edite: rode o script de novo.
+> GERADO por `tools/mapeia_projeto.py` em 2026-10-29T16:37:03. Não edite: rode o script de novo.
 > A interpretação (o que cada área faz, fluxos, RN candidatas) está nas outras páginas desta pasta.
 
 ## Stack
@@ -16,14 +16,14 @@
 ```mermaid
 graph LR
   cmd["cmd (3)"]
-  internal["internal (71)"]
+  internal["internal (77)"]
   migrations["migrations (1)"]
   web["web (56)"]
 ```
 
 | Módulo | Arquivos | Importa |
 |---|---|---|
-| `internal` | 71 | — |
+| `internal` | 77 | — |
 | `web` | 56 | — |
 | `cmd` | 3 | — |
 | `migrations` | 1 | — |
@@ -41,7 +41,7 @@ graph LR
 | `/:pathMatch(.*)*` | — | — | `src/layouts/blank.vue` | `web/console/src/plugins/router/routes.ts:12` |
 | `` | — | — | `src/pages/erro.vue` | `web/console/src/plugins/router/routes.ts:12` |
 
-## Endpoints (19)
+## Endpoints (22)
 
 | Método | Caminho | Onde |
 |---|---|---|
@@ -52,6 +52,8 @@ graph LR
 | GET | `/v1/config/whatsapp` | `internal/adaptadores/entrada/http/servidor.go`:56 |
 | PUT | `/v1/config/whatsapp` | `api/openapi.yaml` (contrato) |
 | PUT | `/v1/config/whatsapp` | `internal/adaptadores/entrada/http/servidor.go`:57 |
+| POST | `/v1/config/whatsapp/webhooks` | `api/openapi.yaml` (contrato) |
+| POST | `/v1/config/whatsapp/webhooks` | `internal/adaptadores/entrada/http/servidor.go`:60 |
 | POST | `/v1/notificacoes` | `api/openapi.yaml` (contrato) |
 | POST | `/v1/notificacoes` | `internal/adaptadores/entrada/http/servidor.go`:50 |
 | GET | `/v1/notificacoes/{id}` | `api/openapi.yaml` (contrato) |
@@ -60,10 +62,11 @@ graph LR
 | DELETE | `/v1/opt-outs` | `internal/adaptadores/entrada/http/servidor.go`:53 |
 | POST | `/v1/opt-outs` | `api/openapi.yaml` (contrato) |
 | POST | `/v1/opt-outs` | `internal/adaptadores/entrada/http/servidor.go`:52 |
-| POST | `/webhooks/sendgrid` | `internal/adaptadores/entrada/webhooks/webhooks.go`:61 |
-| POST | `/webhooks/twilio` | `internal/adaptadores/entrada/webhooks/webhooks.go`:62 |
-| GET | `/webhooks/whatsapp` | `internal/adaptadores/entrada/webhooks/webhooks.go`:63 |
-| POST | `/webhooks/whatsapp` | `internal/adaptadores/entrada/webhooks/webhooks.go`:64 |
+| POST | `/webhooks/sendgrid` | `internal/adaptadores/entrada/webhooks/webhooks.go`:64 |
+| POST | `/webhooks/twilio` | `internal/adaptadores/entrada/webhooks/webhooks.go`:65 |
+| GET | `/webhooks/whatsapp` | `internal/adaptadores/entrada/webhooks/webhooks.go`:66 |
+| POST | `/webhooks/whatsapp` | `internal/adaptadores/entrada/webhooks/webhooks.go`:67 |
+| POST | `/webhooks/zapi/{segredo}` | `internal/adaptadores/entrada/webhooks/webhooks.go`:68 |
 
 ## Chamadas HTTP de saída (2)
 

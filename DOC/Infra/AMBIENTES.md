@@ -76,6 +76,9 @@ não enxerga o schema `ominicore`, e nenhum dos dois enxerga os schemas alheios.
   reinício; releitura a cada `OMINICORE_CONFIG_RELEITURA`, padrão 30 s, igual
   em hml e prod) ou com `configurar-openbao.sh <amb> --so-whatsapp` e reinício.
   A policy do OminiCore só escreve em `kv/<prefixo>/whatsapp` (ADR 0005).
+  Com a Z-API, o OminiCore também grava ali `webhook_segredo` (segredo da URL
+  dos Avisos de status, trocado a cada gravação) e `webhooks_estado`/`webhooks_em`
+  (estado do cadastro na Z-API) — REQ-40, ADR 0007.
   Conferir o estado: `GET /v1/config/whatsapp` ou o log ("whatsapp desligado",
   "whatsapp ligado: <provedor>", "whatsapp reconfigurado: <provedor>");
   client secret do Keycloak (`ominicore-app`) como podman secret no host (ADR 0002).

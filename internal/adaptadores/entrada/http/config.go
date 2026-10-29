@@ -72,6 +72,16 @@ func (s Servidor) apagarConfig(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// recadastrarWebhooks repete o cadastro dos webhooks na Z-API com o segredo
+// atual (REQ-41); a resposta traz o estado, nunca o segredo.
+func (s Servidor) recadastrarWebhooks(w http.ResponseWriter, r *http.Request) {
+	cfg, err := s.Config.Recadastrar(r.Context(), r.Context().Value(chaveQuem{}).(string))
+	if s.falhaDeConfig(w, r, err) {
+		return
+	}
+	escreverJSON(w, http.StatusOK, visao(cfg))
+}
+
 // falhaDeConfig responde o erro da troca; false quando não houve erro.
 func (s Servidor) falhaDeConfig(w http.ResponseWriter, r *http.Request, err error) bool {
 	switch {
@@ -79,6 +89,8 @@ func (s Servidor) falhaDeConfig(w http.ResponseWriter, r *http.Request, err erro
 		return false
 	case errors.Is(err, dominio.ErrProvedorWhatsAppDesconhecido), errors.Is(err, dominio.ErrConfigIncompleta):
 		problema(w, http.StatusUnprocessableEntity, "configuração recusada", err.Error())
+	case errors.Is(err, aplicacao.ErrRecadastroSoZAPI):
+		problema(w, http.StatusConflict, "recadastro recusado", err.Error())
 	case errors.Is(err, aplicacao.ErrTrocaSemRegistro):
 		problema(w, http.StatusInternalServerError, "gravada sem registro", "a troca valeu, mas o registro falhou; veja o log")
 	default:

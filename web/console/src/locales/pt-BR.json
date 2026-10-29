@@ -60,7 +60,14 @@
       "meta_app_secret": "App Secret do webhook",
       "meta_verify_token": "Verify token do webhook",
       "instance_id": "Instância",
-      "client_token": "Token de segurança da conta"
+      "client_token": "Token de segurança da conta",
+      "webhook_segredo": "Segredo do webhook"
+    },
+    "webhooks": {
+      "titulo": "Avisos de status da Z-API",
+      "cadastrados": "Webhooks cadastrados na Z-API em {em}. A Z-API avisa entrega, leitura e número sem WhatsApp.",
+      "naoCadastrados": "Webhooks não cadastrados na Z-API: sem eles, o OminiCore não sabe se a mensagem foi entregue nem passa ao próximo Canal quando o número não tem WhatsApp.",
+      "cadastrarDeNovo": "Cadastrar de novo"
     }
   },
   "confirmar": {

@@ -137,3 +137,9 @@ type Identidade struct {
 	Usuario string
 	Papeis  []string
 }
+
+// CadastroWebhooksPort cadastra no Provedor do WhatsApp as URLs dos Avisos de
+// status (hoje só a Z-API: "Ao enviar" e "Status", REQ-40).
+type CadastroWebhooksPort interface {
+	Cadastrar(ctx context.Context, cfg dominio.ConfigWhatsApp, url string) error
+}

@@ -143,21 +143,21 @@ rode com `make itest` (Docker Desktop, Colima ou Podman: usa o socket do context
 | T-118 | Exemplo | `internal/integracao/keycloak_test.go` (testcontainers, Keycloak 26.3) | passando |
 | T-119 | Exemplo | `internal/adaptadores/entrada/http/servidor_test.go` | passando |
 | T-120 | Exemplo | `internal/adaptadores/entrada/http/config_test.go` | passando |
-| T-121 | Exemplo | `internal/adaptadores/entrada/webhooks/zapi_test.go` | pendente |
-| T-122 | Exemplo | `internal/adaptadores/entrada/webhooks/zapi_test.go` | pendente |
-| T-123 | Exemplo | `internal/adaptadores/entrada/webhooks/zapi_test.go` | pendente |
-| T-124 | Exemplo | `internal/adaptadores/entrada/webhooks/zapi_test.go` | pendente |
-| T-125 | Exemplo | `internal/adaptadores/entrada/webhooks/zapi_test.go` | pendente |
-| T-126 | Exemplo | `internal/adaptadores/entrada/webhooks/zapi_test.go` | pendente |
-| T-127 | Exemplo | `internal/adaptadores/entrada/webhooks/zapi_test.go` | pendente |
-| T-128 | Exemplo | `internal/adaptadores/entrada/webhooks/zapi_test.go` · `internal/integracao/integracao_test.go` (Postgres) | pendente |
-| T-129 | Exemplo | `internal/adaptadores/entrada/webhooks/zapi_test.go` | pendente |
-| T-130 | Exemplo | `internal/adaptadores/entrada/webhooks/zapi_test.go` | pendente |
-| T-131 | Exemplo | `internal/adaptadores/entrada/http/config_test.go` | pendente |
-| T-132 | Exemplo | `internal/adaptadores/entrada/http/config_test.go` | pendente |
-| T-133 | Exemplo | `internal/adaptadores/entrada/http/config_test.go` | pendente |
-| T-134 | Exemplo | `internal/adaptadores/entrada/http/config_test.go` | pendente |
-| T-135 | Exemplo | `internal/adaptadores/entrada/http/config_test.go` | pendente |
-| T-136 | Exemplo | `web/console/src/pages/whatsapp.spec.ts` (Vitest) | pendente |
+| T-121 | Exemplo | `internal/adaptadores/entrada/webhooks/zapi_test.go` | passando |
+| T-122 | Exemplo | `internal/adaptadores/entrada/webhooks/zapi_test.go` | passando |
+| T-123 | Exemplo | `internal/adaptadores/entrada/webhooks/zapi_test.go` | passando |
+| T-124 | Exemplo | `internal/adaptadores/entrada/webhooks/zapi_test.go` | passando |
+| T-125 | Exemplo | `internal/adaptadores/entrada/webhooks/zapi_test.go` | passando |
+| T-126 | Exemplo | `internal/adaptadores/entrada/webhooks/zapi_test.go` | passando |
+| T-127 | Exemplo | `internal/adaptadores/entrada/webhooks/zapi_test.go` | passando |
+| T-128 | Exemplo | `internal/adaptadores/entrada/webhooks/zapi_test.go` · `internal/integracao/zapi_test.go` (Postgres) | passando (memória e Postgres; `make itest` 2026-10-29) |
+| T-129 | Exemplo | `internal/adaptadores/entrada/webhooks/zapi_test.go` | passando |
+| T-130 | Exemplo | `internal/adaptadores/entrada/webhooks/zapi_test.go` | passando |
+| T-131 | Exemplo | `internal/adaptadores/entrada/http/webhooks_zapi_test.go` | passando |
+| T-132 | Exemplo | `internal/adaptadores/entrada/http/webhooks_zapi_test.go` | passando |
+| T-133 | Exemplo | `internal/adaptadores/entrada/http/webhooks_zapi_test.go` | passando |
+| T-134 | Exemplo | `internal/adaptadores/entrada/http/webhooks_zapi_test.go` | passando |
+| T-135 | Exemplo | `internal/adaptadores/entrada/http/webhooks_zapi_test.go` | passando |
+| T-136 | Exemplo | `web/console/src/pages/whatsapp.spec.ts` (Vitest) | passando |
 | T-137 | Exemplo | `web/console/src/pages/whatsapp.spec.ts` (Vitest) | passando |
 | T-138 | Exemplo | `web/console/src/pages/whatsapp.spec.ts` (Vitest) | passando |

@@ -211,13 +211,17 @@ func rodarAPI(ctx context.Context, cfg config, seg openbao.Segredos, atual *apli
 			Enviar:    aplicacao.SendMessageUseCase{Repo: repo, Estado: atual},
 			Consultar: aplicacao.ConsultarUseCase{Repo: repo},
 			OptOut:    aplicacao.OptOutUseCase{Repo: repo},
-			Config:    &aplicacao.ConfigurarUseCase{Cofre: cofre, Registro: repo, Atual: atual, Log: log},
+			Config: &aplicacao.ConfigurarUseCase{
+				Cofre: cofre, Registro: repo, Atual: atual, Log: log,
+				Cadastro: zapi.NovoWebhooks(cfg.ZAPIURL), URLPublica: cfg.WebhookURL,
+			},
 			Webhooks: webhooks.Webhooks{
 				Cred: webhooks.Credenciais{
 					SendGridChavePublica: chaveSG, TwilioAuthToken: seg.Webhooks["twilio_auth_token"],
 					URLPublica: cfg.WebhookURL,
 				},
 				Meta:     metaAtual(atual),
+				ZAPI:     zapiAtual(atual),
 				Receptor: aplicacao.ReceiveMessageUseCase{Repo: repo, Estado: atual, Log: log},
 				OptOut:   aplicacao.OptOutUseCase{Repo: repo},
 				Log:      log,
@@ -320,6 +324,17 @@ func metaAtual(a *aplicacao.ConfigWhatsAppAtual) func() webhooks.MetaAtual {
 		return webhooks.MetaAtual{
 			Ligada:    c.Ligado && c.Provedor == dominio.WhatsAppMeta,
 			AppSecret: c.Campos["meta_app_secret"], VerifyToken: c.Campos["meta_verify_token"],
+		}
+	}
+}
+
+// zapiAtual dá à rota /webhooks/zapi a instância e o segredo atuais (REQ-37).
+func zapiAtual(a *aplicacao.ConfigWhatsAppAtual) func() webhooks.ZAPIAtual {
+	return func() webhooks.ZAPIAtual {
+		c := a.Config()
+		return webhooks.ZAPIAtual{
+			Ligada:     c.Ligado && c.Provedor == dominio.WhatsAppZAPI,
+			InstanceID: c.Campos["instance_id"], Segredo: c.Campos[dominio.CampoWebhookSegredo],
 		}
 	}
 }

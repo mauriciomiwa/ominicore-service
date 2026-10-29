@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import DialogoConfirmar from '@/components/DialogoConfirmar.vue'
-import { criarApi, provedores } from '@/console/api'
+import { camposDoOminiCore, criarApi, provedores } from '@/console/api'
 import type { ConfigWhatsApp, Resultado } from '@/console/api'
 import { useSessao } from '@/console/sessao'
 
@@ -23,6 +23,20 @@ const sucesso = ref('')
 const enviando = ref(false)
 
 const campos = computed(() => provedores[provedor.value] ?? [])
+
+// campos e segredos do Provedor na tabela, sem os do webhook (estado à parte, REQ-42)
+const camposVisiveis = computed(() => Object.fromEntries(Object.entries(config.value.campos ?? {}).filter(([k]) => !camposDoOminiCore.includes(k))))
+const segredosVisiveis = computed(() => Object.fromEntries(Object.entries(config.value.segredos ?? {}).filter(([k]) => !camposDoOminiCore.includes(k))))
+const zapiAtiva = computed(() => config.value.ligado && config.value.provedor === 'zapi')
+const webhooksCadastrados = computed(() => config.value.campos?.webhooks_estado === 'cadastrados')
+
+const webhooksEm = computed(() => {
+  const em = config.value.campos?.webhooks_em
+
+  return em ? new Date(em).toLocaleString('pt-BR') : ''
+})
+
+const recadastrando = ref(false)
 const nomeAmbiente = computed(() => sessao.ambiente ? t(`ambiente.${sessao.ambiente.id}`) : '')
 
 function limparSegredos() {
@@ -38,8 +52,10 @@ function mostrar(c: ConfigWhatsApp) {
   config.value = c
   if (c.ligado && c.provedor) {
     provedor.value = c.provedor
-    for (const [nome, valor] of Object.entries(c.campos ?? {}))
-      valores[nome] = valor
+    for (const [nome, valor] of Object.entries(c.campos ?? {})) {
+      if (!camposDoOminiCore.includes(nome))
+        valores[nome] = valor
+    }
   }
   limparSegredos()
 }
@@ -144,6 +160,20 @@ async function gravar() {
   }
 }
 
+// repete o cadastro dos webhooks na Z-API com o segredo atual (REQ-42)
+async function recadastrar() {
+  recadastrando.value = true
+  sucesso.value = ''
+
+  const r = await api.recadastrarWebhooks()
+
+  recadastrando.value = false
+  if (await tratar(r))
+    return
+  if (r.tipo === 'ok')
+    mostrar(r.dados)
+}
+
 async function desligar() {
   if (!(await dialogo.value?.perguntar(t('confirmar.desligar', { ambiente: nomeAmbiente.value }))))
     return
@@ -232,7 +262,7 @@ onMounted(carregar)
           >
             <tbody>
               <tr
-                v-for="(valor, nome) in config.campos"
+                v-for="(valor, nome) in camposVisiveis"
                 :key="nome"
                 :data-teste="`campo-${nome}`"
               >
@@ -240,7 +270,7 @@ onMounted(carregar)
                 <td>{{ valor }}</td>
               </tr>
               <tr
-                v-for="(configurado, nome) in config.segredos"
+                v-for="(configurado, nome) in segredosVisiveis"
                 :key="nome"
                 :data-teste="`segredo-${nome}`"
               >
@@ -258,6 +288,40 @@ onMounted(carregar)
             @click="desligar"
           >
             {{ $t('whatsapp.desligar') }}
+          </VBtn>
+        </VCardActions>
+      </VCard>
+
+      <VCard
+        v-if="zapiAtiva"
+        class="mb-6"
+        data-teste="webhooks"
+        :title="$t('whatsapp.webhooks.titulo')"
+      >
+        <VCardText>
+          <VAlert
+            v-if="webhooksCadastrados"
+            data-teste="webhooks-cadastrados"
+            type="success"
+            variant="tonal"
+            :text="$t('whatsapp.webhooks.cadastrados', { em: webhooksEm })"
+          />
+          <VAlert
+            v-else
+            data-teste="webhooks-nao-cadastrados"
+            type="warning"
+            variant="tonal"
+            :text="$t('whatsapp.webhooks.naoCadastrados')"
+          />
+        </VCardText>
+        <VCardActions>
+          <VBtn
+            data-teste="cadastrar-de-novo"
+            variant="outlined"
+            :loading="recadastrando"
+            @click="recadastrar"
+          >
+            {{ $t('whatsapp.webhooks.cadastrarDeNovo') }}
           </VBtn>
         </VCardActions>
       </VCard>

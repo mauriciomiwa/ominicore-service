@@ -50,7 +50,10 @@ type Webhooks struct {
 	MetaLigada bool
 	// Meta, quando dada, substitui MetaLigada e os segredos da Meta em Cred e é
 	// consultada a cada requisição: o Provedor muda sem reiniciar (REQ-26).
-	Meta     func() MetaAtual
+	Meta func() MetaAtual
+	// ZAPI é consultada a cada requisição em /webhooks/zapi/{segredo}: Provedor
+	// ativo, instância e segredo atuais (REQ-37); nil = rota sempre 404.
+	ZAPI     func() ZAPIAtual
 	Receptor Receptor
 	OptOut   RegistradorOptOut // nil = descadastro do Provedor ignorado
 	Log      *slog.Logger
@@ -62,6 +65,7 @@ func (w Webhooks) Registrar(mux *http.ServeMux) {
 	mux.HandleFunc("POST /webhooks/twilio", w.twilio)
 	mux.HandleFunc("GET /webhooks/whatsapp", w.soComMeta(w.verificarMeta))
 	mux.HandleFunc("POST /webhooks/whatsapp", w.soComMeta(w.whatsapp))
+	mux.HandleFunc("POST /webhooks/zapi/{segredo}", w.zapi)
 }
 
 // MetaAtual diz se o WhatsApp está ligado pela Meta e com quais segredos do

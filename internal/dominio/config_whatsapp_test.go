@@ -17,7 +17,8 @@ func TestNovaConfigWhatsAppGuardaSoOsCamposDoProvedor(t *testing.T) {
 	if p := c.Publicos(); len(p) != 1 || p["instance_id"] != "i" {
 		t.Fatalf("públicos = %v", p)
 	}
-	if s := c.Segredos(); len(s) != 2 || !s["token"] || !s["client_token"] {
+	// o segredo do webhook da Z-API entra na lista, só como configurado ou não (REQ-40)
+	if s := c.Segredos(); len(s) != 3 || !s["token"] || !s["client_token"] || s[CampoWebhookSegredo] {
 		t.Fatalf("segredos = %v", s)
 	}
 }

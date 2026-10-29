@@ -5,6 +5,17 @@ registro vira suposição de alguém daqui a seis meses.
 
 Entradas antigas: `log/arquivo-AAAA.md` (`tools/arquiva_log.py`).
 
+## 2026-10-29 — Change `13-webhooks-zapi` implementada (31/35; falta conferir a Z-API real e publicar)
+- Rota `POST /webhooks/zapi/{segredo}` (segredo em tempo constante + `instanceId`;
+  404 sem efeito; aviso autêntico → 200 `{"value":true}`): "Ao enviar" com
+  erro → falhou e fallback; Status RECEIVED/READ/PLAYED → entregue/lida.
+- Gravar a Z-API gera segredo novo e cadastra as duas URLs na Z-API
+  (`zapi.Webhooks`, caminho em constante — a conferir); `POST
+  /v1/config/whatsapp/webhooks` recadastra; Console mostra o estado e
+  "Cadastrar de novo". ADR 0007.
+- T-121 a T-136 passando (T-128 no Postgres escrito, `make itest` pendente);
+  sentinel: aprovado com ressalvas.
+
 ## 2026-10-28 — Decisão: origem fixa do Console é o túnel na Hostinger
 - O escritório não sai mais pelo `177.69.185.193`. O dono usa uma máquina
   própria e exclusiva na Hostinger só como túnel para ter IP fixo:

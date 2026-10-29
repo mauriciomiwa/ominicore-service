@@ -220,3 +220,42 @@ describe('API do Ambiente sem resposta (REQ-43)', () => {
     expect(el('tentar-de-novo')).not.toBeNull()
   })
 })
+
+describe('webhooks da Z-API (REQ-42)', () => {
+  it('T-136 Webhooks não cadastrados e recadastro', async () => {
+    const { pinia } = sessaoAberta(hml)
+    const base = { ligado: true, provedor: 'zapi', segredos: { token: true, client_token: false, webhook_segredo: true } }
+
+    const chamadas = api(
+      resposta(200, { ...base, campos: { instance_id: 'inst1', webhooks_estado: 'falhou', webhooks_em: '2026-10-29T12:00:00Z' } }),
+      resposta(200, { ...base, campos: { instance_id: 'inst1', webhooks_estado: 'cadastrados', webhooks_em: '2026-10-29T12:05:00Z' } }),
+    )
+
+    await montar(Whatsapp, pinia)
+    await assentar()
+    expect(el('webhooks-nao-cadastrados')).not.toBeNull()
+    expect(el('webhooks-cadastrados')).toBeNull()
+
+    await clicar('cadastrar-de-novo')
+
+    expect(chamadas[1]).toMatchObject({ metodo: 'POST', url: `${hml.api}/v1/config/whatsapp/webhooks` })
+    expect(el('webhooks-cadastrados')).not.toBeNull()
+    expect(el('webhooks-nao-cadastrados')).toBeNull()
+
+    // nem segredo nem URL do webhook na tela; o estado não vira "campo"
+    const tela = document.body.innerHTML
+
+    expect(tela).not.toContain('/webhooks/zapi')
+    expect(el('campo-webhooks_estado')).toBeNull()
+    expect(el('segredo-webhook_segredo')).toBeNull()
+  })
+
+  it('sem a Z-API ativa não mostra os webhooks', async () => {
+    const { pinia } = sessaoAberta(hml)
+
+    api(resposta(200, { ligado: true, provedor: 'ultramsg', campos: { instance_id: 'i' }, segredos: { token: true } }))
+    await montar(Whatsapp, pinia)
+    await assentar()
+    expect(el('webhooks')).toBeNull()
+  })
+})

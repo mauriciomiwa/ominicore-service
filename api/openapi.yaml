@@ -304,6 +304,46 @@ paths:
           $ref: "#/components/responses/Problema"
         "503":
           $ref: "#/components/responses/Problema"
+  /v1/config/whatsapp/webhooks:
+    options:
+      operationId: preflightWebhooksZAPI
+      summary: Preflight de CORS do Console do Operador (recadastro)
+      description: Como o de `/v1/config/whatsapp`, só com o método `POST` (REQ-34).
+      security: []
+      parameters:
+        - name: Origin
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Origem do Console autorizada.
+        "403":
+          $ref: "#/components/responses/Problema"
+    post:
+      operationId: recadastrarWebhooksZAPI
+      summary: Recadastrar na Z-API as URLs dos Avisos de status (Operador)
+      description: |
+        Cadastra de novo na Z-API as URLs de "Ao enviar" e de "Status" com o
+        segredo atual, sem trocá-lo (REQ-41). A resposta traz o estado do
+        cadastro em `campos.webhooks_estado`; o segredo nunca sai. Só com a
+        Z-API ativa: senão 409, sem efeito.
+      responses:
+        "200":
+          description: Recadastro tentado; o estado diz se a Z-API aceitou.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigWhatsApp"
+        "401":
+          $ref: "#/components/responses/Problema"
+        "403":
+          $ref: "#/components/responses/Problema"
+        "409":
+          $ref: "#/components/responses/Problema"
+        "503":
+          $ref: "#/components/responses/Problema"
 components:
   securitySchemes:
     keycloak:
@@ -441,7 +481,12 @@ components:
           enum: [meta, ultramsg, zapi]
         campos:
           type: object
-          description: Campos que não são segredo (`instance_id`, `phone_number_id`).
+          description: |
+            Campos que não são segredo (`instance_id`, `phone_number_id`). Com a
+            Z-API, também o estado do cadastro dos webhooks na Z-API
+            (`webhooks_estado`: `cadastrados` ou `falhou`; `webhooks_em`, RFC 3339 —
+            REQ-40). O segredo da URL dos avisos aparece só em `segredos`
+            (`webhook_segredo`).
           additionalProperties:
             type: string
         segredos:

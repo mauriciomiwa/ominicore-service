@@ -27,7 +27,7 @@ const caminho = '/v1/config/whatsapp'
  * chamada sai (T-107); 401 vira "sem sessão" para a tela refazer o login.
  */
 export function criarApi(sessao: FonteDeSessao, buscar: typeof fetch = (...a) => fetch(...a)) {
-  async function chamar<T>(metodo: string, corpo?: Record<string, string>): Promise<Resultado<T>> {
+  async function chamar<T>(metodo: string, corpo?: Record<string, string>, sufixo = ''): Promise<Resultado<T>> {
     const token = await sessao.token()
     if (!token || !sessao.ambiente)
       return { tipo: 'sem-sessao' }
@@ -38,7 +38,7 @@ export function criarApi(sessao: FonteDeSessao, buscar: typeof fetch = (...a) =>
 
     let r: Response
     try {
-      r = await buscar(`${sessao.ambiente.api}${caminho}`, {
+      r = await buscar(`${sessao.ambiente.api}${caminho}${sufixo}`, {
         method: metodo,
         headers,
         body: corpo ? JSON.stringify(corpo) : undefined,
@@ -71,8 +71,15 @@ export function criarApi(sessao: FonteDeSessao, buscar: typeof fetch = (...a) =>
     consultar: () => chamar<ConfigWhatsApp>('GET'),
     gravar: (corpo: Record<string, string>) => chamar<ConfigWhatsApp>('PUT', corpo),
     desligar: () => chamar<void>('DELETE'),
+
+    // repete o cadastro dos webhooks na Z-API com o segredo atual (REQ-41, REQ-42)
+    recadastrarWebhooks: () => chamar<ConfigWhatsApp>('POST', undefined, '/webhooks'),
   }
 }
+
+// Campos do webhook da Z-API, escritos só pelo OminiCore (REQ-40): não vão na
+// tabela de campos nem no formulário; o estado aparece à parte.
+export const camposDoOminiCore = ['webhook_segredo', 'webhooks_estado', 'webhooks_em']
 
 // Campos de cada Provedor, como o domínio exige (internal/dominio/config_whatsapp.go).
 export interface Campo { nome: string; segredo: boolean; obrigatorio: boolean }

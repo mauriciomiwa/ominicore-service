@@ -137,6 +137,15 @@ Desde a fatia 11, o `publicar.sh` instala também a rota pública de
 | C7 | GitHub: environment `console` com os secrets `CLOUDFLARE_API_TOKEN` (permissão Workers Scripts: Edit e Workers Routes: Edit na zona) e `CLOUDFLARE_ACCOUNT_ID`; depois Actions › console › Run workflow com "publicar" marcado (a `main` precisa estar verde); depois do primeiro deploy, a variável de repositório `CONSOLE_PUBLICADO=true` liga a verificação diária | GitHub | dono | conta Cloudflare |
 | C8 | O próprio workflow roda `verificar-exposicao.sh hml` e `prod` de fora do escritório (T-113 a T-115). Do escritório: entrar, consultar e gravar em homologação | GitHub + escritório | dono | — |
 
+**Webhooks da Z-API (fatia 13, ADR 0007).** Não se cadastram à mão: ao gravar a
+Z-API pelo Console, o OminiCore gera um segredo novo e cadastra na Z-API as URLs
+de "Ao enviar" e de "Status" (`https://notify.flipapi.com.br/webhooks/zapi/<segredo>`).
+O Console mostra o estado; se der "não cadastrados", use "Cadastrar de novo".
+Conferir no painel da Z-API (instância › Webhooks): os dois campos preenchidos
+com a mesma URL; os demais (Ao receber, conexão, presença) ficam vazios.
+Rollback: voltar o binário (`publicar.sh prod --voltar`) — a rota some (404) e
+os avisos que chegarem são ignorados; limpar os campos no painel, se quiser.
+
 **Acesso pela origem fixa (túnel na Hostinger, `72.60.159.29`).** O túnel leva
 só o TCP dos IPs da Cloudflare do `flipapi`; o HTTP/3 (QUIC, UDP) sai direto e
 aparece com o IP real — o Keycloak responde "Forbidden" e o WAF bloqueia. Use um

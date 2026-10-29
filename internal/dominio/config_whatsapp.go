@@ -16,15 +16,31 @@ var CamposWhatsApp = map[ProvedorWhatsApp][]string{
 }
 
 // CamposOpcionaisWhatsApp entram quando existem: o `client_token` da Z-API só
-// existe se a conta ativou o token de segurança.
+// existe se a conta ativou o token de segurança; os campos do webhook da Z-API
+// (REQ-37, REQ-40) são escritos só pelo OminiCore.
 var CamposOpcionaisWhatsApp = map[ProvedorWhatsApp][]string{
-	WhatsAppZAPI: {"client_token"},
+	WhatsAppZAPI: {"client_token", CampoWebhookSegredo, CampoWebhooksEstado, CampoWebhooksEm},
 }
 
+// Campos do webhook da Z-API, gerados e gravados pelo OminiCore: o segredo da
+// URL do aviso e o estado do cadastro na Z-API (REQ-40, ADR 0007).
+const (
+	CampoWebhookSegredo = "webhook_segredo"
+	CampoWebhooksEstado = "webhooks_estado"
+	CampoWebhooksEm     = "webhooks_em"
+	WebhooksCadastrados = "cadastrados"
+	WebhooksFalhou      = "falhou"
+)
+
+// CamposDoOminiCore não vêm do Operador: se chegarem na gravação, são
+// descartados antes de gerar os valores (REQ-40).
+var CamposDoOminiCore = []string{CampoWebhookSegredo, CampoWebhooksEstado, CampoWebhooksEm}
+
 // segredosWhatsApp nunca saem pela API nem para log (REQ-23); os demais campos
-// (instance_id, phone_number_id) são públicos.
+// (instance_id, phone_number_id, estado dos webhooks) são públicos.
 var segredosWhatsApp = map[string]bool{
 	"token": true, "client_token": true, "meta_app_secret": true, "meta_verify_token": true,
+	CampoWebhookSegredo: true,
 }
 
 // ErrConfigIncompleta: falta um campo exigido pelo Provedor (REQ-22, REQ-26).

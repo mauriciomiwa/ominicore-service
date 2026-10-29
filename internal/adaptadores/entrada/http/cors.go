@@ -17,7 +17,11 @@ func (s Servidor) cors(prox http.Handler) http.Handler {
 
 // preflight responde o OPTIONS antes da autenticação: o navegador não manda o
 // token no preflight (T-116).
-func (s Servidor) preflight(w http.ResponseWriter, r *http.Request) {
+func (s Servidor) preflight(metodos string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) { s.responderPreflight(w, r, metodos) }
+}
+
+func (s Servidor) responderPreflight(w http.ResponseWriter, r *http.Request, metodos string) {
 	w.Header().Add("Vary", "Origin")
 	if !s.origemDoConsole(r) {
 		problema(w, http.StatusForbidden, "origem não permitida", "")
@@ -25,7 +29,7 @@ func (s Servidor) preflight(w http.ResponseWriter, r *http.Request) {
 	}
 	h := w.Header()
 	h.Set("Access-Control-Allow-Origin", s.ConsoleOrigem)
-	h.Set("Access-Control-Allow-Methods", "GET, PUT, DELETE")
+	h.Set("Access-Control-Allow-Methods", metodos)
 	h.Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
 	h.Set("Access-Control-Max-Age", "600")
 	w.WriteHeader(http.StatusNoContent)
