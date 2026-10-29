@@ -1,24 +1,22 @@
 # Estado — ominicore
 
-> Atualizado em 2026-10-27 por Mauricio Miwa + Claude (changes 12 e 13 propostas; spec notificacoes ajustada)
+> Atualizado em 2026-10-29 por Mauricio Miwa + Claude (changes 08 a 14 arquivadas; WAF corrigido)
 
 ## Em curso
-- Prod no ar desde 2026-10-06 (`notify.flipapi.com.br`, Console em `ominicore.flipapi.com.br`); hml adiado (`log.md` 2026-10-06).
-- Change `13-webhooks-zapi` implementada 34/36 na branch `fatia/13-webhooks-zapi` (rotas da Z-API conferidas; `make itest` passando). Em prod (API 4f1d1b8, Console 57674d31). Faltam: 7.4 ("Cadastrar de novo" no Console + aviso real) e 1.2 (archive 08→11).
-- Change `12-defeitos-prod` implementada 11/12 na branch `fatia/12-defeitos-prod` (sem commit; sentinel com ressalvas; `make itest` passando, inclusive o T-98 no OpenBao real). Falta 1.1 (archive 08→11).
-- Em prod: `ac762e0` (API, quadlet, healthcheck healthy) e Console 76eed4ae. Próximo passo: confirmar o WAF; o archive da 12 e da 13 exige arquivar antes 08 → 09 → 10 → 11 (a 08 falta 5.2; a 11 falta 1.2 e 7.3).
-- Sem commit: change `ajuste-texto-notificacoes` (arquivada), change 13, DOC desta sessão e as mudanças de 27/10 de outra sessão (`to-do.md`, `fontes-externas.md`, tasks da 09).
+- Nenhuma change ativa. Prod no ar: API `c3bcb0c` (fatia 14) e Console 57674d31; hml adiado (`log.md` 2026-10-06).
+- `main` = `origin/main`, com tudo desta sessão. Branch de trabalho: `fatia/14-templates-wbem`.
 
 ## Decisões recentes
-- Webhooks da Z-API: segredo na URL + `instanceId`, 404 sem efeito; cadastro automático na Z-API a cada gravação; botão "Cadastrar de novo" (`log.md` 2026-10-27; ADR 0007 a escrever).
-- REQ-2 e REQ-14 reescritos abaixo de 500 caracteres (OpenSpec 1.15 reprova no `--strict`).
+- WAF: o IP do escritório (`72.60.159.29`, túnel Hostinger) fica direto na regra "Block specific paths", porque o plano Free tem as 5 regras em uso (ADR 0006, `deploy/aviva2/README.md` C1/C2). Verificação diária pelo CI (`CONSOLE_PUBLICADO=true`).
+- A 5.2 da 08 (UltraMsg real) foi adiada para o `to-do.md`: prod usa a Z-API.
+- Templates `wbem-*` em prod; o Sistema de origem do aviva-back é o client `wbem` (realm `ominicore`).
 
 ## Bloqueios e pendências
-- Caminho da API de cadastro de webhook da Z-API não documentado: tarefa 2.1 da 13, com a instância real.
-- WAF do Console: confirmar de fora do escritório (4G) que dá 403.
-- Email e SMS em prod com credenciais `pendente`; trocar a senha do role `aviva_back` (esteve no cofre do OminiCore).
+- Email e SMS em prod com credenciais `pendente`; trocar a senha do role `aviva_back`.
+- `publicar.sh`: `flock` e `.anterior` atômico; token de API da Cloudflare para wrangler e CI.
+- RN-6 e RN-10 sem REQ: confirmar se ficam para depois.
+- IP do túnel mudou? Trocar na regra da Cloudflare e no `keycloak-allowlist` (repositório `flip`).
 
 ## Arquivos que importam agora
-- `openspec/changes/13-webhooks-zapi/` — proposta, deltas, design, tarefas
-- `DOC/to-do.md` — seção "Prod — operação (2026-10-27)" (escopo da change 12)
-- `internal/adaptadores/entrada/webhooks/whatsapp.go` — modelo do adaptador de avisos
+- `DOC/to-do.md` — pendências de operação
+- `deploy/aviva2/README.md` — runbook (Console C1–C8, Z-API, QUIC)

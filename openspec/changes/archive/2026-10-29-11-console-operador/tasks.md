@@ -2,7 +2,7 @@
 
 ## 1. Negócio e documentação de origem
 - [x] 1.1 RN-12 em `DOC/Negocio/especificacao-negocio.md`, termos Console do Operador e Ambiente no glossário e Fatia 11 em `DOC/System/backlog-mvp.md` (feitos na sabatina) — `python3 DOC/tools/checa_projeto.py .` sem furo
-- [ ] 1.2 Conferir que `10-config-whatsapp-api` está arquivada e que `openspec/specs/configuracao-canais/spec.md` tem o REQ-27 com o texto do delta MODIFIED desta change — `openspec validate 11-console-operador --strict`
+- [x] 1.2 Conferir que `10-config-whatsapp-api` está arquivada e que `openspec/specs/configuracao-canais/spec.md` tem o REQ-27 com o texto do delta MODIFIED desta change — `openspec validate 11-console-operador --strict`
 - [x] 1.3 ADR `DOC/System/decisoes/0006-config-publica-so-do-escritorio.md` (revisa a 0003: `/v1/config/` público só do IP do escritório, CORS só para o Console) e status da 0003 apontando para ela — arquivo presente e citado no `DOC/log.md`
 - [x] 1.4 `DOC/to-do.md` com o que ficou fora (configuração por cliente da casa, Email/SMS/QR no Console, BFF com Tunnel, outros idiomas, tema do Keycloak) — linhas presentes
 

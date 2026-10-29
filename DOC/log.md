@@ -5,6 +5,14 @@ registro vira suposição de alguém daqui a seis meses.
 
 Entradas antigas: `log/arquivo-AAAA.md` (`tools/arquiva_log.py`).
 
+## 2026-10-29 — Changes 08 a 14 arquivadas
+- Arquivadas em cadeia: 08, 09, 10, 11, 12, 13 e 14. A 5.2 da 08 (formato real
+  da resposta do UltraMsg) foi arquivada em aberto, por decisão do dono: prod
+  usa a Z-API. O item foi para o `to-do.md`, como condição para ligar o UltraMsg.
+- O archive deixou o REQ-6, o REQ-10 e o REQ-11 acima de 500 caracteres. A
+  change editorial `ajuste-texto-whatsapp` (arquivada) reescreveu os três, sem
+  mudar regra nem cenário. Resultado: `openspec validate --all --strict` com 5/5.
+
 ## 2026-10-29 — WAF do Console estava desligado; corrigido
 - A verificação de exposição pelo CI (primeira vez, de fora do escritório) deu
   200 no Console e 401 em `/v1/config/whatsapp`. Na Cloudflare, a lista

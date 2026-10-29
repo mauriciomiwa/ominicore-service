@@ -86,5 +86,5 @@ jobs:
         ambiente: [prod] # hml adiado (log.md 2026-10-06); volta junto do ambiente
     steps:
       - uses: actions/checkout@v4
-      - name: T-113 a T-115 de fora do escritório
+      - name: T-113, T-114 e T-115 de fora do escritório
         run: ./deploy/aviva2/verificar-exposicao.sh ${{ matrix.ambiente }}

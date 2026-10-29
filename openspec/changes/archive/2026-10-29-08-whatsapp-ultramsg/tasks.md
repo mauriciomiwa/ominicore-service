@@ -35,7 +35,7 @@
 
 ## 5. Deploy e operação
 - [x] 5.1 `deploy/aviva2/openbao/configurar-openbao.sh` (pergunta Meta ou UltraMsg; `--so-whatsapp` grava `provedor`, `instance_id` e `token` pelo stdin; segredos da Meta só com `meta`) e `deploy/local/bootstrap.sh` (`WHATSAPP_PROVEDOR=ultramsg`) — `bash -n` (`shellcheck` não instalado localmente nem no CI: pendente)
-- [ ] 5.2 Conferir o formato real da resposta do UltraMsg com a instância de trial (sucesso e token inválido) e ajustar o teste de classificação se divergir; registrar o formato em `DOC/Padroes/fontes-externas.md`
+- [ ] 5.2 (ADIADA em 2026-10-29 para o `DOC/to-do.md`, decisão do dono: prod usa a Z-API; a change foi arquivada com ela em aberto) Conferir o formato real da resposta do UltraMsg com a instância de trial (sucesso e token inválido) e ajustar o teste de classificação se divergir; registrar o formato em `DOC/Padroes/fontes-externas.md`
 - [x] 5.3 Runbook `deploy/aviva2/README.md` (instância e número por ambiente, monitorar a instância desconectada, rollback pelo cofre), `DOC/Infra/AMBIENTES.md` e `DOC/Infra/infraestrutura.md`
 - [x] 5.4 `DOC/System/plano-de-testes.md` (T-70 a T-81) e mapa (`tools/mapeia_projeto.py`)
 - [x] 5.5 `go test -race ./...` e `make itest` passando

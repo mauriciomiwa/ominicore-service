@@ -143,35 +143,78 @@ Origem: RN-2
 - **THEN** a Notificação fica enviada e nenhuma Tentativa é criada no Canal SMS
 
 ### Requirement: REQ-10 Enviar pelo Canal WhatsApp
-Quando houver uma Tentativa pendente no Canal WhatsApp, o sistema SHALL
-enviá-la ao Provedor de WhatsApp como o Modelo aprovado da versão WhatsApp do
-Template, no idioma dela, com os valores das variáveis na ordem dos parâmetros,
-para o telefone do Destinatário; recusa por número sem WhatsApp ou por Modelo
-não aprovado SHALL ser Falha definitiva, e limite de taxa ou erro genérico do
-Provedor SHALL ser Falha temporária.
+Tentativa pendente de WhatsApp SHALL ir ao Provedor ativo, para o telefone do
+Destinatário. Meta: o Modelo aprovado (idioma e parâmetros em ordem); sem
+WhatsApp ou Modelo não aprovado é Falha definitiva, e limite de taxa ou erro
+genérico, temporária. UltraMsg e Z-API: o texto preenchido; limite de taxa ou
+indisponibilidade é temporária, e outra recusa, definitiva. Texto com mais de
+4096 caracteres ou versão sem a forma do Provedor SHALL ser Falha definitiva,
+sem chamada.
 Origem: RN-4
 
 #### Scenario: T-28 Tentativa de WhatsApp é enviada pelo Modelo aprovado
-- **WHEN** uma Notificação `boas-vindas` com `nome` = Ana é processada no Canal WhatsApp e o Provedor aceita
+- **WHEN** com a Meta ativa, uma Notificação `boas-vindas` com `nome` = Ana é processada no Canal WhatsApp e o Provedor aceita
 - **THEN** o Provedor recebe o Modelo `boas_vindas`, idioma `pt_BR`, parâmetro 1 = Ana e o telefone do Destinatário, e a Tentativa fica enviada
 
 #### Scenario: T-29 Número sem WhatsApp passa ao próximo Canal
-- **WHEN** a ordem é WhatsApp → SMS e o Provedor de WhatsApp recusa com o código 131026
+- **WHEN** com a Meta ativa, a ordem é WhatsApp → SMS e o Provedor de WhatsApp recusa com o código 131026
 - **THEN** a Tentativa de WhatsApp fica falhou sem Retentativa e a próxima Tentativa é no Canal SMS
 
 #### Scenario: T-30 Limite de taxa é Falha temporária
-- **WHEN** o Provedor de WhatsApp recusa com o código 130429
+- **WHEN** com a Meta ativa, o Provedor de WhatsApp recusa com o código 130429
 - **THEN** existe uma Retentativa pendente no Canal WhatsApp
 
 #### Scenario: T-31 Modelo não aprovado é Falha definitiva
-- **WHEN** o Provedor de WhatsApp recusa com o código 132001
+- **WHEN** com a Meta ativa, o Provedor de WhatsApp recusa com o código 132001
 - **THEN** a Tentativa fica falhou com o motivo do Provedor, sem Retentativa
 
+#### Scenario: T-73 Tentativa de WhatsApp é enviada como texto pelo UltraMsg
+- **WHEN** com o UltraMsg ativo, uma Notificação `boas-vindas` com `nome` = Ana é processada no Canal WhatsApp e o Provedor aceita devolvendo um id
+- **THEN** o Provedor recebe o texto "Olá Ana, sua conta está pronta." para o telefone do Destinatário, e a Tentativa fica enviada com esse id
+
+#### Scenario: T-74 Recusa do UltraMsg passa ao próximo Canal
+- **WHEN** com o UltraMsg ativo, a ordem é WhatsApp → SMS e o Provedor recusa o token ou a instância
+- **THEN** a Tentativa de WhatsApp fica falhou sem Retentativa, com o motivo do Provedor, e a próxima Tentativa é no Canal SMS
+
+#### Scenario: T-75 UltraMsg indisponível é Falha temporária
+- **WHEN** com o UltraMsg ativo, o Provedor responde com limite de taxa, erro de servidor ou não responde
+- **THEN** existe uma Retentativa pendente no Canal WhatsApp
+
+#### Scenario: T-76 Texto longo demais não chega ao UltraMsg
+- **WHEN** com o UltraMsg ativo, o texto da versão WhatsApp preenchido passa de 4096 caracteres e a ordem é WhatsApp → SMS
+- **THEN** o Provedor não é chamado, a Tentativa de WhatsApp fica falhou como Falha definitiva e a próxima é no Canal SMS
+
+#### Scenario: T-77 Tentativa pendente sem a forma do Provedor ativo segue a ordem
+- **WHEN** uma Tentativa de WhatsApp ficou pendente, o Provedor ativo passou a ser um cuja forma a versão WhatsApp do Template não tem, e a ordem é WhatsApp → SMS
+- **THEN** o Provedor não é chamado, a Tentativa de WhatsApp fica falhou como Falha definitiva e a próxima é no Canal SMS
+
+#### Scenario: T-85 Tentativa de WhatsApp é enviada como texto pela Z-API
+- **WHEN** com a Z-API ativa e sem token de segurança da conta, uma Notificação `boas-vindas` com `nome` = Ana e telefone +5511999990000 é processada no Canal WhatsApp e o Provedor aceita devolvendo um `messageId`
+- **THEN** o Provedor recebe o texto "Olá Ana, sua conta está pronta." para o telefone 5511999990000, sem o cabeçalho de token de segurança, e a Tentativa fica enviada com esse `messageId`
+
+#### Scenario: T-86 Token de segurança da conta vai em toda chamada à Z-API
+- **WHEN** com a Z-API ativa e o token de segurança da conta configurado, uma Tentativa de WhatsApp é enviada
+- **THEN** a chamada ao Provedor leva o token de segurança da conta no cabeçalho `Client-Token`
+
+#### Scenario: T-87 Recusa da Z-API passa ao próximo Canal
+- **WHEN** com a Z-API ativa, a ordem é WhatsApp → SMS e o Provedor recusa o token, a instância ou o token de segurança da conta
+- **THEN** a Tentativa de WhatsApp fica falhou sem Retentativa, com o motivo do Provedor, e a próxima Tentativa é no Canal SMS
+
+#### Scenario: T-88 Z-API indisponível é Falha temporária
+- **WHEN** com a Z-API ativa, o Provedor responde com limite de taxa, erro de servidor ou não responde
+- **THEN** existe uma Retentativa pendente no Canal WhatsApp
+
+#### Scenario: T-89 Texto longo demais não chega à Z-API
+- **WHEN** com a Z-API ativa, o texto da versão WhatsApp preenchido passa de 4096 caracteres e a ordem é WhatsApp → SMS
+- **THEN** o Provedor não é chamado, a Tentativa de WhatsApp fica falhou como Falha definitiva e a próxima é no Canal SMS
+
 ### Requirement: REQ-11 Versão WhatsApp do Template
-Onde o Template tiver versão WhatsApp, o sistema SHALL tratá-la como a
-referência a um Modelo aprovado (nome, idioma e parâmetros ordenados, cada um
-uma variável do Template) e SHALL aceitar pedidos com o Canal WhatsApp na
-Ordem de Canais usando o telefone do Destinatário como contato.
+A versão WhatsApp do Template SHALL ser um Modelo aprovado (nome, idioma e
+parâmetros ordenados, cada um uma variável), um texto com variáveis, ou os
+dois, e o pedido com WhatsApp na Ordem de Canais SHALL usar o telefone do
+Destinatário. Com o Canal ligado e na ordem, versão sem a forma do Provedor
+ativo SHALL ser recusada com "versão whatsapp sem texto" (UltraMsg ou Z-API)
+ou "versão whatsapp sem modelo aprovado" (Meta), sem registrar nada.
 Origem: RN-4
 
 #### Scenario: T-32 Pedido com WhatsApp na ordem é aceito
@@ -181,6 +224,22 @@ Origem: RN-4
 #### Scenario: T-33 Parâmetro do Modelo aprovado é variável exigida
 - **WHEN** o pedido com Canal WhatsApp omite a variável `nome`, usada como parâmetro 1 do Modelo aprovado
 - **THEN** o pedido é recusado citando a variável faltante e nada é registrado
+
+#### Scenario: T-78 Versão sem texto é recusada com o UltraMsg ativo
+- **WHEN** com o UltraMsg ativo, o pedido informa `canais` WhatsApp → SMS para um Template cuja versão WhatsApp só tem Modelo aprovado
+- **THEN** o pedido é recusado com o motivo "versão whatsapp sem texto" e nada é registrado
+
+#### Scenario: T-79 Versão sem Modelo aprovado é recusada com a Meta ativa
+- **WHEN** com a Meta ativa, o pedido informa `canais` WhatsApp → SMS para um Template cuja versão WhatsApp só tem texto
+- **THEN** o pedido é recusado com o motivo "versão whatsapp sem modelo aprovado" e nada é registrado
+
+#### Scenario: T-80 Variável do texto do WhatsApp é exigida
+- **WHEN** com o UltraMsg ativo, o pedido com Canal WhatsApp omite a variável `nome`, usada no texto da versão WhatsApp
+- **THEN** o pedido é recusado citando a variável faltante e nada é registrado
+
+#### Scenario: T-90 Versão sem texto é recusada com a Z-API ativa
+- **WHEN** com a Z-API ativa, o pedido informa `canais` WhatsApp → SMS para um Template cuja versão WhatsApp só tem Modelo aprovado
+- **THEN** o pedido é recusado com o motivo "versão whatsapp sem texto" e nada é registrado
 
 ### Requirement: REQ-12 Receber Aviso de status do Provedor
 Quando chegar um Aviso de status com assinatura válida do Provedor, o sistema
@@ -392,3 +451,98 @@ Origem: RN-4
 #### Scenario: T-69 Webhook da Meta com o Canal desligado
 - **WHEN** o WhatsApp está desligado e chega a verificação ou um Aviso de status em `/webhooks/whatsapp`
 - **THEN** a resposta é 404 e nenhuma Tentativa muda
+
+### Requirement: REQ-21 Provedor do WhatsApp sem Aviso de status
+Enquanto o Provedor do WhatsApp ativo for o UltraMsg, o sistema SHALL manter
+como enviada a Tentativa aceita por ele, sem esperar Aviso de status; com o
+UltraMsg ou a Z-API ativos, SHALL responder como rota inexistente à
+verificação e aos Avisos de status em `/webhooks/whatsapp` (os avisos da Z-API
+chegam pelo REQ-37).
+Origem: RN-4, RN-5
+
+#### Scenario: T-81 Webhook da Meta com o UltraMsg ativo
+- **WHEN** o UltraMsg é o Provedor do WhatsApp e chega a verificação ou um Aviso de status em `/webhooks/whatsapp`
+- **THEN** a resposta é 404 e nenhuma Tentativa muda
+
+#### Scenario: T-91 Webhook da Meta com a Z-API ativa
+- **WHEN** a Z-API é o Provedor do WhatsApp e chega a verificação ou um Aviso de status em `/webhooks/whatsapp`
+- **THEN** a resposta é 404 e nenhuma Tentativa muda
+
+### Requirement: REQ-37 Aviso da Z-API autenticado pela URL
+Quando chegar um aviso da Z-API com o segredo da URL e a instância configurados
+para a Z-API ativa, o sistema SHALL tratá-lo como Aviso de status válido
+(REQ-12, REQ-13) e responder `200 {"value": true}`, inclusive se nada mudar; com
+segredo errado, outra instância ou a Z-API inativa, SHALL responder como rota
+inexistente, sem efeito.
+Origem: RN-5, RN-4
+
+#### Scenario: T-121 Aviso com o segredo e a instância certos é aceito
+- **WHEN** a Z-API está ativa e chega em `/webhooks/zapi/<segredo atual>` o status `RECEIVED` de uma Tentativa enviada, com o `instanceId` configurado
+- **THEN** a resposta é 200 `{"value": true}` e a Tentativa fica entregue
+
+#### Scenario: T-122 Segredo errado é recusado como rota inexistente
+- **WHEN** chega um aviso com um segredo diferente do atual, inclusive o segredo anterior a uma regravação
+- **THEN** a resposta é 404 e nenhuma Tentativa muda
+
+#### Scenario: T-123 Aviso de outra instância é recusado
+- **WHEN** chega um aviso com o segredo atual e um `instanceId` diferente do configurado
+- **THEN** a resposta é 404 e nenhuma Tentativa muda
+
+#### Scenario: T-124 Sem a Z-API ativa a rota não existe
+- **WHEN** o UltraMsg ou a Meta é o Provedor ativo, ou o WhatsApp está desligado, e chega um aviso em `/webhooks/zapi/<qualquer segredo>`
+- **THEN** a resposta é 404 e nenhuma Tentativa muda
+
+#### Scenario: T-125 Aviso autêntico sem efeito responde sucesso
+- **WHEN** chega um aviso autêntico de uma mensagem que o OminiCore não conhece, ou um `RECEIVED` repetido de Tentativa já lida
+- **THEN** a resposta é 200 `{"value": true}` e nada muda
+
+### Requirement: REQ-38 Status da mensagem pela Z-API
+Quando chegar da Z-API um aviso válido de status, o sistema SHALL aplicar a
+cada id da lista `ids` o status entregue para `RECEIVED` e lida para `READ` ou
+`PLAYED`, só fazendo avançar (REQ-12), e SHALL ignorar `SENT` e `READ_BY_ME`.
+Origem: RN-5, RN-4
+
+#### Scenario: T-126 Leitura confirmada pela Z-API
+- **WHEN** chega da Z-API o status `READ` com o id de uma Tentativa entregue
+- **THEN** a Tentativa fica lida e a Notificação segue entregue
+
+#### Scenario: T-127 Status SENT não muda nada
+- **WHEN** chega da Z-API o status `SENT` com o id de uma Tentativa enviada
+- **THEN** a Tentativa continua enviada e a resposta é 200 `{"value": true}`
+
+### Requirement: REQ-39 Erro de envio da Z-API depois do aceite
+Quando chegar da Z-API um aviso válido "Ao enviar" com `error`, o sistema SHALL
+marcar a Tentativa como falhou, como contato inválido para "Phone number does
+not exist" ou número inválido e como recusado pelo Provedor nos demais, e
+seguir o REQ-13; sem `error`, SHALL manter a Tentativa como está.
+Origem: RN-5, RN-4, RN-2
+
+#### Scenario: T-128 Número sem WhatsApp passa ao SMS
+- **WHEN** a ordem é WhatsApp → SMS, a Z-API aceitou a Tentativa e chega "Ao enviar" com `error` "Phone number does not exist"
+- **THEN** a Tentativa de WhatsApp fica falhou com classificação contato inválido e existe uma Tentativa pendente no Canal SMS
+
+#### Scenario: T-129 Shadow ban é recusa do Provedor
+- **WHEN** chega "Ao enviar" com `error` "The message was not sent due to a likely shadow ban" de uma Tentativa enviada
+- **THEN** a Tentativa fica falhou com classificação recusado pelo Provedor
+
+#### Scenario: T-130 Ao enviar sem erro não muda nada
+- **WHEN** chega "Ao enviar" sem `error` de uma Tentativa enviada
+- **THEN** a Tentativa continua enviada e a resposta é 200 `{"value": true}`
+
+### Requirement: REQ-44 Templates do wbem para o tomador
+Quando o Sistema de origem pedir uma Notificação com o Template
+`wbem-link-tomador` ou `wbem-otp-tomador`, o sistema SHALL encontrá-lo com a
+versão WhatsApp em texto e preenchê-la com a variável `link` ou `codigo`; o
+Template SHALL ter só o Canal WhatsApp.
+Origem: RN-13
+
+#### Scenario: T-139 Os dois Templates preenchem o texto do WhatsApp
+- **GIVEN** o banco com as migrations aplicadas
+- **WHEN** o Template `wbem-link-tomador` é preenchido com `link` e o
+  `wbem-otp-tomador` com `codigo`
+- **THEN** o texto do WhatsApp traz o link e o código, a Ordem de Canais é só
+  WhatsApp e o texto serve à Z-API e ao UltraMsg
+
+#### Scenario: T-140 Pedido sem a variável ou por outro Canal é recusado
+- **WHEN** o pedido usa `wbem-otp-tomador` sem `codigo`, ou pede o Canal SMS
+- **THEN** o pedido é recusado (422) e nada é registrado
