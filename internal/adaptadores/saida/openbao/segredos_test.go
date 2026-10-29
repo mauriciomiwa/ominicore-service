@@ -11,6 +11,7 @@ import (
 
 	"ominicore/internal/adaptadores/saida/openbao"
 	"ominicore/internal/dominio"
+	"ominicore/internal/testes/baofake"
 )
 
 // kvFalso responde o KV v2 só nos caminhos dados; o resto é 404.
@@ -146,7 +147,7 @@ func TestWhatsAppLigadoComTodasAsCredenciais(t *testing.T) {
 	kv["/v1/kv/data/ominicore/webhooks"]["meta_app_secret"] = "s"
 	kv["/v1/kv/data/ominicore/webhooks"]["meta_verify_token"] = "v"
 	seg, err := openbao.Carregar(context.Background(), openbao.Config{Endereco: kvFalso(t, kv), Token: "t"})
-	if err != nil || !seg.WhatsAppLigado || seg.WhatsApp["phone_number_id"] != "1" || seg.Webhooks["meta_verify_token"] != "v" {
+	if err != nil || !seg.WhatsAppLigado || seg.WhatsApp["phone_number_id"] != "1" || seg.WhatsApp["meta_verify_token"] != "v" {
 		t.Fatalf("segredos = %+v err = %v", seg, err)
 	}
 }
@@ -232,5 +233,36 @@ func TestT64_ProvedorMetaExplicitoExigeOsCamposDaMeta(t *testing.T) {
 	seg, err := openbao.Carregar(context.Background(), openbao.Config{Endereco: kvFalso(t, kv), Token: "t"})
 	if err != nil || seg.ProvedorWhatsApp != dominio.WhatsAppMeta {
 		t.Fatalf("segredos = %+v err = %v", seg, err)
+	}
+}
+
+// T-98 no cofre: o KV v2 só marca a versão como apagada (soft delete); a
+// leitura seguinte tem de ver o Canal desligado, não uma configuração
+// incompleta (REQ-24, change 12).
+func TestT98_VersaoApagadaDoWhatsAppELidaComoDesligado(t *testing.T) {
+	kv := baofake.Novo(t, map[string]map[string]any{})
+	cofre, err := openbao.Abrir(t.Context(), openbao.Config{Endereco: kv.URL, Token: "t"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	zapi, err := dominio.NovaConfigWhatsApp("zapi", map[string]string{"instance_id": "inst1", "token": "tk"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := cofre.GravarWhatsApp(t.Context(), zapi); err != nil {
+		t.Fatal(err)
+	}
+	if err := cofre.ApagarWhatsApp(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := cofre.LerWhatsApp(t.Context())
+	if err != nil || cfg.Ligado {
+		t.Fatalf("depois de desligar: cfg = %+v err = %v, quero desligado sem erro", cfg, err)
+	}
+	if err := cofre.GravarWhatsApp(t.Context(), zapi); err != nil {
+		t.Fatal(err)
+	}
+	if cfg, err := cofre.LerWhatsApp(t.Context()); err != nil || !cfg.Ligado || cfg.Provedor != dominio.WhatsAppZAPI {
+		t.Fatalf("gravar depois de desligar deve religar: cfg = %+v err = %v", cfg, err)
 	}
 }

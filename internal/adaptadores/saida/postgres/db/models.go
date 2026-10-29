@@ -6,7 +6,18 @@ package db
 
 import (
 	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
+
+type ConfigEvento struct {
+	ID       int64
+	Canal    string
+	Acao     string
+	Provedor pgtype.Text
+	Por      string
+	Em       time.Time
+}
 
 type Idempotencium struct {
 	SistemaOrigem string

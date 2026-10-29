@@ -1,0 +1,9 @@
+[
+  {
+    "id": "prod",
+    "producao": true,
+    "issuer": "https://auth.flipapi.com.br/realms/ominicore",
+    "clientId": "ominicore-console",
+    "api": "https://notify.flipapi.com.br"
+  }
+]

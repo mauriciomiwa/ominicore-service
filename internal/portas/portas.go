@@ -99,3 +99,47 @@ type TentativaConsultada struct {
 type MessageSenderPort interface {
 	Enviar(ctx context.Context, para string, conteudo dominio.ConteudoCanal) dominio.ResultadoEnvio
 }
+
+// EstadoCanais é o estado atual dos Canais no ambiente, que pode mudar sem
+// reiniciar (REQ-26): quais estão desligados e o Provedor do WhatsApp.
+type EstadoCanais interface {
+	Desligados() map[dominio.Canal]bool
+	ProvedorWhatsApp() dominio.ProvedorWhatsApp
+}
+
+// CofreWhatsAppPort lê e grava a configuração do Canal WhatsApp no cofre
+// (REQ-22, REQ-24, REQ-26).
+type CofreWhatsAppPort interface {
+	LerWhatsApp(ctx context.Context) (dominio.ConfigWhatsApp, error)
+	GravarWhatsApp(ctx context.Context, cfg dominio.ConfigWhatsApp) error
+	ApagarWhatsApp(ctx context.Context) error
+}
+
+// EventoConfig é uma troca de configuração de um Canal pela API, sem segredo
+// (REQ-27). Acao é "gravada" ou "apagada"; Provedor fica vazio ao apagar.
+type EventoConfig struct {
+	Canal    dominio.Canal
+	Acao     string
+	Provedor dominio.ProvedorWhatsApp
+	Por      string
+}
+
+// RegistroConfigPort guarda as trocas de configuração (REQ-27).
+type RegistroConfigPort interface {
+	RegistrarEventoConfig(ctx context.Context, e EventoConfig) error
+}
+
+// Identidade é quem chamou a API, lida do token do Keycloak: o client (`azp`),
+// a pessoa (`preferred_username`, vazio em token de client) e os papéis do
+// realm (REQ-1, REQ-25, REQ-36).
+type Identidade struct {
+	Client  string
+	Usuario string
+	Papeis  []string
+}
+
+// CadastroWebhooksPort cadastra no Provedor do WhatsApp as URLs dos Avisos de
+// status (hoje só a Z-API: "Ao enviar" e "Status", REQ-40).
+type CadastroWebhooksPort interface {
+	Cadastrar(ctx context.Context, cfg dominio.ConfigWhatsApp, url string) error
+}

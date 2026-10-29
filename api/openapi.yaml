@@ -67,6 +67,12 @@ paths:
           $ref: "#/components/responses/Problema"
         "401":
           $ref: "#/components/responses/Problema"
+        "403":
+          description: Token do Console do Operador; ele não pede Notificações nem mexe em Opt-out (REQ-36).
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
         "422":
           $ref: "#/components/responses/Problema"
         "500":
@@ -96,6 +102,12 @@ paths:
                 $ref: "#/components/schemas/Consulta"
         "401":
           $ref: "#/components/responses/Problema"
+        "403":
+          description: Token do Console do Operador; ele não pede Notificações nem mexe em Opt-out (REQ-36).
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
         "404":
           $ref: "#/components/responses/Problema"
         "500":
@@ -124,6 +136,12 @@ paths:
           $ref: "#/components/responses/Problema"
         "401":
           $ref: "#/components/responses/Problema"
+        "403":
+          description: Token do Console do Operador; ele não pede Notificações nem mexe em Opt-out (REQ-36).
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
         "500":
           $ref: "#/components/responses/Problema"
     delete:
@@ -146,7 +164,185 @@ paths:
           $ref: "#/components/responses/Problema"
         "401":
           $ref: "#/components/responses/Problema"
+        "403":
+          description: Token do Console do Operador; ele não pede Notificações nem mexe em Opt-out (REQ-36).
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
         "500":
+          $ref: "#/components/responses/Problema"
+  /v1/config/whatsapp:
+    options:
+      operationId: preflightConfigWhatsApp
+      summary: Preflight de CORS do Console do Operador
+      description: |
+        Responde o preflight do navegador antes da autenticação (o navegador
+        não manda o token aqui). Só a origem do Console do Operador
+        (`OMINICORE_CONSOLE_ORIGEM`) é autorizada; outra origem recebe 403 sem
+        cabeçalho de CORS (REQ-34). As rotas de envio e de Opt-out não têm CORS.
+      security: []
+      parameters:
+        - name: Origin
+          in: header
+          required: true
+          schema:
+            type: string
+          example: https://ominicore.flipapi.com.br
+      responses:
+        "204":
+          description: Origem do Console autorizada.
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+            Access-Control-Allow-Methods:
+              schema:
+                type: string
+              example: GET, PUT, DELETE
+            Access-Control-Allow-Headers:
+              schema:
+                type: string
+              example: Authorization, Content-Type
+            Access-Control-Max-Age:
+              schema:
+                type: integer
+              example: 600
+        "403":
+          $ref: "#/components/responses/Problema"
+    get:
+      operationId: consultarConfigWhatsApp
+      summary: Consultar a configuração do Canal WhatsApp (Operador)
+      description: |
+        Só para o Operador: token com o papel de realm `ominicore-config`
+        (RN-11). Devolve o Provedor e os campos públicos; de cada segredo,
+        só se está configurado — nunca o valor (REQ-23).
+      responses:
+        "200":
+          description: Configuração atual.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigWhatsApp"
+              example:
+                ligado: true
+                provedor: zapi
+                campos:
+                  instance_id: 3C4F2A
+                segredos:
+                  token: true
+                  client_token: false
+        "401":
+          $ref: "#/components/responses/Problema"
+        "403":
+          $ref: "#/components/responses/Problema"
+        "503":
+          $ref: "#/components/responses/Problema"
+    put:
+      operationId: gravarConfigWhatsApp
+      summary: Gravar o Provedor e as credenciais do WhatsApp (Operador)
+      description: |
+        Substitui a configuração inteira no OpenBao e vale sem reiniciar: a
+        api na hora, o worker na próxima releitura (`OMINICORE_CONFIG_RELEITURA`,
+        padrão 30 s). Campos exigidos: `meta` = `token`, `phone_number_id`,
+        `meta_app_secret`, `meta_verify_token`; `ultramsg` e `zapi` =
+        `instance_id`, `token` (`zapi` aceita `client_token`). Outros campos
+        são ignorados. A credencial não é testada no Provedor. Cada troca fica
+        registrada com o Operador (`azp`), sem segredo.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GravarConfigWhatsApp"
+            example:
+              provedor: zapi
+              instance_id: 3C4F2A
+              token: "<token da instância>"
+              client_token: "<token de segurança da conta>"
+      responses:
+        "200":
+          description: Gravada; devolve a visão sem segredos.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigWhatsApp"
+        "400":
+          $ref: "#/components/responses/Problema"
+        "401":
+          $ref: "#/components/responses/Problema"
+        "403":
+          $ref: "#/components/responses/Problema"
+        "422":
+          description: Provedor desconhecido ou campo exigido faltando; nada é gravado.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
+        "500":
+          description: Gravada, mas o registro da troca falhou (fica no log).
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problema"
+        "503":
+          $ref: "#/components/responses/Problema"
+    delete:
+      operationId: desligarWhatsApp
+      summary: Desligar o Canal WhatsApp (Operador)
+      description: |
+        Apaga a configuração: o Canal passa a desligado (pulado na ordem;
+        pedido só por WhatsApp = 422). Idempotente.
+      responses:
+        "204":
+          description: Desligado (ou já estava).
+        "401":
+          $ref: "#/components/responses/Problema"
+        "403":
+          $ref: "#/components/responses/Problema"
+        "500":
+          $ref: "#/components/responses/Problema"
+        "503":
+          $ref: "#/components/responses/Problema"
+  /v1/config/whatsapp/webhooks:
+    options:
+      operationId: preflightWebhooksZAPI
+      summary: Preflight de CORS do Console do Operador (recadastro)
+      description: Como o de `/v1/config/whatsapp`, só com o método `POST` (REQ-34).
+      security: []
+      parameters:
+        - name: Origin
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Origem do Console autorizada.
+        "403":
+          $ref: "#/components/responses/Problema"
+    post:
+      operationId: recadastrarWebhooksZAPI
+      summary: Recadastrar na Z-API as URLs dos Avisos de status (Operador)
+      description: |
+        Cadastra de novo na Z-API as URLs de "Ao enviar" e de "Status" com o
+        segredo atual, sem trocá-lo (REQ-41). A resposta traz o estado do
+        cadastro em `campos.webhooks_estado`; o segredo nunca sai. Só com a
+        Z-API ativa: senão 409, sem efeito.
+      responses:
+        "200":
+          description: Recadastro tentado; o estado diz se a Z-API aceitou.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigWhatsApp"
+        "401":
+          $ref: "#/components/responses/Problema"
+        "403":
+          $ref: "#/components/responses/Problema"
+        "409":
+          $ref: "#/components/responses/Problema"
+        "503":
           $ref: "#/components/responses/Problema"
 components:
   securitySchemes:
@@ -273,6 +469,40 @@ components:
         contato:
           type: string
           description: E-mail (Canal email) ou telefone E.164 (Canais sms e whatsapp).
+    ConfigWhatsApp:
+      type: object
+      description: Configuração do Canal WhatsApp sem segredos (REQ-23).
+      required: [ligado]
+      properties:
+        ligado:
+          type: boolean
+        provedor:
+          type: string
+          enum: [meta, ultramsg, zapi]
+        campos:
+          type: object
+          description: |
+            Campos que não são segredo (`instance_id`, `phone_number_id`). Com a
+            Z-API, também o estado do cadastro dos webhooks na Z-API
+            (`webhooks_estado`: `cadastrados` ou `falhou`; `webhooks_em`, RFC 3339 —
+            REQ-40). O segredo da URL dos avisos aparece só em `segredos`
+            (`webhook_segredo`).
+          additionalProperties:
+            type: string
+        segredos:
+          type: object
+          description: Para cada segredo do Provedor, se está configurado.
+          additionalProperties:
+            type: boolean
+    GravarConfigWhatsApp:
+      type: object
+      required: [provedor]
+      properties:
+        provedor:
+          type: string
+          enum: [meta, ultramsg, zapi]
+      additionalProperties:
+        type: string
     Problema:
       type: object
       required: [status, title]

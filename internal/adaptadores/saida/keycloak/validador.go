@@ -16,6 +16,8 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+
+	"ominicore/internal/portas"
 )
 
 // ErrNaoAutenticado cobre qualquer token recusado; o motivo vai no wrap.
@@ -63,11 +65,17 @@ func NovoComBackchannel(emissor, realmInterno, publico string, cache Cache) *Val
 	return v
 }
 
-// SistemaOrigem valida o token e devolve o client que o pediu (`azp`).
-func (v *Validador) SistemaOrigem(ctx context.Context, token string) (string, error) {
+// Identificar valida o token e devolve o client que o pediu (`azp`), a pessoa
+// (`preferred_username`, quando o token é de um usuário) e os papéis do realm
+// (`realm_access.roles`), que dão permissões como a do Operador (REQ-25).
+func (v *Validador) Identificar(ctx context.Context, token string) (portas.Identidade, error) {
 	claims := struct {
 		jwt.RegisteredClaims
-		AZP string `json:"azp"`
+		AZP         string `json:"azp"`
+		Usuario     string `json:"preferred_username"`
+		RealmAccess struct {
+			Roles []string `json:"roles"`
+		} `json:"realm_access"`
 	}{}
 	_, err := jwt.ParseWithClaims(token, &claims, func(t *jwt.Token) (any, error) {
 		kid, _ := t.Header["kid"].(string)
@@ -80,12 +88,12 @@ func (v *Validador) SistemaOrigem(ctx context.Context, token string) (string, er
 		jwt.WithLeeway(30*time.Second),
 	)
 	if err != nil {
-		return "", fmt.Errorf("%w: %w", ErrNaoAutenticado, err)
+		return portas.Identidade{}, fmt.Errorf("%w: %w", ErrNaoAutenticado, err)
 	}
 	if claims.AZP == "" {
-		return "", fmt.Errorf("%w: token sem azp", ErrNaoAutenticado)
+		return portas.Identidade{}, fmt.Errorf("%w: token sem azp", ErrNaoAutenticado)
 	}
-	return claims.AZP, nil
+	return portas.Identidade{Client: claims.AZP, Usuario: claims.Usuario, Papeis: claims.RealmAccess.Roles}, nil
 }
 
 // chave procura o kid no JWKS em cache; kid desconhecido força nova leitura

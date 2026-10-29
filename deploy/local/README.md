@@ -13,6 +13,15 @@ go run ./cmd/ominicore api           # :8080
 go run ./cmd/ominicore worker        # em outro terminal
 ```
 
+Console do Operador (RN-12) em `http://localhost:5173`, contra o Keycloak e a
+API locais. O `bootstrap.sh` cria o client `ominicore-console` e a pessoa
+`operador.local`, e mostra a senha temporária uma vez. No primeiro login o
+Keycloak pede o OTP (app autenticador), a nova senha e o nome.
+
+```bash
+cd web/console && bun install && bun run dev   # bun run test · bun run lint · bun run build
+```
+
 Pedir uma Notificação com o Sistema de origem de teste (`sistema-local`):
 
 ```bash
@@ -22,6 +31,18 @@ TOKEN=$(curl -s -d grant_type=client_credentials -d client_id=sistema-local \
 curl -i -X POST http://localhost:8080/v1/notificacoes \
   -H "Authorization: Bearer $TOKEN" -H "Idempotency-Key: teste-1" \
   -d '{"template_id":"boas-vindas","destinatario":{"email":"voce@exemplo.com"},"dados":{"nome":"Você"}}'
+```
+
+Ver e trocar a configuração do WhatsApp com o Operador de teste
+(`operador-local`, papel `ominicore-config`):
+
+```bash
+OPS=$(curl -s -d grant_type=client_credentials -d client_id=operador-local \
+  -d client_secret=operador-local-secret \
+  http://localhost:8081/realms/ominicore/protocol/openid-connect/token | jq -r .access_token)
+curl -s -H "Authorization: Bearer $OPS" http://localhost:8080/v1/config/whatsapp
+curl -s -X PUT -H "Authorization: Bearer $OPS" http://localhost:8080/v1/config/whatsapp \
+  -d '{"provedor":"zapi","instance_id":"instancia0","token":"local-invalido"}'
 ```
 
 Sem chave SendGrid real, a Tentativa termina `falhou` com `sendgrid 401` e o
@@ -55,6 +76,9 @@ TWILIO_MESSAGING_SERVICE_SID=...` antes do `./deploy/local/bootstrap.sh`.
 | `OMINICORE_WHATSAPP_URL` | `https://graph.facebook.com` | trocar só em teste (versão da Graph API fixada no adaptador) |
 | `OMINICORE_ULTRAMSG_URL` | `https://api.ultramsg.com` | trocar só em teste (UltraMsg falso) |
 | `OMINICORE_ZAPI_URL` | `https://api.z-api.io` | trocar só em teste (Z-API falsa) |
+| `OMINICORE_CONFIG_RELEITURA` | `30s` | intervalo da releitura da configuração do WhatsApp no cofre (≥ 1s) |
+| `OMINICORE_CONSOLE_ORIGEM` | — | origem do Console do Operador, a única com CORS em `/v1/config/*` (local: `http://localhost:5173`; hml/prod: `https://ominicore.flipapi.com.br`); vazia = sem CORS |
+| `OMINICORE_CONSOLE_CLIENT` | `ominicore-console` | client público do Console: recusado no envio e no Opt-out; nas trocas, registra a pessoa (`preferred_username`) |
 
 Segredos no OpenBao: `kv/<prefixo>/postgres` (`dsn`), `kv/<prefixo>/sendgrid`
 (`api_key`, `remetente`), `kv/<prefixo>/twilio` (`account_sid`, `api_key_sid`,

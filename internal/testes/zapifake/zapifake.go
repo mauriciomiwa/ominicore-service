@@ -1,6 +1,7 @@
 // Package zapifake simula o endpoint send-text da Z-API nos testes: guarda cada
 // mensagem recebida (com o header Client-Token) e responde com o status e o
-// erro configurados. Sucesso segue a doc
+// erro configurados. Também simula o cadastro das URLs dos webhooks
+// (PUT .../update-webhook-delivery e .../update-webhook-message-status). Sucesso segue a doc
 // (https://developer.z-api.io/message/send-text): {"zaapId","messageId","id"};
 // erro: {"error":"..."}.
 package zapifake
@@ -30,16 +31,18 @@ type Mensagem struct {
 
 // Fake guarda as mensagens recebidas.
 type Fake struct {
-	URL    string
-	mu     sync.Mutex
-	status int
-	erro   string
-	msgs   []Mensagem
+	URL       string
+	mu        sync.Mutex
+	status    int
+	erro      string
+	msgs      []Mensagem
+	webhooks  map[string]string // caminho (update-webhook-...) → URL cadastrada
+	falharCad bool
 }
 
 // Novo sobe o fake respondendo 200 com messageId.
 func Novo(t *testing.T) *Fake {
-	f := &Fake{status: http.StatusOK}
+	f := &Fake{status: http.StatusOK, webhooks: map[string]string{}}
 	srv := httptest.NewServer(http.HandlerFunc(f.receber))
 	t.Cleanup(srv.Close)
 	f.URL = srv.URL
@@ -54,7 +57,48 @@ func (f *Fake) Responder(status int, erro string) {
 	f.status, f.erro = status, erro
 }
 
+// FalharCadastro faz o cadastro de webhooks responder erro (T-132).
+func (f *Fake) FalharCadastro(falhar bool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.falharCad = falhar
+}
+
+// Webhooks devolve as URLs cadastradas por caminho.
+func (f *Fake) Webhooks() map[string]string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	out := map[string]string{}
+	for k, v := range f.webhooks {
+		out[k] = v
+	}
+	return out
+}
+
+func (f *Fake) cadastrar(w http.ResponseWriter, r *http.Request, caminho string) {
+	var corpo struct {
+		Value string `json:"value"`
+	}
+	w.Header().Set("Content-Type", "application/json")
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.falharCad || json.NewDecoder(r.Body).Decode(&corpo) != nil || corpo.Value == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"error":"webhook não aceito"}`))
+		return
+	}
+	f.webhooks[caminho] = corpo.Value
+	_, _ = w.Write([]byte(`{"value":true}`))
+}
+
 func (f *Fake) receber(w http.ResponseWriter, r *http.Request) {
+	base := "/instances/" + InstanceID + "/token/" + Token + "/"
+	for _, caminho := range []string{"update-webhook-delivery", "update-webhook-message-status"} {
+		if r.Method == http.MethodPut && r.URL.Path == base+caminho {
+			f.cadastrar(w, r, caminho)
+			return
+		}
+	}
 	var corpo struct {
 		Phone   string `json:"phone"`
 		Message string `json:"message"`

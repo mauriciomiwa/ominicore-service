@@ -1,0 +1,86 @@
+name: console
+
+# Console do Operador (RN-12): web/console. CI em todo PR que mexe nele; deploy
+# manual (workflow_dispatch) na main, seguido da verificação de exposição; e a
+# verificação diária, que pega regra de WAF desligada à mão (ADR 0006).
+on:
+  pull_request:
+    paths: ["web/console/**", ".github/workflows/console.yml", "deploy/aviva2/verificar-exposicao.sh"]
+  push:
+    branches: [main]
+    paths: ["web/console/**", ".github/workflows/console.yml"]
+  workflow_dispatch:
+    inputs:
+      publicar:
+        description: "Publicar o Console em ominicore.flipapi.com.br"
+        type: boolean
+        default: false
+  schedule:
+    - cron: "17 9 * * *" # 06:17 em Brasília
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web/console
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: web/console/package.json
+      - run: bun install --frozen-lockfile
+      - name: lint (sem texto fixo, sem v-html)
+        run: bun run lint
+      - name: tipos
+        run: bun run typecheck
+      - name: testes (T-106 a T-112)
+        run: bun run test
+      - run: bun run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: console-dist
+          path: web/console/dist
+          retention-days: 7
+
+  publicar:
+    needs: ci
+    if: github.event_name == 'workflow_dispatch' && inputs.publicar && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: console
+    defaults:
+      run:
+        working-directory: web/console
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: web/console/package.json
+      - run: bun install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: console-dist
+          path: web/console/dist
+      - name: wrangler deploy
+        run: bunx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+  exposicao:
+    needs: [publicar]
+    # o agendamento só vale depois do primeiro deploy (variável do repositório CONSOLE_PUBLICADO=true)
+    if: always() && ((github.event_name == 'schedule' && vars.CONSOLE_PUBLICADO == 'true') || needs.publicar.result == 'success')
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ambiente: [hml, prod]
+    steps:
+      - uses: actions/checkout@v4
+      - name: T-113 a T-115 de fora do escritório
+        run: ./deploy/aviva2/verificar-exposicao.sh ${{ matrix.ambiente }}

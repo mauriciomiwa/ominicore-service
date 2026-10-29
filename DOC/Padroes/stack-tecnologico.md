@@ -27,7 +27,9 @@ decisão ou chute. "Sabatina" = confirmado pelo usuário no kickoff de 2026-09-2
 | Execução | um binário, dois subcomandos: `ominicore api` e `ominicore worker` | sabatina (P12) |
 | Local | `podman compose` com Postgres, Redis, OpenBao (dev) e Keycloak | sabatina (P12) |
 | Deploy | quadlets Podman no host aviva2.0 (EC2 arm64, us-east-1), binário `CGO_ENABLED=0 GOARCH=arm64` montado em `distroless/static`, atrás do Traefik | sabatina (P12a) + `flip/aviva-back/deploy/aviva2/publicar.sh` |
-| Exposição | só `/webhooks/*` público (Traefik + Cloudflare, assinatura do Provedor validada); API de envio só na rede `aviva` (ADR 0003) | sabatina (P12b) |
+| Exposição | `/webhooks/*` público (Traefik + Cloudflare, assinatura do Provedor validada); `/v1/config/*` público só do IP do escritório (WAF da Cloudflare, JWT com papel, CORS só do Console — ADR 0006); API de envio só na rede `aviva` (ADR 0003) | sabatina (P12b) + sabatina da fatia 11 (P2, P4b) |
+| Console do Operador (front) | `web/console/`: template Materio free 2.3.0 (ThemeSelection, MIT; `LICENSE-materio`) enxuto; Vue 3.5, Vuetify 3.13, Vite 6, TypeScript, Pinia, vue-router; `oidc-client-ts` 3 (Authorization Code + PKCE, token em memória); `vue-i18n` 11 só pt-BR (`src/locales/pt-BR.json`); fonte Inter local (`@fontsource/inter`); bun 1.3 (`packageManager`) | sabatina da fatia 11 (P5, P11) + `web/console/package.json` |
+| Hospedagem do Console | Cloudflare Workers com Static Assets (`web/console/wrangler.jsonc`, sem `main`), domínio `ominicore.flipapi.com.br`, CSP e cabeçalhos em `public/_headers`; deploy pelo `wrangler` no GitHub Actions (`console.yml`) | sabatina da fatia 11 (P10) + precedente `../choice/wrangler.jsonc` |
 | Repositório / CI | GitHub + GitHub Actions + Dependabot | sabatina (P14) |
 
 ## Verificação automática
@@ -42,6 +44,8 @@ decisão ou chute. "Sabatina" = confirmado pelo usuário no kickoff de 2026-09-2
 | Vulnerabilidades | `govulncheck` | CI |
 | Código SQL gerado em dia | `sqlc diff` | CI |
 | Contrato | `redocly lint api/openapi.yaml` (`make contrato`) | CI (`.github/workflows/go.yml`) |
+| Front (Console) | ESLint 8 do template + `@intlify/vue-i18n/no-raw-text` (nenhum texto fixo) + `vue/no-v-html`; `vue-tsc`; Vitest + `@vue/test-utils` + happy-dom (T-106 a T-112) | CI (`.github/workflows/console.yml`) |
+| Exposição na borda | `deploy/aviva2/verificar-exposicao.sh` (T-113 a T-115) de fora do escritório | CI (`console.yml`), após deploy e diário |
 
 ## Decisões em aberto
 - **Cadastro de Templates no MVP:** seed por migration (proposto na fatia 1) ou

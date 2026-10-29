@@ -15,11 +15,13 @@ import (
 
 	"ominicore/internal/aplicacao"
 	"ominicore/internal/dominio"
+	"ominicore/internal/portas"
 )
 
-// Autenticador devolve o Sistema de origem do token (REQ-1).
+// Autenticador devolve quem chamou, pelo token (REQ-1).
 type Autenticador interface {
-	SistemaOrigem(ctx context.Context, token string) (string, error)
+	// Identificar devolve o client do token (`azp`), a pessoa e os papéis do realm.
+	Identificar(ctx context.Context, token string) (portas.Identidade, error)
 }
 
 // Servidor liga as rotas aos casos de uso.
@@ -28,26 +30,46 @@ type Servidor struct {
 	Enviar    aplicacao.SendMessageUseCase
 	Consultar aplicacao.ConsultarUseCase
 	OptOut    aplicacao.OptOutUseCase
+	// Config liga /v1/config/whatsapp, só para o Operador (RN-11); nil = sem rotas.
+	Config *aplicacao.ConfigurarUseCase
 	// Webhooks registra /webhooks/* (públicos, assinados pelo Provedor); nil = sem rotas.
 	Webhooks interface{ Registrar(*http.ServeMux) }
-	Log      *slog.Logger
+	// ConsoleOrigem é a origem do Console do Operador, a única autorizada por
+	// CORS em /v1/config/* (REQ-34); vazia = sem CORS.
+	ConsoleOrigem string
+	// ConsoleClient é o client público do Console: não pede Notificações nem
+	// mexe em Opt-out (REQ-36), e nas trocas registra a pessoa (REQ-27).
+	ConsoleClient string
+	Log           *slog.Logger
 }
 
 // Handler devolve o roteador HTTP.
 func (s Servidor) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) })
-	mux.Handle("POST /v1/notificacoes", s.autenticar(http.HandlerFunc(s.pedirNotificacao)))
-	mux.Handle("GET /v1/notificacoes/{id}", s.autenticar(http.HandlerFunc(s.consultarNotificacao)))
-	mux.Handle("POST /v1/opt-outs", s.autenticar(http.HandlerFunc(s.optOut(s.OptOut.Registrar))))
-	mux.Handle("DELETE /v1/opt-outs", s.autenticar(http.HandlerFunc(s.optOut(s.OptOut.Remover))))
+	mux.Handle("POST /v1/notificacoes", s.autenticar(s.soSistemaDeOrigem(http.HandlerFunc(s.pedirNotificacao))))
+	mux.Handle("GET /v1/notificacoes/{id}", s.autenticar(s.soSistemaDeOrigem(http.HandlerFunc(s.consultarNotificacao))))
+	mux.Handle("POST /v1/opt-outs", s.autenticar(s.soSistemaDeOrigem(http.HandlerFunc(s.optOut(s.OptOut.Registrar)))))
+	mux.Handle("DELETE /v1/opt-outs", s.autenticar(s.soSistemaDeOrigem(http.HandlerFunc(s.optOut(s.OptOut.Remover)))))
+	if s.Config != nil {
+		operador := func(h http.HandlerFunc) http.Handler { return s.cors(s.autenticar(exigirPapel(PapelOperador, h))) }
+		mux.Handle("GET /v1/config/whatsapp", operador(s.consultarConfig))
+		mux.Handle("PUT /v1/config/whatsapp", operador(s.gravarConfig))
+		mux.Handle("DELETE /v1/config/whatsapp", operador(s.apagarConfig))
+		mux.HandleFunc("OPTIONS /v1/config/whatsapp", s.preflight("GET, PUT, DELETE"))
+		mux.Handle("POST /v1/config/whatsapp/webhooks", operador(s.recadastrarWebhooks))
+		mux.HandleFunc("OPTIONS /v1/config/whatsapp/webhooks", s.preflight("POST"))
+	}
 	if s.Webhooks != nil {
 		s.Webhooks.Registrar(mux)
 	}
 	return mux
 }
 
-type chaveOrigem struct{}
+type (
+	chaveOrigem struct{}
+	chaveQuem   struct{}
+)
 
 // autenticar recusa com 401, antes de qualquer efeito, pedido sem token válido.
 func (s Servidor) autenticar(prox http.Handler) http.Handler {
@@ -57,13 +79,41 @@ func (s Servidor) autenticar(prox http.Handler) http.Handler {
 			problema(w, http.StatusUnauthorized, "não autenticado", "token Bearer ausente")
 			return
 		}
-		origem, err := s.Auth.SistemaOrigem(r.Context(), token)
+		id, err := s.Auth.Identificar(r.Context(), token)
 		if err != nil {
 			s.Log.InfoContext(r.Context(), "token recusado", "erro", err.Error())
 			problema(w, http.StatusUnauthorized, "não autenticado", "token inválido")
 			return
 		}
-		prox.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), chaveOrigem{}, origem)))
+		ctx := context.WithValue(r.Context(), chaveOrigem{}, id.Client)
+		ctx = context.WithValue(ctx, chavePapeis{}, id.Papeis)
+		ctx = context.WithValue(ctx, chaveQuem{}, s.quem(id))
+		prox.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+// quem é o Operador registrado nas trocas (REQ-27): a pessoa, quando o token
+// vem do Console; o client, nos demais.
+func (s Servidor) quem(id portas.Identidade) string {
+	if s.doConsole(id.Client) && id.Usuario != "" {
+		return id.Usuario
+	}
+	return id.Client
+}
+
+func (s Servidor) doConsole(client string) bool {
+	return s.ConsoleClient != "" && client == s.ConsoleClient
+}
+
+// soSistemaDeOrigem recusa com 403, sem efeito, o token do Console nas rotas de
+// Notificação e de Opt-out (REQ-36).
+func (s Servidor) soSistemaDeOrigem(prox http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if client, _ := r.Context().Value(chaveOrigem{}).(string); s.doConsole(client) {
+			problema(w, http.StatusForbidden, "sem permissão", "o Console do Operador não pede Notificações nem mexe em Opt-out")
+			return
+		}
+		prox.ServeHTTP(w, r)
 	})
 }
 

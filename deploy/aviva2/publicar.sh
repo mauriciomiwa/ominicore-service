@@ -48,7 +48,7 @@ CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags="-s -w -X main
 
 renderizar() { # template destino [PAPEL]
   PAPEL="${3:-}" AMBIENTE="$AMBIENTE" SUFIXO="$SUFIXO" REALM="$REALM" PREFIXO="$PREFIXO" SCHEMA="$SCHEMA" \
-  AUTH_MOUNT="$AUTH_MOUNT" ROLE="$ROLE" HOST_WEBHOOK="$HOST_WEBHOOK" \
+  AUTH_MOUNT="$AUTH_MOUNT" ROLE="$ROLE" HOST_WEBHOOK="$HOST_WEBHOOK" HOST_CONSOLE="$HOST_CONSOLE" \
     perl -pe 's/\$\{(\w+)\}/exists $ENV{$1} ? $ENV{$1} : die "variável $1 sem valor\n"/ge' "$1" > "$2"
 }
 renderizar deploy/aviva2/ominicore.env.tmpl "$OUT/ominicore.env"

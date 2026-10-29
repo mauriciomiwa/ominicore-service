@@ -1,0 +1,9 @@
+[
+  {
+    "id": "local",
+    "producao": false,
+    "issuer": "http://localhost:8081/realms/ominicore",
+    "clientId": "ominicore-console",
+    "api": "http://localhost:8080"
+  }
+]

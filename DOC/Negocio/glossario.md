@@ -72,6 +72,21 @@ _Evitar_: template da Meta, HSM, message template
 Serviço interno da casa que pede Notificações ao OminiCore.
 _Evitar_: cliente, consumidor, tenant
 
+**Operador**:
+Quem tem o papel de configuração do OminiCore no Keycloak e troca, pela API,
+o Provedor e as credenciais de um Canal; não pede Notificações por isso.
+_Evitar_: admin, administrador, usuário
+
+**Console do Operador**:
+Página web, aberta só a partir do escritório, em que o Operador escolhe o
+Ambiente e faz a configuração da API com a própria conta.
+_Evitar_: admin, painel admin, backoffice
+
+**Ambiente**:
+Instalação isolada do OminiCore (homologação ou produção), com realm, cofre e
+banco próprios; é o que o Console do Operador escolhe.
+_Evitar_: tenant, instância
+
 **Destinatário**:
 Pessoa que recebe a Notificação, identificada pelo contato em cada Canal.
 _Evitar_: cliente, usuário, contato

@@ -1,4 +1,4 @@
-// Package integracao prova, contra um Postgres real (testcontainers), o que o
+// Package integracao prova, contra um Postgres e um Keycloak reais (testcontainers), o que o
 // repositório em memória não alcança: transação, SKIP LOCKED e a idempotência
 // sob concorrência. Pula sozinho sem runtime de containers (Docker/Podman);
 // com Podman: `make itest`.
@@ -814,5 +814,40 @@ func TestT73_TextoDaVersaoWhatsAppNoSeedDoPostgres(t *testing.T) {
 	}
 	if dominio.WhatsAppUltraMsg.Servir(c) != nil || dominio.WhatsAppMeta.Servir(c) != nil {
 		t.Fatal("o seed não serve aos dois Provedores")
+	}
+}
+
+func TestT104_TrocasDeConfiguracaoNoPostgresSemSegredo(t *testing.T) {
+	pool := banco(t)
+	repo := postgres.Repositorio{Pool: pool}
+	ctx := context.Background()
+	for _, e := range []portas.EventoConfig{
+		{Canal: dominio.CanalWhatsApp, Acao: "gravada", Provedor: dominio.WhatsAppZAPI, Por: "ops-a"},
+		{Canal: dominio.CanalWhatsApp, Acao: "apagada", Por: "ops-a"},
+		{Canal: dominio.CanalWhatsApp, Acao: "webhooks", Provedor: dominio.WhatsAppZAPI, Por: "ana"}, // recadastro (REQ-41, migration 00010)
+	} {
+		if err := repo.RegistrarEventoConfig(ctx, e); err != nil {
+			t.Fatal(err)
+		}
+	}
+	rows, err := pool.Query(ctx, `SELECT canal, acao, coalesce(provedor, ''), por, em IS NOT NULL FROM config_eventos ORDER BY id`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	var got []string
+	for rows.Next() {
+		var canal, acao, prov, por string
+		var comHora bool
+		if err := rows.Scan(&canal, &acao, &prov, &por, &comHora); err != nil || !comHora {
+			t.Fatalf("linha: %v", err)
+		}
+		got = append(got, canal+" "+acao+" "+prov+" "+por)
+	}
+	if strings.Join(got, "|") != "whatsapp gravada zapi ops-a|whatsapp apagada  ops-a|whatsapp webhooks zapi ana" {
+		t.Fatalf("eventos = %q", got)
+	}
+	if err := repo.RegistrarEventoConfig(ctx, portas.EventoConfig{Canal: dominio.CanalWhatsApp, Acao: "trocada", Por: "x"}); err == nil {
+		t.Fatal("ação fora de gravada/apagada/webhooks aceita")
 	}
 }

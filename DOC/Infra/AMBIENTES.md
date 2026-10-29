@@ -10,6 +10,8 @@ no aviva2.0 é tratada como prod.
 
 ## 1. Quais ambientes existem
 
+> **2026-10-06 — prod antes de hml (decisão do dono):** o primeiro deploy é direto em prod (`notify.flipapi.com.br`, realm `ominicore`), sem Sistema de origem usando ainda; o hml fica adiado e entra depois como Ambiente novo (DNS `notify-hml`, realm `ominicore-hml`), sem mexer no de prod. Até lá, o Console publicado lista só Produção. Ver `log.md` 2026-10-06.
+
 | Ambiente | Para que serve | Quem usa | Dado real? |
 |---|---|---|---|
 | local | desenvolvimento (`deploy/local/compose.yaml`) | dev | não |
@@ -38,6 +40,9 @@ Fonte do host/realm: `../flip/infra/aviva2.0/keycloak/keycloak.env`
 |---|---|---|
 | API de envio (só rede `aviva`) | `http://ominicore-api-hml:8080` | `http://ominicore-api:8080` |
 | Webhooks públicos (Traefik + Cloudflare, ADR 0003) | `https://notify-hml.flipapi.com.br/webhooks/*` | `https://notify.flipapi.com.br/webhooks/*` |
+| Configuração pública só do escritório (WAF, ADR 0006) | `https://notify-hml.flipapi.com.br/v1/config/*` | `https://notify.flipapi.com.br/v1/config/*` |
+| Console do Operador (um para os dois; Worker `ominicore-console`) | `https://ominicore.flipapi.com.br` → Homologação | idem → Produção |
+| Client do Console (público, PKCE, OTP pelo fluxo `navegador-otp`) | `ominicore-console` no realm `ominicore-hml` | `ominicore-console` no realm `ominicore` |
 | Keycloak (`iss`) | `https://auth.flipapi.com.br/realms/ominicore-hml` | `https://auth.flipapi.com.br/realms/ominicore` |
 | Keycloak backchannel (`OMINICORE_KC_URL`) | `http://keycloak:8080` | `http://keycloak:8080` |
 | Banco | Aurora `db-zillionvf-prod` / `new_aviva`, schema `ominicore_hml`, role próprio | Aurora `db-zillionvf-prod` / `new_aviva`, schema `ominicore`, role próprio |
@@ -64,11 +69,23 @@ não enxerga o schema `ominicore`, e nenhum dos dois enxerga os schemas alheios.
   `kv/<prefixo>/optout` — chave do HMAC dos Opt-outs, **permanente**, uma por ambiente).
   WhatsApp é opcional: sem `kv/<prefixo>/whatsapp` o Canal fica desligado (REQ-20)
   e os campos da Meta em `webhooks` não são exigidos; com o caminho, os campos do
-  Provedor são obrigatórios (Meta: também os dois de `webhooks`). Liga-se ou
-  troca-se o Provedor com `configurar-openbao.sh <amb> --so-whatsapp` e reinício
-  de api e worker. Conferir o estado: log de boot "whatsapp desligado" ou
-  "whatsapp ligado: <provedor>";
+  Provedor são obrigatórios (Meta: também App Secret e verify token, em
+  `whatsapp` ou, na falta, em `webhooks` — REQ-28). Liga-se ou troca-se o
+  Provedor pela API do Operador (`/v1/config/whatsapp`, papel de realm
+  `ominicore-config` concedido por `conceder-operador.sh <amb> <client>`, sem
+  reinício; releitura a cada `OMINICORE_CONFIG_RELEITURA`, padrão 30 s, igual
+  em hml e prod) ou com `configurar-openbao.sh <amb> --so-whatsapp` e reinício.
+  A policy do OminiCore só escreve em `kv/<prefixo>/whatsapp` (ADR 0005).
+  Com a Z-API, o OminiCore também grava ali `webhook_segredo` (segredo da URL
+  dos Avisos de status, trocado a cada gravação) e `webhooks_estado`/`webhooks_em`
+  (estado do cadastro na Z-API) — REQ-40, ADR 0007.
+  Conferir o estado: `GET /v1/config/whatsapp` ou o log ("whatsapp desligado",
+  "whatsapp ligado: <provedor>", "whatsapp reconfigurado: <provedor>");
   client secret do Keycloak (`ominicore-app`) como podman secret no host (ADR 0002).
+- **Operadores (pessoas):** uma conta por pessoa em cada realm, criada por
+  `criar-operador.sh <amb> <usuario> <email>`, com OTP obrigatório no Console;
+  o acesso de fora só sai da origem fixa do Operador — hoje o túnel do dono na
+  Hostinger, `72.60.159.29` (lista `escritorio` do WAF + `ipAllowList` do Keycloak).
 - **Quem pode ler/escrever valor de prod:** escrever — só o dono (Mauricio
   Miwa), com token de admin do OpenBao; ler — só o app, pela role `jwt` presa
   ao `azp` `ominicore-app` do realm `ominicore`.
@@ -87,6 +104,7 @@ não enxerga o schema `ominicore`, e nenhum dos dois enxerga os schemas alheios.
 | `OMINICORE_REDIS_PASSWORD` | vazio | podman secret `redis-password` | idem | Redis do aviva2.0 com `requirepass` |
 | `OMINICORE_RETENCAO_DIAS` | `30` | `30` | `30` | igual nos três: o prazo é regra de negócio (RN-9), não de ambiente |
 | `OMINICORE_WEBHOOK_URL` | vazio | `https://notify-hml.flipapi.com.br` | `https://notify.flipapi.com.br` | origem que o Twilio assina e usa na `StatusCallback` |
+| `OMINICORE_CONSOLE_ORIGEM` | `http://localhost:5173` | `https://ominicore.flipapi.com.br` | `https://ominicore.flipapi.com.br` | um Console só, que escolhe o Ambiente; local usa o `bun run dev` |
 | credenciais SendGrid/Twilio/WhatsApp | inválidas/teste | sandbox (WhatsApp: número de teste da Meta) | produção | hml nunca envia a pessoa real |
 
 ## 5. Dados de homologação

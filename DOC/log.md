@@ -5,6 +5,164 @@ registro vira suposição de alguém daqui a seis meses.
 
 Entradas antigas: `log/arquivo-AAAA.md` (`tools/arquiva_log.py`).
 
+## 2026-10-29 — Change 13 em produção
+- API `4f1d1b8` (`HOST=aviva publicar.sh prod`, por Claude com o "pode" do dono):
+  healthy; `.anterior` = `ac762e0` íntegro; `/webhooks/zapi/<errado>` → 404.
+- Console publicado (versão 57674d31) com o estado dos webhooks e "Cadastrar
+  de novo". Falta a 7.4: cadastrar pelo Console e conferir um aviso real.
+- Achado no primeiro "Cadastrar de novo" (17:00): os webhooks foram
+  cadastrados na Z-API, mas o registro em `config_eventos` falhou (o CHECK só
+  aceitava gravada/apagada) e a API respondeu 500. Correção: migration 00010.
+
+## 2026-10-29 — Change `13-webhooks-zapi` implementada (31/35; falta conferir a Z-API real e publicar)
+- Rota `POST /webhooks/zapi/{segredo}` (segredo em tempo constante + `instanceId`;
+  404 sem efeito; aviso autêntico → 200 `{"value":true}`): "Ao enviar" com
+  erro → falhou e fallback; Status RECEIVED/READ/PLAYED → entregue/lida.
+- Gravar a Z-API gera segredo novo e cadastra as duas URLs na Z-API
+  (`zapi.Webhooks`, caminho em constante — a conferir); `POST
+  /v1/config/whatsapp/webhooks` recadastra; Console mostra o estado e
+  "Cadastrar de novo". ADR 0007.
+- T-121 a T-136 passando (T-128 no Postgres escrito, `make itest` pendente);
+  sentinel: aprovado com ressalvas.
+
+## 2026-10-28 — Decisão: origem fixa do Console é o túnel na Hostinger
+- O escritório não sai mais pelo `177.69.185.193`. O dono usa uma máquina
+  própria e exclusiva na Hostinger só como túnel para ter IP fixo:
+  `72.60.159.29` (já liberado no `keycloak-allowlist` do host; falta no
+  repositório `flip`). Esse IP passa a ser a lista `escritorio` da Cloudflare,
+  e `ominicore.flipapi.com.br` e `notify.flipapi.com.br` passam pelo túnel.
+- Achado: a regra de WAF não bloqueava — de `186.204.15.26` (fora da lista) o
+  Console abriu (200) e `/v1/config/*` chegou à API (401). A conferir e ativar
+  pelo dono; reteste pelo celular no 4G (403 esperado).
+
+## 2026-10-27 — Change 12 em produção
+- `a9a3bf9` publicado pelo dono (`HOST=aviva publicar.sh prod`, túnel SSM na
+  porta 2222 — o SSH público não aceita IP fora do escritório). Conferido no
+  host: `RestartUSec=10s` e `StartLimitIntervalUSec=0` em api e worker.
+- Console publicado (`wrangler deploy`, versão 76eed4ae) com "Tentar de novo".
+- Achado: healthcheck sempre "unhealthy" — `HealthCmd` de texto vira
+  `CMD-SHELL` e a imagem distroless não tem `/bin/sh`. Corrigido em `45a39b3`
+  (forma de array, validada no gerador do quadlet em dry-run); publicado em
+  `ac762e0` (por Claude, com o "pode" do dono): api e worker "healthy".
+- Achado: dois `publicar.sh prod` sobrepostos cortaram o
+  `/opt/ominicore/ominicore.anterior` (segfault; o `--voltar` derrubaria a API).
+  Recriado pelo dono a partir do binário atual; melhoria do script no `to-do.md`.
+- Achado: de fora do escritório (186.204.15.26) o Console abriu (200) e
+  `/v1/config/*` chegou à API (401): o WAF não bloqueou — a confirmar com o dono
+  se esse IP está na lista `escritorio`.
+
+## 2026-10-27 — Change `12-defeitos-prod` implementada (11/12; falta publicar e arquivar)
+- Desligar o WhatsApp: o KV v2 só marca a versão como apagada (soft delete), e
+  o `LerWhatsApp` a lia como "incompleta: sem o campo token" (o erro de prod).
+  Agora versão apagada ou sem dados = Canal desligado. O `baofake` passou a
+  simular o soft delete como o real (antes apagava de verdade, por isso o
+  defeito passou); o T-98 ganhou teste no cofre e de integração com o OpenBao
+  2.6.3 real — `make itest` passando (rodado pelo dono no Docker Desktop).
+- Quadlet: `RestartSec=10s` e `StartLimitIntervalSec=0` — religa para sempre.
+- Console: API sem resposta (status 0) ou 5xx mostra a mensagem e "Tentar de
+  novo"; carregamento termina em `finally` (REQ-43, T-137 e T-138).
+
+## 2026-10-27 — Decisão: Avisos de status da Z-API (sabatina fechada; change 13)
+- Eventos: "Ao enviar" (DeliveryCallback) com `error` → Tentativa falhou
+  ("Phone number does not exist"/"invalid phone number" = contato inválido; o
+  resto = recusado pelo Provedor) e fallback; "Status" (MessageStatusCallback)
+  RECEIVED → entregue, READ/PLAYED → lida; SENT e READ_BY_ME ignorados. "Ao
+  receber" (RN-6), conexão e presença fora.
+- Autenticação: segredo de 32 bytes na URL (`/webhooks/zapi/<segredo>`) +
+  `instanceId` igual ao configurado; senão 404 sem efeito. Aviso autêntico →
+  200 `{"value": true}` sempre (desconhecido, repetido ou atrasado só vai para
+  o log). RN-4 e RN-5 revisadas na especificação.
+- Segredo novo a cada gravação da Z-API; o OminiCore cadastra as duas URLs na
+  Z-API pela API dela (caminho a conferir com a instância real); falha no
+  cadastro não desfaz a gravação, e o Console mostra o estado e "Cadastrar de
+  novo". ADR 0007 a escrever na change.
+- Ordem: change 12 (defeitos de produção) antes; esta é a 13. UltraMsg fica fora
+  (to-do).
+
+## 2026-10-27 — Change `ajuste-texto-notificacoes` arquivada (só redação)
+- O OpenSpec 1.15.0 passou o aviso de texto de requisito acima de 500
+  caracteres de INFO para WARNING, e o `validate --all --strict` (CI,
+  pre-commit, hook Stop) reprovava `spec/notificacoes`.
+- REQ-2 (pedido por Template) e REQ-14 (consulta) reescritos mais enxutos (493
+  e 480 caracteres), com as mesmas obrigações e os mesmos cenários (T-4 a T-6,
+  T-15 a T-18, T-43, T-44, T-56), sem REQ novo. Separar em REQ novos não deu: o
+  OpenSpec 1.15 recusa MODIFIED que larga cenários.
+- `openspec validate --all --strict`: 7/7.
+
+## 2026-10-06 — Decisão: primeiro deploy direto em prod, hml adiado
+- O dono decidiu publicar o OminiCore e o Console direto em prod
+  (`notify.flipapi.com.br`, realm `ominicore`, cofre `kv/ominicore`, schema
+  `ominicore`), sem passar por hml, para testar o Console; ainda não há Sistema
+  de origem usando o OminiCore. Contraria o "hml primeiro" do contrato, agora
+  anotado em `Infra/AMBIENTES.md` §1. Recusada a alternativa de usar o nome
+  `notify` com os dados de hml e trocar depois (mistura de Ambientes).
+- O Console publicado lista só Produção (`ambientes-publicados.json`) até o
+  hml existir. O wrangler usa *route* sobre o registro DNS `ominicore` criado
+  no painel, em vez de `custom_domain`.
+
+## 2026-10-05 — Fatia 11 (`11-console-operador`) implementada: 42/45
+- API: `portas.Identidade` (client, pessoa, papéis); CORS só em `/v1/config/*`
+  para `OMINICORE_CONSOLE_ORIGEM`; token de `OMINICORE_CONSOLE_CLIENT` recusado
+  no envio e no Opt-out; troca pelo Console registra o `preferred_username`.
+- Keycloak: `lib-console.sh` (client público PKCE S256 + fluxo `navegador-otp`
+  com OTP obrigatório por override; a atualização das execuções preserva a
+  `priority`, senão o OTP vai para antes da senha — achado no login local) e
+  `criar-console.sh`/`criar-operador.sh`; o Keycloak 26 pede nome e sobrenome
+  no primeiro login.
+- Console `web/console`: Materio free 2.3.0 enxuto, Vite 6, Vuetify 3.13,
+  `oidc-client-ts`, `vue-i18n` pt-BR, CSP em `_headers`, Worker só com assets.
+- Borda: rota `/v1/config/` no Traefik, `verificar-exposicao.sh` (T-113 a T-115,
+  CI de fora do escritório), runbook C1–C8, ADR 0006. Fatos: a 443 do host só
+  aceita a Cloudflare; o `auth.flipapi.com.br` tem `ipAllowList` própria.
+- CVE (política em `Infra/seguranca-dependencias.md`): `bun audit` acusa 6
+  altas em `minimatch`, `braces` e `extract-zip`, todas em ferramentas de build
+  e lint do Console (ESLint 8, sass/chokidar, `@iconify/tools`), sem correção
+  compatível publicada (`braces` 3.0.3 e `extract-zip` 2.0.1 são as últimas).
+  Mitigação: uso não exposto (rodam só no build local e no CI, sobre arquivos
+  do próprio repositório); nada disso vai no bundle publicado. Revisitar na
+  migração para o ESLint 9 ou quando o Dependabot abrir PR (dono: Mauricio Miwa).
+- Pendentes: 1.2 (archive da 10), 7.3 (T-113 a T-115 só depois do deploy).
+
+## 2026-10-05 — Sabatina do Console do Operador fechada; change `11-console-operador` proposta
+- Respostas do dono: só WhatsApp; template Materio free (Vuexy é pago);
+  `/v1/config/*` público em `notify[-hml].flipapi.com.br` (opção a, não BFF),
+  WAF só do IP fixo do escritório + JWT + CORS para
+  `https://ominicore.flipapi.com.br`; client público `ominicore-console`
+  (PKCE, token em memória); seletor escolhe o Ambiente (hml/prod), não
+  cliente; conta por pessoa com OTP; só pt-BR. Termos novos no glossário:
+  Console do Operador, Ambiente. A abrir: RN-12, ADR 0006 (revisa a 0003),
+  change. Configuração por cliente (W Bem, Lara) fica fora.
+- Na proposta: token do client do Console recusado no envio e no Opt-out
+  (REQ-36); `config_eventos` registra o usuário da pessoa nas trocas pelo
+  Console (REQ-27 modificado); OTP obrigatório por override de fluxo no client.
+
+## 2026-10-05 — Fatia 10 (`10-config-whatsapp-api`) implementada: 33/33
+- `dominio.ConfigWhatsApp` (campos e segredos por Provedor, validação única
+  para boot, releitura e API); `openbao.Cofre` (ler, gravar, apagar, re-login
+  em 403); `aplicacao.ConfigWhatsAppAtual` (retrato atômico lido por pedido,
+  envio, aviso e webhooks; trocas serializadas para a releitura não aplicar
+  leitura velha) e `ReleituraConfig`; `ConfigurarUseCase` + rotas
+  `/v1/config/whatsapp` com o papel `ominicore-config`; `config_eventos`
+  (migration 00009); `conceder-operador.sh`; policy com escrita só em
+  `kv/<p>/whatsapp`; ADR 0005.
+- Verde: `go test -race`, `make itest`, lint, contrato, `openspec validate
+  --strict`, rastreabilidade. T-92 a T-105 passando. Sentinel: aprovado com
+  ressalvas (sem `shellcheck`; deploy em hml ainda não feito).
+
+## 2026-10-05 — Decisão: configuração do WhatsApp pela API (change `10-config-whatsapp-api`)
+- Sabatina fechada com as recomendações (P1–P10): `GET`/`PUT`/`DELETE
+  /v1/config/whatsapp` para Meta, UltraMsg e Z-API, só para o Operador (realm
+  role `ominicore-config`; Sistema de origem sem o papel → 403); grava no
+  OpenBao só em `kv/<p>/whatsapp` (ADR 0005, revisa a 0002); valida só os
+  campos, sem testar no Provedor; segredos nunca saem (consulta diz só se
+  estão configurados); vale sem reinício (releitura a cada 30 s; inválida
+  mantém a anterior); `config_eventos` guarda quem, quando e qual Provedor.
+- Segredos do webhook da Meta passam para `kv/<p>/whatsapp`, com `webhooks`
+  como alternativa de leitura (REQ-28); rollback para binário antigo com a
+  Meta pela API exige regravá-la pelo script (runbook).
+- RN-11 e termo Operador no glossário; Fatia 10 no backlog. REQ-22 a REQ-28,
+  T-92 a T-105.
+
 ## 2026-10-05 — Fatia 9 (`09-whatsapp-zapi`) implementada: 26/27
 - `dominio.WhatsAppZAPI`, `EnviaTexto` e `ServirTexto` (forma + 4096, usado
   também pelo UltraMsg); cofre com `CamposWhatsApp[zapi]` e o opcional
@@ -195,39 +353,4 @@ Entradas antigas: `log/arquivo-AAAA.md` (`tools/arquiva_log.py`).
   `notificacoes` ganha REQ-10 (envio pelo Modelo aprovado) e REQ-11 (versão
   WhatsApp do Template). Cobre RN-4. T-28 a T-33 passando. Validação contra a
   Meta real segue pendente da conta (to-do).
-
-## 2026-09-29 — Fatia 6 (`06-whatsapp`) implementada: 13/13
-- Canal WhatsApp pela Cloud API da Meta (Graph `v26.0`, conferida na doc em
-  2026-09-29); migration 00004 (Modelo aprovado em `template_conteudos`);
-  `Variaveis()` inclui os parâmetros do Modelo aprovado; contato = telefone.
-- Códigos confirmados na doc da Meta: 131026/132001 definitiva, 130429/131000
-  temporária; 131049 (marketing por usuário, 24 h) cai na regra comum (4xx =
-  definitiva), porque 24 h não cabem na Retentativa.
-- Verde: `go test -race`, `make itest` 17/17, lint, `sqlc diff`, contrato,
-  `openspec validate --strict`, rastreabilidade. T-28 a T-33 passando.
-- Sentinel: aprovado com ressalvas — `to` vai em E.164 com `+` (aceito pela
-  Meta segundo a doc, não validado contra conta real); validação real depende
-  da conta Meta Business (to-do).
-
-## 2026-09-29 — Sabatina do WhatsApp fechada; RN-4 entra no MVP (fatia 06)
-- Decidido (recomendações aceitas): Cloud API da Meta direto (não Twilio);
-  só Modelo aprovado, sem texto livre (depende de RN-6); contato = telefone
-  E.164; 131026/132001 definitiva, 130429/131000 temporária; versão WhatsApp do
-  `boas-vindas`, ordem padrão inalterada (Email → SMS); versão da Graph API
-  fixada no adaptador; validação real depois da conta Meta (não bloqueia).
-- Glossário: **Modelo aprovado**. Backlog: fatia 06 com REQ-10/REQ-11; REQ
-  previstos das fatias 3–5 renumerados (REQ-12 a REQ-15).
-- Change `06-whatsapp` aberta (T-28 a T-33).
-
-## 2026-09-29 — Trilha de infraestrutura: artefatos do aviva2.0 preparados
-- `deploy/aviva2/`: quadlets (template api/worker), env sem segredo, rota do
-  Traefik só `/webhooks/*`, SQL do schema/role, scripts do realm (kcadm, sem
-  reiniciar o Keycloak) e do OpenBao (auth `jwt` por realm), `publicar.sh
-  hml|prod` (sem padrão; prod pede confirmação e árvore limpa; `--voltar`).
-- Lacunas de código achadas ao desenhar o deploy e corrigidas (config, sem
-  regra nova): `OMINICORE_DB_SCHEMA` (hml = `ominicore_hml`, validado contra
-  injeção), `OMINICORE_BAO_AUTH_MOUNT` (um mount `jwt` aceita um só emissor),
-  `OMINICORE_REDIS_PASSWORD` (Redis do aviva2.0 com `requirepass`). Testes:
-  isolamento de schemas no Postgres real, login no mount do ambiente.
-- Nada executado no host: as etapas com credencial de admin são do dono.
 

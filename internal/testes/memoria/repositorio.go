@@ -24,8 +24,12 @@ type Repositorio struct {
 	optOuts      map[string]string // canal|contato normalizado → origem (o fake guarda em claro)
 	// EventosOptOut é o histórico de registro/remoção ("acao por").
 	EventosOptOut []string
-	anonimizadas  map[string]time.Time
-	chaves        map[string]string
+	// EventosConfig são as trocas de configuração pela API (REQ-27).
+	EventosConfig []portas.EventoConfig
+	// FalharEventoConfig faz RegistrarEventoConfig falhar.
+	FalharEventoConfig error
+	anonimizadas       map[string]time.Time
+	chaves             map[string]string
 }
 
 var _ portas.MessageRepositoryPort = (*Repositorio)(nil)
@@ -353,4 +357,22 @@ func (r *Repositorio) IDProvedor(i int) string {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return r.idProvedor[i]
+}
+
+// RegistrarEventoConfig guarda a troca de configuração (REQ-27).
+func (r *Repositorio) RegistrarEventoConfig(_ context.Context, e portas.EventoConfig) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.FalharEventoConfig != nil {
+		return r.FalharEventoConfig
+	}
+	r.EventosConfig = append(r.EventosConfig, e)
+	return nil
+}
+
+// Eventos devolve uma cópia das trocas de configuração.
+func (r *Repositorio) Eventos() []portas.EventoConfig {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return append([]portas.EventoConfig(nil), r.EventosConfig...)
 }

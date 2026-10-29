@@ -1,5 +1,5 @@
 {
- "gerado_em": "2026-10-05T12:03:44",
+ "gerado_em": "2026-10-29T16:37:03",
  "raiz": "ominicore",
  "stack": [
   {
@@ -7,23 +7,107 @@
    "linguagem": "go",
    "frameworks": [],
    "dependencias": 0
+  },
+  {
+   "manifesto": "web/console/package.json",
+   "linguagem": "js/ts",
+   "frameworks": [
+    "vue@^3.5.43",
+    "vue-router@^4.6.4"
+   ],
+   "dependencias": 46
+  },
+  {
+   "manifesto": "web/console/src/plugins/iconify/package.json",
+   "linguagem": "js/ts",
+   "frameworks": [],
+   "dependencias": 0
   }
  ],
  "modulos": {
   "cmd": {
-   "arquivos": 2,
+   "arquivos": 3,
    "importa": []
   },
   "internal": {
-   "arquivos": 57,
+   "arquivos": 77,
    "importa": []
   },
   "migrations": {
    "arquivos": 1,
    "importa": []
+  },
+  "web": {
+   "arquivos": 56,
+   "importa": []
   }
  },
- "rotas": [],
+ "rotas": [
+  {
+   "path": "/",
+   "nome": null,
+   "titulo": null,
+   "componente": "src/layouts/blank.vue",
+   "arquivo": "web/console/src/plugins/router/routes.ts",
+   "linha": 2
+  },
+  {
+   "path": "",
+   "nome": null,
+   "titulo": null,
+   "componente": "src/pages/index.vue",
+   "arquivo": "web/console/src/plugins/router/routes.ts",
+   "linha": 2
+  },
+  {
+   "path": "/callback/:ambiente",
+   "nome": null,
+   "titulo": null,
+   "componente": "src/layouts/blank.vue",
+   "arquivo": "web/console/src/plugins/router/routes.ts",
+   "linha": 3
+  },
+  {
+   "path": "",
+   "nome": null,
+   "titulo": null,
+   "componente": "src/pages/callback.vue",
+   "arquivo": "web/console/src/plugins/router/routes.ts",
+   "linha": 3
+  },
+  {
+   "path": "/",
+   "nome": null,
+   "titulo": null,
+   "componente": "src/layouts/default.vue",
+   "arquivo": "web/console/src/plugins/router/routes.ts",
+   "linha": 5
+  },
+  {
+   "path": "whatsapp",
+   "nome": null,
+   "titulo": null,
+   "componente": "src/pages/whatsapp.vue",
+   "arquivo": "web/console/src/plugins/router/routes.ts",
+   "linha": 9
+  },
+  {
+   "path": "/:pathMatch(.*)*",
+   "nome": null,
+   "titulo": null,
+   "componente": "src/layouts/blank.vue",
+   "arquivo": "web/console/src/plugins/router/routes.ts",
+   "linha": 12
+  },
+  {
+   "path": "",
+   "nome": null,
+   "titulo": null,
+   "componente": "src/pages/erro.vue",
+   "arquivo": "web/console/src/plugins/router/routes.ts",
+   "linha": 12
+  }
+ ],
  "endpoints": [
   {
    "metodo": "POST",
@@ -55,65 +139,128 @@
   },
   {
    "metodo": "GET",
+   "path": "/v1/config/whatsapp",
+   "arquivo": "api/openapi.yaml",
+   "linha": 0,
+   "tipo": "openapi"
+  },
+  {
+   "metodo": "PUT",
+   "path": "/v1/config/whatsapp",
+   "arquivo": "api/openapi.yaml",
+   "linha": 0,
+   "tipo": "openapi"
+  },
+  {
+   "metodo": "DELETE",
+   "path": "/v1/config/whatsapp",
+   "arquivo": "api/openapi.yaml",
+   "linha": 0,
+   "tipo": "openapi"
+  },
+  {
+   "metodo": "POST",
+   "path": "/v1/config/whatsapp/webhooks",
+   "arquivo": "api/openapi.yaml",
+   "linha": 0,
+   "tipo": "openapi"
+  },
+  {
+   "metodo": "GET",
    "path": "/healthz",
    "arquivo": "internal/adaptadores/entrada/http/servidor.go",
-   "linha": 39,
+   "linha": 49,
    "tipo": "go"
   },
   {
    "metodo": "POST",
    "path": "/v1/notificacoes",
    "arquivo": "internal/adaptadores/entrada/http/servidor.go",
-   "linha": 40,
+   "linha": 50,
    "tipo": "go"
   },
   {
    "metodo": "GET",
    "path": "/v1/notificacoes/{id}",
    "arquivo": "internal/adaptadores/entrada/http/servidor.go",
-   "linha": 41,
+   "linha": 51,
    "tipo": "go"
   },
   {
    "metodo": "POST",
    "path": "/v1/opt-outs",
    "arquivo": "internal/adaptadores/entrada/http/servidor.go",
-   "linha": 42,
+   "linha": 52,
    "tipo": "go"
   },
   {
    "metodo": "DELETE",
    "path": "/v1/opt-outs",
    "arquivo": "internal/adaptadores/entrada/http/servidor.go",
-   "linha": 43,
+   "linha": 53,
+   "tipo": "go"
+  },
+  {
+   "metodo": "GET",
+   "path": "/v1/config/whatsapp",
+   "arquivo": "internal/adaptadores/entrada/http/servidor.go",
+   "linha": 56,
+   "tipo": "go"
+  },
+  {
+   "metodo": "PUT",
+   "path": "/v1/config/whatsapp",
+   "arquivo": "internal/adaptadores/entrada/http/servidor.go",
+   "linha": 57,
+   "tipo": "go"
+  },
+  {
+   "metodo": "DELETE",
+   "path": "/v1/config/whatsapp",
+   "arquivo": "internal/adaptadores/entrada/http/servidor.go",
+   "linha": 58,
+   "tipo": "go"
+  },
+  {
+   "metodo": "POST",
+   "path": "/v1/config/whatsapp/webhooks",
+   "arquivo": "internal/adaptadores/entrada/http/servidor.go",
+   "linha": 60,
    "tipo": "go"
   },
   {
    "metodo": "POST",
    "path": "/webhooks/sendgrid",
    "arquivo": "internal/adaptadores/entrada/webhooks/webhooks.go",
-   "linha": 58,
+   "linha": 64,
    "tipo": "go"
   },
   {
    "metodo": "POST",
    "path": "/webhooks/twilio",
    "arquivo": "internal/adaptadores/entrada/webhooks/webhooks.go",
-   "linha": 59,
+   "linha": 65,
    "tipo": "go"
   },
   {
    "metodo": "GET",
    "path": "/webhooks/whatsapp",
    "arquivo": "internal/adaptadores/entrada/webhooks/webhooks.go",
-   "linha": 61,
+   "linha": 66,
    "tipo": "go"
   },
   {
    "metodo": "POST",
    "path": "/webhooks/whatsapp",
    "arquivo": "internal/adaptadores/entrada/webhooks/webhooks.go",
-   "linha": 62,
+   "linha": 67,
+   "tipo": "go"
+  },
+  {
+   "metodo": "POST",
+   "path": "/webhooks/zapi/{segredo}",
+   "arquivo": "internal/adaptadores/entrada/webhooks/webhooks.go",
+   "linha": 68,
    "tipo": "go"
   }
  ],
@@ -142,8 +289,17 @@
   "HOST": [
    "deploy/aviva2/publicar.sh"
   ],
+  "KC_ADMIN_USUARIO": [
+   "deploy/aviva2/keycloak/lib-admin.sh"
+  ],
+  "KC_DEPLOY_CLIENT": [
+   "deploy/aviva2/keycloak/lib-admin.sh"
+  ],
   "KEY": [
    "deploy/aviva2/publicar.sh"
+  ],
+  "NODE_ENV": [
+   "web/console/.eslintrc.cjs"
   ],
   "SENDGRID_API_KEY": [
    "deploy/local/bootstrap.sh"
@@ -198,7 +354,7 @@
    "migrations"
   ],
   "schemas": [],
-  "sql": 10
+  "sql": 11
  },
  "infra": {
   "docker": [],
@@ -207,6 +363,7 @@
   ],
   "nomad": [],
   "ci": [
+   ".github/workflows/console.yml",
    ".github/workflows/dependabot-automerge.yml",
    ".github/workflows/go.yml",
    ".github/workflows/sdd-checks.yml"

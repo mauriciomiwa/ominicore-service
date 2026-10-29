@@ -8,14 +8,13 @@ duas vezes, e com cada Tentativa registrada com Canal e resultado.
 ## Requirements
 
 ### Requirement: REQ-2 Pedir Notificação por Template
-Quando um Sistema de origem autenticado pedir uma Notificação informando um
-Template existente, o Destinatário e todas as variáveis do Template, o sistema
-SHALL registrar a Notificação como pendente, com a Ordem de Canais do pedido
-(ou, sem ela, a do Template), a primeira Tentativa no primeiro Canal dessa
-ordem para o qual o Destinatário tem contato, e responder com o identificador
-da Notificação. O sistema SHALL recusar o pedido cuja ordem cite Canal sem
-versão no Template, cujo Destinatário não tenha contato para nenhum Canal da
-ordem ou cujo telefone não esteja no formato E.164.
+Quando um Sistema de origem autenticado pedir uma Notificação com um Template
+existente, o Destinatário e todas as variáveis dele, o sistema SHALL
+registrá-la como pendente, com a Ordem de Canais do pedido (ou a do Template) e
+a primeira Tentativa no primeiro Canal da ordem com contato do Destinatário, e
+responder com o identificador; SHALL recusar o pedido com Canal da
+ordem sem versão no Template, sem contato do Destinatário para a ordem ou com
+telefone fora do E.164.
 Origem: RN-1, RN-2
 
 #### Scenario: T-4 Pedido válido é aceito
@@ -238,13 +237,12 @@ Origem: RN-5, RN-2
 - **THEN** a Tentativa fica falhou, a Notificação segue entregue e nenhuma Tentativa nova é criada
 
 ### Requirement: REQ-14 Consultar Notificação
-Quando o Sistema de origem autenticado consultar uma Notificação que ele pediu,
-o sistema SHALL devolver o status dela, o horário da anonimização quando já
-tiver sido anonimizada, e de cada Tentativa (Canal, número, status, horários e
-a classificação da falha: contato inválido, recusado pelo Provedor,
-Retentativas esgotadas, Opt-out), MUST NOT devolver contato do Destinatário nem
-o texto do motivo, e SHALL responder como inexistente a Notificação de outro
-Sistema de origem.
+Quando o Sistema de origem autenticado consultar uma Notificação que pediu, o
+sistema SHALL devolver o status, o horário da anonimização, se houver, e de cada
+Tentativa o Canal, o número, o status, os horários e a classificação da falha
+(contato inválido, recusado pelo Provedor, Retentativas esgotadas, Opt-out);
+MUST NOT devolver contato do Destinatário nem o texto do motivo; e SHALL
+responder como inexistente a Notificação de outro Sistema de origem.
 Origem: RN-5, RN-9, RN-8
 
 #### Scenario: T-43 Dono consulta status e Tentativas

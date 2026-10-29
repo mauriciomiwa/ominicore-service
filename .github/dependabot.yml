@@ -46,3 +46,18 @@ updates:
     groups:
       minor-e-patch:
         update-types: ["minor", "patch"]
+
+  # Console do Operador (fatia 11): lockfile do bun
+  - package-ecosystem: "bun"
+    directory: "/web/console"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/Sao_Paulo"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      minor-e-patch:
+        update-types: ["minor", "patch"]

@@ -1,6 +1,11 @@
-# ${HOST_WEBHOOK} -> ominicore${SUFIXO}-api, SÓ /webhooks/* (ADR 0003). Público,
-# atrás da Cloudflare; a API de envio (/v1/*) não tem rota aqui. Cada webhook
-# valida a assinatura do Provedor antes de qualquer efeito (fatia 03).
+# ${HOST_WEBHOOK} -> ominicore${SUFIXO}-api. Público, atrás da Cloudflare (a 443
+# do host só aceita a Cloudflare), em dois prefixos:
+#   /webhooks/*   — cada webhook valida a assinatura do Provedor antes de
+#                   qualquer efeito (fatia 03, ADR 0003);
+#   /v1/config/*  — Console do Operador (RN-12, ADR 0006): o WAF da Cloudflare
+#                   só deixa passar o IP do escritório, e a API exige o JWT com
+#                   o papel ominicore-config e só autoriza CORS para o Console.
+# O resto da API (/v1/notificacoes, /v1/opt-outs) não tem rota aqui: só a rede aviva.
 # Gerado por deploy/aviva2/publicar.sh (${AMBIENTE}).
 http:
   routers:
@@ -13,6 +18,11 @@ http:
       # traefik.yml grava a URL inteira (mesma solução do webhook Celcoin do aviva-back)
       observability:
         accessLogs: false
+    ominicore${SUFIXO}-config:
+      rule: Host(`${HOST_WEBHOOK}`) && PathPrefix(`/v1/config/`)
+      entryPoints: [websecure]
+      service: ominicore${SUFIXO}-api
+      tls: {}
   services:
     ominicore${SUFIXO}-api:
       loadBalancer:

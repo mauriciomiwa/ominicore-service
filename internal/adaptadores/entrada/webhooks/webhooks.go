@@ -45,21 +45,53 @@ type RegistradorOptOut interface {
 // Webhooks liga as rotas /webhooks/* ao Receptor.
 type Webhooks struct {
 	Cred Credenciais
-	// MetaLigada registra as rotas da Meta: só com o WhatsApp ligado pela Meta;
-	// desligado ou pelo UltraMsg, elas respondem 404 (REQ-20, REQ-21).
+	// MetaLigada liga as rotas da Meta: só com o WhatsApp ligado pela Meta;
+	// desligado ou por um Provedor de texto, elas respondem 404 (REQ-20, REQ-21).
 	MetaLigada bool
-	Receptor   Receptor
-	OptOut     RegistradorOptOut // nil = descadastro do Provedor ignorado
-	Log        *slog.Logger
+	// Meta, quando dada, substitui MetaLigada e os segredos da Meta em Cred e é
+	// consultada a cada requisição: o Provedor muda sem reiniciar (REQ-26).
+	Meta func() MetaAtual
+	// ZAPI é consultada a cada requisição em /webhooks/zapi/{segredo}: Provedor
+	// ativo, instância e segredo atuais (REQ-37); nil = rota sempre 404.
+	ZAPI     func() ZAPIAtual
+	Receptor Receptor
+	OptOut   RegistradorOptOut // nil = descadastro do Provedor ignorado
+	Log      *slog.Logger
 }
 
 // Registrar põe as rotas no mux.
 func (w Webhooks) Registrar(mux *http.ServeMux) {
 	mux.HandleFunc("POST /webhooks/sendgrid", w.sendgrid)
 	mux.HandleFunc("POST /webhooks/twilio", w.twilio)
-	if w.MetaLigada {
-		mux.HandleFunc("GET /webhooks/whatsapp", w.verificarMeta)
-		mux.HandleFunc("POST /webhooks/whatsapp", w.whatsapp)
+	mux.HandleFunc("GET /webhooks/whatsapp", w.soComMeta(w.verificarMeta))
+	mux.HandleFunc("POST /webhooks/whatsapp", w.soComMeta(w.whatsapp))
+	mux.HandleFunc("POST /webhooks/zapi/{segredo}", w.zapi)
+}
+
+// MetaAtual diz se o WhatsApp está ligado pela Meta e com quais segredos do
+// webhook.
+type MetaAtual struct {
+	Ligada                 bool
+	AppSecret, VerifyToken string
+}
+
+func (w Webhooks) meta() MetaAtual {
+	if w.Meta != nil {
+		return w.Meta()
+	}
+	return MetaAtual{Ligada: w.MetaLigada, AppSecret: w.Cred.MetaAppSecret, VerifyToken: w.Cred.MetaVerifyToken}
+}
+
+// soComMeta responde como rota inexistente quando a Meta não é o Provedor
+// ativo (REQ-21, T-103).
+func (w Webhooks) soComMeta(h func(http.ResponseWriter, *http.Request, MetaAtual)) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		m := w.meta()
+		if !m.Ligada {
+			http.NotFound(rw, r)
+			return
+		}
+		h(rw, r, m)
 	}
 }
 
