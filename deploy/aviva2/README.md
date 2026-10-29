@@ -128,8 +128,8 @@ Desde a fatia 11, o `publicar.sh` instala também a rota pública de
 
 | # | Etapa | Onde | Quem | Credencial |
 |---|---|---|---|---|
-| C1 | IP List `escritorio` com o IP fixo do escritório (Manage Account › Configurations › Lists) | Cloudflare | dono | conta Cloudflare |
-| C2 | Regra de WAF (Security › WAF › Custom rules) na zona `flipapi.com.br`, ação **Block**: `(http.host eq "ominicore.flipapi.com.br" or (http.host in {"notify.flipapi.com.br" "notify-hml.flipapi.com.br"} and starts_with(http.request.uri.path, "/v1/"))) and not ip.src in $escritorio` | Cloudflare | dono | conta Cloudflare |
+| C1 | IP fixo do escritório (hoje `72.60.159.29`, túnel da Hostinger) escrito direto na regra C2. A zona está no plano Free: 5 regras personalizadas, todas em uso, e a conta não tem a lista `escritorio` | Cloudflare | dono | conta Cloudflare |
+| C2 | Na zona `flipapi.com.br` (Segurança › Regras de segurança), a regra **"Block specific paths"** (ação **Block**), que já existia, ganhou um `or`: `(http.request.uri.path eq "/" and http.host in {"flipapi.com.br"}) or ((http.host eq "ominicore.flipapi.com.br" or (http.host in {"notify.flipapi.com.br" "notify-hml.flipapi.com.br"} and starts_with(http.request.uri.path, "/v1/"))) and not ip.src in {72.60.159.29})`. Rollback: só a primeira parte. IP novo: troque nos dois `72.60.159.29` (aqui e no C3). Confira com `gh workflow run console.yml --ref main -f publicar=false` | Cloudflare | dono | conta Cloudflare |
 | C3 | IP do escritório no `keycloak-allowlist` de `../flip/infra/aviva2.0/traefik/dynamic/keycloak.yml` (repositório `flip`); sem ele, o login pelo Console é recusado | repositório `flip` + host | dono | chave SSH |
 | C4 | Client público: `sudo keycloak/criar-console.sh hml` (PKCE, OTP obrigatório pelo fluxo `navegador-otp`; idempotente) | host | dono | senha admin do Keycloak |
 | C5 | Uma conta por pessoa: `sudo keycloak/criar-operador.sh hml <usuario> <email>`. A senha temporária sai uma vez; no primeiro login a pessoa cadastra o OTP, troca a senha e informa nome e sobrenome. Para tirar o acesso, desabilite a pessoa no Keycloak | host | dono | senha admin do Keycloak |

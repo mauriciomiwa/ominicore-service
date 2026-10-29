@@ -34,6 +34,9 @@ ficam no `System/backlog-mvp.md` (cada uma é uma change do OpenSpec); furos de 
 - [x] (resolvido em 29/10: RN-13 criada e diff auditado pela sentinel no commit `9ccf62a`) Furos da fatia 14 apontados pelo hook em 2026-10-29 (trabalho da outra sessão, ainda em escrita): REQ-44 da change `14-templates-wbem` cita a RN-13, que não existe em `especificacao-negocio.md`; `internal/integracao/integracao_test.go` alterado sem auditoria da sentinel. Fechar na sessão da fatia 14 (criar a RN-13 ou corrigir a referência; auditar o diff).
 - [ ] Rastreabilidade: o REQ-21 aparece como MODIFIED na change `09-whatsapp-zapi`, mas ainda não existe na spec vigente (nasce na `08-whatsapp-ultramsg`, não arquivada). Some ao arquivar na ordem 08 → 09 → 10 → 11 → 12 → 13; antes disso, a 08 precisa da 5.2 (UltraMsg) e a 11, da 1.2 e da 7.3.
 
+## WAF do Console (achado e corrigido em 2026-10-29)
+- [x] A regra C2 e a lista `escritorio` nunca tinham sido criadas (zona no plano Free, 5 regras em uso). Corrigido pelo dono: IP do escritório na regra "Block specific paths". CI (run 40960531950, de 135.119.237.66): T-113 a T-115 com 403 da Cloudflare. Variável `CONSOLE_PUBLICADO=true` criada: a verificação diária das 06:17 passa a rodar.
+
 ## Console — deploy (2026-10-29)
 - [ ] O login OAuth do `wrangler` expira em dias; trocar por um API Token da Cloudflare só com Workers (secret `CLOUDFLARE_API_TOKEN` do environment `console`) e publicar pelo `console.yml` no GitHub Actions.
 

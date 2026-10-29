@@ -33,3 +33,9 @@ Atualização (2026-10-28): o escritório deixou de ter IP fixo. A origem fixa
 passa a ser o túnel exclusivo do dono na Hostinger (`72.60.159.29`), que entra
 na lista `escritorio` e no `ipAllowList` do Keycloak; o Console e a API são
 roteados por ele. A decisão não muda: só a origem.
+
+Atualização (2026-10-29): a zona está no plano Free, com 5 regras personalizadas,
+todas em uso. Em vez de uma lista e de uma regra própria, o IP fica escrito
+direto na regra "Block specific paths", com um `or` (`deploy/aviva2/README.md`,
+C1 e C2). Até essa data, a regra não existia, e a verificação pelo CI foi o que
+mostrou isso.

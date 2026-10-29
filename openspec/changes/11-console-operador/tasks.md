@@ -50,7 +50,7 @@
 ## 7. Borda, deploy e operação
 - [x] 7.1 Router `Host(${HOST_WEBHOOK}) && PathPrefix(/v1/config/)` em `deploy/aviva2/traefik/ominicore.yml.tmpl` (com `ipAllowList` da Cloudflare se a 5.1 pedir) e `OMINICORE_CONSOLE_ORIGEM`/`OMINICORE_CONSOLE_CLIENT` em `deploy/aviva2/ominicore.env.tmpl` — `bash -n deploy/aviva2/publicar.sh` e o arquivo gerado conferido
 - [x] 7.2 `deploy/aviva2/verificar-exposicao.sh <amb>` (Console, `/v1/config/whatsapp`, `/v1/notificacoes` e `/v1/opt-outs` de fora do escritório → 403/404; sai com erro citando o T-n) — `bash -n`
-- [ ] 7.3 Testes T-113, T-114 e T-115 pelo `verificar-exposicao.sh`, rodando no CI de fora do escritório
+- [x] 7.3 Testes T-113, T-114 e T-115 pelo `verificar-exposicao.sh`, rodando no CI de fora do escritório
 - [x] 7.4 `.github/workflows/console.yml` (PR com filtro em `web/console/**`: lint, `vue-tsc`, Vitest, build; `workflow_dispatch` na `main`: `wrangler deploy` com `CLOUDFLARE_API_TOKEN` e depois o `verificar-exposicao.sh hml` e `prod`; `schedule` diário só da verificação) e Dependabot `npm` em `web/console` — workflow válido (`actionlint` ou o run do PR verde)
 - [x] 7.5 Runbook em `deploy/aviva2/README.md`: IP List e regra de WAF na Cloudflare **antes** do router, `criar-console.sh`, `criar-operador.sh`, deploy do Console, troca do IP do escritório e rollback (tirar o router, `wrangler rollback`) — seções presentes
 - [x] 7.6 `DOC/Infra/AMBIENTES.md` e `DOC/Infra/infraestrutura.md` (hostname do Console, WAF, client e variáveis por Ambiente) e `DOC/Padroes/stack-tecnologico.md` (linhas do front: Materio, Vue 3, Vuetify, Vite, TS, bun, `oidc-client-ts`, `vue-i18n`, Vitest, Workers Static Assets) — seções presentes
