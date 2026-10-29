@@ -13,7 +13,7 @@
 
 ## 3. Entrega
 
-- [ ] 3.1 (dono) Publicar a API no host (a migration roda no boot ou pelo runbook) nos schemas de hml e prod — verificar: `POST /v1/notificacoes` com `wbem-otp-tomador` para o celular do dono, de dentro da rede `aviva`, dá 202 e a mensagem chega
+- [x] 3.1 (dono) Publicar a API no host (a migration roda no boot ou pelo runbook) nos schemas de hml e prod — verificar: `POST /v1/notificacoes` com `wbem-otp-tomador` para o celular do dono, de dentro da rede `aviva`, dá 202 e a mensagem chega
 
 ## 4. Fechamento
 
