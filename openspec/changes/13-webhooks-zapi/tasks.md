@@ -37,6 +37,7 @@
 - [x] 5.7 Teste T-134 (recadastro com o segredo atual, que continua valendo)
 - [x] 5.8 Teste T-135 (recadastro com UltraMsg: 409, nada chamado)
 - [x] 5.9 Rodar de novo T-92 a T-105 (configuração do WhatsApp inalterada para Meta e UltraMsg) — `go test -race ./...`
+- [x] 5.10 Migration `00010_config_eventos_webhooks.sql` (o CHECK de `config_eventos.acao` aceita `webhooks`; achado em prod em 2026-10-29: o recadastro funcionava, mas o registro falhava e a API respondia 500) e T-104 no Postgres com a ação `webhooks` — `make itest`
 
 ## 6. Console
 - [x] 6.1 Cliente da API (`recadastrarWebhooks`) e tela do WhatsApp com o estado dos webhooks (Z-API ativa) e o botão "Cadastrar de novo"; textos em `pt-BR.json` — `bun run lint` e `bun run typecheck`

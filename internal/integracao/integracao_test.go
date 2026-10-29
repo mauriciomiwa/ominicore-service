@@ -824,6 +824,7 @@ func TestT104_TrocasDeConfiguracaoNoPostgresSemSegredo(t *testing.T) {
 	for _, e := range []portas.EventoConfig{
 		{Canal: dominio.CanalWhatsApp, Acao: "gravada", Provedor: dominio.WhatsAppZAPI, Por: "ops-a"},
 		{Canal: dominio.CanalWhatsApp, Acao: "apagada", Por: "ops-a"},
+		{Canal: dominio.CanalWhatsApp, Acao: "webhooks", Provedor: dominio.WhatsAppZAPI, Por: "ana"}, // recadastro (REQ-41, migration 00010)
 	} {
 		if err := repo.RegistrarEventoConfig(ctx, e); err != nil {
 			t.Fatal(err)
@@ -843,10 +844,10 @@ func TestT104_TrocasDeConfiguracaoNoPostgresSemSegredo(t *testing.T) {
 		}
 		got = append(got, canal+" "+acao+" "+prov+" "+por)
 	}
-	if strings.Join(got, "|") != "whatsapp gravada zapi ops-a|whatsapp apagada  ops-a" {
+	if strings.Join(got, "|") != "whatsapp gravada zapi ops-a|whatsapp apagada  ops-a|whatsapp webhooks zapi ana" {
 		t.Fatalf("eventos = %q", got)
 	}
 	if err := repo.RegistrarEventoConfig(ctx, portas.EventoConfig{Canal: dominio.CanalWhatsApp, Acao: "trocada", Por: "x"}); err == nil {
-		t.Fatal("ação fora de gravada/apagada aceita")
+		t.Fatal("ação fora de gravada/apagada/webhooks aceita")
 	}
 }

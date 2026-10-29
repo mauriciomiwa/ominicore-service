@@ -10,6 +10,9 @@ Entradas antigas: `log/arquivo-AAAA.md` (`tools/arquiva_log.py`).
   healthy; `.anterior` = `ac762e0` íntegro; `/webhooks/zapi/<errado>` → 404.
 - Console publicado (versão 57674d31) com o estado dos webhooks e "Cadastrar
   de novo". Falta a 7.4: cadastrar pelo Console e conferir um aviso real.
+- Achado no primeiro "Cadastrar de novo" (17:00): os webhooks foram
+  cadastrados na Z-API, mas o registro em `config_eventos` falhou (o CHECK só
+  aceitava gravada/apagada) e a API respondeu 500. Correção: migration 00010.
 
 ## 2026-10-29 — Change `13-webhooks-zapi` implementada (31/35; falta conferir a Z-API real e publicar)
 - Rota `POST /webhooks/zapi/{segredo}` (segredo em tempo constante + `instanceId`;
