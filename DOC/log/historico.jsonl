@@ -308,3 +308,5 @@
 {"data": "2026-10-29T17:57:04", "script": "checa_projeto-local", "rc": 0, "faltas": 0, "alertas": 2, "erro": false, "detalhe": "execucoes/2026-10-29_175704_checa_projeto-local.json", "furos": 0}
 {"data": "2026-10-29T18:13:15", "script": "mapeia_projeto-check", "rc": 0, "faltas": 0, "alertas": 0, "erro": false, "detalhe": "execucoes/2026-10-29_181315_mapeia_projeto-check.json", "surgiu": 0, "sumiu": 0}
 {"data": "2026-10-29T18:13:15", "script": "checa_projeto-local", "rc": 0, "faltas": 0, "alertas": 2, "erro": false, "detalhe": "execucoes/2026-10-29_181315_checa_projeto-local.json", "furos": 0}
+{"data": "2026-10-31T19:42:13", "script": "mapeia_projeto-check", "rc": 0, "faltas": 0, "alertas": 0, "erro": false, "detalhe": "execucoes/2026-10-31_194213_mapeia_projeto-check.json", "surgiu": 0, "sumiu": 0}
+{"data": "2026-10-31T19:42:13", "script": "checa_projeto-local", "rc": 0, "faltas": 0, "alertas": 2, "erro": false, "detalhe": "execucoes/2026-10-31_194213_checa_projeto-local.json", "furos": 0}

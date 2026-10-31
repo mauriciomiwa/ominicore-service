@@ -163,3 +163,5 @@ rode com `make itest` (Docker Desktop, Colima ou Podman: usa o socket do context
 | T-138 | Exemplo | `web/console/src/pages/whatsapp.spec.ts` (Vitest) | passando |
 | T-139 | Exemplo | `internal/integracao/integracao_test.go` (Postgres) | passando |
 | T-140 | Exemplo | `internal/integracao/integracao_test.go` (Postgres) | passando |
+| T-157 | Exemplo | `internal/integracao/integracao_test.go` (Postgres) | passando |
+| T-158 | Exemplo | `internal/integracao/integracao_test.go` (Postgres) | passando |

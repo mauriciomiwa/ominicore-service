@@ -4,6 +4,8 @@ Lista viva de pendências, lembretes e decisões em aberto. As fatias planejadas
 ficam no `System/backlog-mvp.md` (cada uma é uma change do OpenSpec); furos de rastreabilidade entram aqui.
 
 ## Decisões em aberto
+- [ ] Botão de link e anexo (documento) no WhatsApp: os modelos da régua do wbem (RN-14) usam o link escrito e o PDF como link até lá.
+- [ ] `15-fila-zapi`: renumerar a migration planejada `00012_config_eventos_fila.sql` para `00013` (a `00012` é a dos modelos da régua do wbem, fatia 16).
 - [ ] Cadastro de Templates: seed por migration (fatia 1) basta no MVP ou precisa de API de administração?
 - [ ] Mesma Chave de idempotência com pedido diferente dentro de 24 h: devolver a Notificação existente (como hoje) ou recusar como conflito?
 - [ ] Prazo e orçamento do MVP.
