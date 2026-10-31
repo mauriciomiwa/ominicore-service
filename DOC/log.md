@@ -5,6 +5,11 @@ registro vira suposição de alguém daqui a seis meses.
 
 Entradas antigas: `log/arquivo-AAAA.md` (`tools/arquiva_log.py`).
 
+## 2026-10-31 (19h55) — Prod em `4e26915` com os modelos da régua do wbem
+- **Prod:** PR #18 na `main` (`4e26915`) e `HOST=aviva ./deploy/aviva2/publicar.sh prod` (o dono digitou `prod`): migration `00012` aplicada no schema `ominicore` antes do restart; API e worker no ar em `4e26915`. Alvo provado antes pelo container (`OMINICORE_KC_ISSUER` do realm `ominicore`, `OMINICORE_BAO_PREFIXO=ominicore`, `OMINICORE_DB_SCHEMA=ominicore`).
+- **Por que prod:** o hml do OminiCore segue adiado (06/10); o dono confirmou publicar em prod. Prod estava em `c3bcb0c`, sem diferença de código ou migration para a `main` além da `00012`.
+- **Falta (3.1 da change):** um pedido real com um dos modelos novos para o celular do dono; nenhum Sistema de origem os chama ainda.
+
 ## 2026-10-31 — Modelos da régua do wbem (fatia 16)
 - **Dono (31/10, na sessão do aviva-back):** criar os modelos de WhatsApp da apresentação v9 do aviva-back, só os modelos (os disparos ficam no aviva-back, quando cada evento existir). Texto com o link escrito no lugar do botão; o PDF das Mensagens 7, 8 e 11 vai como link.
 - **Change `16-modelos-regua-wbem`** (RN-14, REQ-49, T-157 e T-158): migration `00012_modelos_regua_wbem.sql` com 16 Templates. O link inicial da v9 é um Template novo (`wbem-financiamento-na-clinica`): reescrever o `wbem-link-tomador` quebraria o pedido de hoje do aviva-back, que só manda `link`.
