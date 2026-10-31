@@ -899,3 +899,85 @@ func TestT140_PedidoSemAVariavelOuPorOutroCanalERecusado(t *testing.T) {
 		t.Fatalf("nada devia ser registrado: %d notificações, %d tentativas", n, ten)
 	}
 }
+
+// variaveisDaRegua é o contrato de cada modelo da régua do wbem (RN-14): as
+// variáveis que o aviva-back manda. Todo modelo leva `nome` e `link`.
+var variaveisDaRegua = map[string][]string{
+	"wbem-financiamento-na-clinica":    {"nome", "clinica", "valor_tratamento", "condicao", "primeira_parcela", "link"},
+	"wbem-open-finance-confirmado":     {"nome", "clinica", "link"},
+	"wbem-open-finance-nao-confirmado": {"nome", "clinica", "reservada_ate", "link"},
+	"wbem-pix-autorizado":              {"nome", "clinica", "link"},
+	"wbem-pix-nao-confirmado":          {"nome", "clinica", "reservada_ate", "link"},
+	"wbem-proposta-vence-hoje":         {"nome", "clinica", "hora_limite", "link"},
+	"wbem-debito-cancelado":            {"nome", "clinica", "link"},
+	"wbem-boleto-disponivel":           {"nome", "clinica", "parcela", "valor", "vencimento", "link_pdf", "link"},
+	"wbem-parcela-nao-debitada":        {"nome", "clinica", "parcela", "valor", "vencimento", "link_pdf", "link"},
+	"wbem-contratacao-liberada":        {"nome", "clinica", "link"},
+	"wbem-contratacao-adiada":          {"nome", "clinica", "garantida_ate", "link"},
+	"wbem-contrato-assinado":           {"nome", "clinica", "link_pdf", "link"},
+	"wbem-lembrete-open-finance":       {"nome", "clinica", "link"},
+	"wbem-lembrete-pix":                {"nome", "clinica", "link"},
+	"wbem-lembrete-biometria":          {"nome", "clinica", "link"},
+	"wbem-lembrete-assinatura":         {"nome", "clinica", "link"},
+}
+
+func TestT157_ModelosDaReguaDoWbemPreenchemOTextoDoWhatsApp(t *testing.T) {
+	repo := postgres.Repositorio{Pool: banco(t)}
+	if len(variaveisDaRegua) != 16 {
+		t.Fatalf("a régua da v9 tem 16 modelos, o contrato tem %d", len(variaveisDaRegua))
+	}
+	for id, vars := range variaveisDaRegua {
+		tpl, err := repo.BuscarTemplate(context.Background(), id)
+		if err != nil {
+			t.Fatalf("%s: %v", id, err)
+		}
+		if len(tpl.OrdemCanais) != 1 || tpl.OrdemCanais[0] != dominio.CanalWhatsApp || len(tpl.Conteudos) != 1 {
+			t.Fatalf("%s: ordem %v e %d versões, quer só WhatsApp", id, tpl.OrdemCanais, len(tpl.Conteudos))
+		}
+		dados := map[string]string{}
+		for _, v := range vars {
+			dados[v] = "<" + v + ">"
+		}
+		c, err := tpl.Preencher(dominio.CanalWhatsApp, dados)
+		if err != nil {
+			t.Fatalf("%s: %v", id, err)
+		}
+		for _, v := range vars {
+			if !strings.Contains(c.Corpo, "<"+v+">") {
+				t.Errorf("%s: o texto não usa a variável %s", id, v)
+			}
+		}
+		if strings.Contains(c.Corpo, "{{") || strings.Contains(c.Corpo, `\n`) || !strings.HasPrefix(c.Corpo, "*") ||
+			!strings.HasSuffix(c.Corpo, "_A W Bem nunca pede senha, código ou depósito._") {
+			t.Errorf("%s: forma do texto fora do padrão: %q", id, c.Corpo)
+		}
+		if dominio.WhatsAppZAPI.ServirTexto(c) != nil || dominio.WhatsAppUltraMsg.ServirTexto(c) != nil {
+			t.Errorf("%s: o texto não serve à Z-API e ao UltraMsg", id)
+		}
+	}
+}
+
+func TestT158_ModeloDaReguaSemVariavelERecusadoEOsDaRN13NaoMudam(t *testing.T) {
+	pool := banco(t)
+	uc := aplicacao.SendMessageUseCase{Repo: postgres.Repositorio{Pool: pool}, ProvedorWhatsApp: dominio.WhatsAppZAPI}
+	_, err := uc.Pedir(context.Background(), aplicacao.PedidoNotificacao{
+		SistemaOrigem: "wbem", ChaveIdempotencia: "t158-a", TemplateID: "wbem-pix-nao-confirmado",
+		Destinatario: dominio.Destinatario{Telefone: "+5511999998888"},
+		Dados:        map[string]string{"nome": "Marcos", "clinica": "Odonto Vida", "link": "https://app.wbem.com.br/j/acesso/?t=abc"},
+	})
+	if !errors.Is(err, dominio.ErrVariavelFaltando) {
+		t.Fatalf("sem reservada_ate: err = %v, quer variável faltando", err)
+	}
+	if n, ten := contar(t, pool); n != 0 || ten != 0 {
+		t.Fatalf("nada devia ser registrado: %d notificações, %d tentativas", n, ten)
+	}
+	repo := postgres.Repositorio{Pool: pool}
+	tpl, err := repo.BuscarTemplate(context.Background(), "wbem-link-tomador")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, _ := tpl.Preencher(dominio.CanalWhatsApp, map[string]string{"link": "L"})
+	if c.Corpo != "WBem: acesse sua proposta de crédito: L (vale 24 h, uso único)." {
+		t.Errorf("o Template da RN-13 mudou: %q", c.Corpo)
+	}
+}

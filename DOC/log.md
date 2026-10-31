@@ -5,6 +5,11 @@ registro vira suposição de alguém daqui a seis meses.
 
 Entradas antigas: `log/arquivo-AAAA.md` (`tools/arquiva_log.py`).
 
+## 2026-10-31 — Modelos da régua do wbem (fatia 16)
+- **Dono (31/10, na sessão do aviva-back):** criar os modelos de WhatsApp da apresentação v9 do aviva-back, só os modelos (os disparos ficam no aviva-back, quando cada evento existir). Texto com o link escrito no lugar do botão; o PDF das Mensagens 7, 8 e 11 vai como link.
+- **Change `16-modelos-regua-wbem`** (RN-14, REQ-49, T-157 e T-158): migration `00012_modelos_regua_wbem.sql` com 16 Templates. O link inicial da v9 é um Template novo (`wbem-financiamento-na-clinica`): reescrever o `wbem-link-tomador` quebraria o pedido de hoje do aviva-back, que só manda `link`.
+- **Numeração:** a `15-fila-zapi` (ainda não publicada) planejava a `00012`; passa para a `00013`, porque o goose não aplica migration mais antiga que a última.
+
 ## 2026-10-29 — Changes 08 a 14 arquivadas
 - Arquivadas em cadeia: 08, 09, 10, 11, 12, 13 e 14. A 5.2 da 08 (formato real
   da resposta do UltraMsg) foi arquivada em aberto, por decisão do dono: prod

@@ -138,6 +138,15 @@ Depende de: nada (migration aditiva; Z-API em produção)
 Pronto quando: T-139 e T-140 passando, migration publicada nos dois schemas e
 um pedido real do aviva-back entregue.
 
+### Fatia 16 — Modelos da régua do wbem
+Change: `16-modelos-regua-wbem`
+Valor: os 16 modelos de WhatsApp da apresentação v9 do aviva-back (link
+inicial e Mensagens 1 a 15) prontos para o aviva-back pedir.
+Cobre: RN-14 (REQ-49)
+Depende de: nada (migration aditiva `00012`); a `15-fila-zapi` passa a usar a `00013`
+Pronto quando: T-157 e T-158 passando e migration publicada nos dois schemas.
+Os disparos ficam no aviva-back, quando cada evento existir.
+
 ## Trilha de infraestrutura (não é fatia)
 
 Deploy no aviva2.0 (quadlets `ominicore-api` e `ominicore-worker`, rota
