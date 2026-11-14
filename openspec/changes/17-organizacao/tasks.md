@@ -28,7 +28,7 @@
 ## 4. Change 15 e ambientes
 
 - [x] 4.1 Renumerar na change `15-fila-zapi` a migration para `00014_config_eventos_fila.sql` (tasks e design) — verificar: `grep -rnE "0001[23]_" openspec/changes/15-fila-zapi` vazio
-- [ ] 4.2 (dono, skill `ambientes`) Consulta só de leitura dos `sistema_origem` distintos dos últimos 30 dias em hml e prod; client além de `wbem` entra na migration antes do deploy — verificar: resultado anotado no `log.md`
+- [x] 4.2 (dono, skill `ambientes`) Consulta só de leitura dos `sistema_origem` distintos dos últimos 30 dias em hml e prod; client além de `wbem` entra na migration antes do deploy — verificar: resultado anotado no `log.md`
 
 ## 5. Fechamento
 

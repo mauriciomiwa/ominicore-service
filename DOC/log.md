@@ -11,6 +11,7 @@ Entradas antigas: `log/arquivo-AAAA.md` (`tools/arquiva_log.py`).
 - Isolamento: coluna `organizacao` em cada tabela, mais row-level security no Postgres como segunda barreira. A Organização vem do client (`azp`), nunca de header.
 - Cadastro de Organização e vínculo client → Organização só por migration; client sem Organização recebe 403 e nada é criado. Os dados atuais vão para `wbem`.
 - Fatias: 17 (base), 18 (Templates e credenciais, com Email e SMS lidos do cofre com cache), 19 (Operadores por grupo `/organizacoes/<id>` no Keycloak e Console). A `15-fila-zapi` espera a 18 e usa a migration `00014`.
+- **Clients antes do deploy (tarefa 4.2, dono, 14/11, só leitura):** em prod, `SELECT DISTINCT sistema_origem FROM ominicore.notificacoes` dos últimos 30 dias devolve só `wbem`, já cadastrado na `00013`. O hml não existe (adiado em 2026-10-06): o schema `ominicore_hml` não foi criado, então não há o que conferir lá.
 - Change `17-organizacao` (RN-15, REQ-50 a REQ-52, T-159 a T-165). Um só role do banco por enquanto: a barreira vale onde a API fixa a Organização na transação; um role só da API fica para quando houver uma segunda Organização em prod.
 
 ## 2026-10-31 — Modelos da régua do wbem (fatia 16)

@@ -115,9 +115,11 @@ Nenhuma migration cria Organização de teste.
 
 ## Migration Plan
 
-1. hml: `publicar.sh hml` (o goose aplica a `00013`), seguido de pedido e
-   consulta pelo client do aviva-back de hml.
-2. prod: consulta de leitura dos `sistema_origem` distintos, depois
+1. hml: não existe ainda (adiado em 2026-10-06). Quando for criado, o goose
+   aplica todas as migrations, e o client do aviva-back de hml precisa de
+   vínculo numa migration.
+2. prod: consulta de leitura dos `sistema_origem` distintos (feita em
+   14/11: só `wbem`), depois
    `HOST=aviva publicar.sh prod` pelo dono, seguido de um pedido real do `wbem`.
 3. Rollback: `goose down` para a `00012`, depois a imagem anterior
    (`.anterior`). Não há perda de dados.
