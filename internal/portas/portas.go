@@ -11,6 +11,7 @@ import (
 
 // NovaNotificacao é o que o caso de uso de envio pede para registrar.
 type NovaNotificacao struct {
+	Organizacao       dominio.Organizacao // a do Sistema de origem (REQ-51)
 	SistemaOrigem     string
 	ChaveIdempotencia string
 	TemplateID        string
@@ -50,8 +51,9 @@ type MessageRepositoryPort interface {
 	// ReservarPorIDProvedor trava a Tentativa (e a Notificação) do aviso;
 	// ok=false quando o id do Provedor não existe (REQ-12).
 	ReservarPorIDProvedor(ctx context.Context, idProvedor string) (a AvisoReservado, ok bool, err error)
-	// ConsultarNotificacao devolve a Notificação só se for do Sistema de origem.
-	ConsultarNotificacao(ctx context.Context, sistemaOrigem, id string) (c Consulta, ok bool, err error)
+	// ConsultarNotificacao devolve a Notificação só se for da Organização e do
+	// Sistema de origem (REQ-14, REQ-52).
+	ConsultarNotificacao(ctx context.Context, org dominio.Organizacao, sistemaOrigem, id string) (c Consulta, ok bool, err error)
 	// OptOutsDe diz em quais Canais os contatos do Destinatário fizeram Opt-out.
 	OptOutsDe(ctx context.Context, d dominio.Destinatario) (map[dominio.Canal]bool, error)
 	// RegistrarOptOut e RemoverOptOut são idempotentes e guardam quem fez (REQ-15).
@@ -136,6 +138,12 @@ type Identidade struct {
 	Client  string
 	Usuario string
 	Papeis  []string
+}
+
+// OrganizacoesPort diz a que Organização pertence o client do token (REQ-50).
+type OrganizacoesPort interface {
+	// DoSistema devolve ok=false quando o client não pertence a nenhuma.
+	DoSistema(ctx context.Context, client string) (org dominio.Organizacao, ok bool, err error)
 }
 
 // CadastroWebhooksPort cadastra no Provedor do WhatsApp as URLs dos Avisos de

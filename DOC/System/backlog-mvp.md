@@ -147,6 +147,31 @@ Depende de: nada (migration aditiva `00012`); a `15-fila-zapi` passa a usar a `0
 Pronto quando: T-157 e T-158 passando e migration publicada nos dois schemas.
 Os disparos ficam no aviva-back, quando cada evento existir.
 
+### Fatia 17 — Organização (base do multi-tenant)
+Change: `17-organizacao`
+Valor: cada Sistema de origem pertence a uma Organização, a Notificação fica com
+ela e o banco impede que uma Organização leia a Notificação de outra; client
+sem Organização é recusado. Nada muda para o `wbem`.
+Cobre: RN-15 (REQ-50 a REQ-52)
+Depende de: Fatia 16 (migration `00012`); usa a `00013` e a `15-fila-zapi` passa à `00014`
+Pronto quando: T-159 a T-165 passando, migration publicada nos dois schemas e
+um pedido real do `wbem` aceito depois dela.
+
+### Fatia 18 — Templates e credenciais por Organização
+Change: a abrir
+Valor: cada Organização tem os seus Templates e as suas credenciais de Email,
+SMS e WhatsApp (`kv/ominicore/<organizacao>/...`), lidas do cofre com cache.
+Cobre: RN-15
+Depende de: Fatia 17. A `15-fila-zapi` espera esta fatia. Remove o default
+`wbem` da coluna `organizacao` (mantido na 17 pela compatibilidade do deploy).
+
+### Fatia 19 — Operadores e Console por Organização
+Change: a abrir
+Valor: o Operador só vê e configura a Organização do seu grupo no Keycloak
+(`/organizacoes/<id>`); o papel global vê todas.
+Cobre: RN-15, RN-11 e RN-12
+Depende de: Fatia 18
+
 ## Trilha de infraestrutura (não é fatia)
 
 Deploy no aviva2.0 (quadlets `ominicore-api` e `ominicore-worker`, rota

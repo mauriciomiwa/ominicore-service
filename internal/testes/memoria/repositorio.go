@@ -30,9 +30,15 @@ type Repositorio struct {
 	FalharEventoConfig error
 	anonimizadas       map[string]time.Time
 	chaves             map[string]string
+	// Vinculos é o client → Organização (REQ-50); Novo cadastra `sistema-a`
+	// (org-a), `sistema-b` (org-b) e `wbem` (wbem).
+	Vinculos map[string]dominio.Organizacao
 }
 
-var _ portas.MessageRepositoryPort = (*Repositorio)(nil)
+var (
+	_ portas.MessageRepositoryPort = (*Repositorio)(nil)
+	_ portas.OrganizacoesPort      = (*Repositorio)(nil)
+)
 
 // Novo cria o repositório com o Template boas-vindas das migrations 00002/00003.
 func Novo() *Repositorio {
@@ -41,7 +47,18 @@ func Novo() *Repositorio {
 		Notificacoes: map[string]dominio.Notificacao{},
 		chaves:       map[string]string{},
 		optOuts:      map[string]string{},
+		Vinculos: map[string]dominio.Organizacao{
+			"sistema-a": "org-a", "sistema-b": "org-b", "wbem": dominio.OrganizacaoInicial,
+		},
 	}
+}
+
+// DoSistema devolve a Organização do client pelo Vinculos.
+func (r *Repositorio) DoSistema(_ context.Context, client string) (dominio.Organizacao, bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	org, ok := r.Vinculos[client]
+	return org, ok, nil
 }
 
 // BoasVindas espelha o seed das migrations 00002, 00003, 00004 e 00008.
@@ -77,7 +94,7 @@ func (r *Repositorio) RegistrarNotificacao(_ context.Context, n portas.NovaNotif
 	id := fmt.Sprintf("00000000-0000-4000-8000-%012d", len(r.Notificacoes)+1) // formato UUID, como no Postgres
 	r.chaves[chave] = id
 	r.Notificacoes[id] = dominio.Notificacao{
-		ID: id, SistemaOrigem: n.SistemaOrigem, TemplateID: n.TemplateID, Destinatario: n.Destinatario,
+		ID: id, Organizacao: n.Organizacao, SistemaOrigem: n.SistemaOrigem, TemplateID: n.TemplateID, Destinatario: n.Destinatario,
 		Dados: n.Dados, OrdemCanais: n.OrdemCanais, Status: dominio.NotificacaoPendente, CriadaEm: time.Now(),
 	}
 	r.enfileirar(id, n.PrimeiroCanal, 1, 0)
@@ -188,12 +205,13 @@ func (r *Repositorio) ReservarPorIDProvedor(_ context.Context, id string) (porta
 	return portas.AvisoReservado{}, false, nil
 }
 
-// ConsultarNotificacao devolve a Notificação só para o Sistema de origem dono.
-func (r *Repositorio) ConsultarNotificacao(_ context.Context, sistemaOrigem, id string) (portas.Consulta, bool, error) {
+// ConsultarNotificacao devolve a Notificação só para o Sistema de origem dono,
+// dentro da Organização dele.
+func (r *Repositorio) ConsultarNotificacao(_ context.Context, org dominio.Organizacao, sistemaOrigem, id string) (portas.Consulta, bool, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	n, ok := r.Notificacoes[id]
-	if !ok || n.SistemaOrigem != sistemaOrigem {
+	if !ok || n.Organizacao != org || n.SistemaOrigem != sistemaOrigem {
 		return portas.Consulta{}, false, nil
 	}
 	c := portas.Consulta{ID: n.ID, TemplateID: n.TemplateID, Status: n.Status}

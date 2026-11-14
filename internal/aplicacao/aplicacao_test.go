@@ -17,7 +17,7 @@ import (
 
 func pedido() aplicacao.PedidoNotificacao {
 	return aplicacao.PedidoNotificacao{
-		SistemaOrigem: "sistema-a", ChaveIdempotencia: "abc-1", TemplateID: "boas-vindas",
+		Organizacao: "org-a", SistemaOrigem: "sistema-a", ChaveIdempotencia: "abc-1", TemplateID: "boas-vindas",
 		Destinatario: dominio.Destinatario{Email: "ana@exemplo.com"}, Dados: map[string]string{"nome": "Ana"},
 	}
 }

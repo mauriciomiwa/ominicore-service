@@ -5,6 +5,14 @@ registro vira suposição de alguém daqui a seis meses.
 
 Entradas antigas: `log/arquivo-AAAA.md` (`tools/arquiva_log.py`).
 
+## 2026-11-14 — Sabatina do multi-tenant: Organização (fatias 17 a 19)
+- Revê o kickoff ("não multi-tenant"). **Organização** = empresa ou marca do grupo; termo no glossário (evitar "tenant").
+- Por Organização: Provedor e credenciais de cada Canal, Templates e Operadores. Opt-out e retenção continuam globais.
+- Isolamento: coluna `organizacao` em cada tabela, mais row-level security no Postgres como segunda barreira. A Organização vem do client (`azp`), nunca de header.
+- Cadastro de Organização e vínculo client → Organização só por migration; client sem Organização recebe 403 e nada é criado. Os dados atuais vão para `wbem`.
+- Fatias: 17 (base), 18 (Templates e credenciais, com Email e SMS lidos do cofre com cache), 19 (Operadores por grupo `/organizacoes/<id>` no Keycloak e Console). A `15-fila-zapi` espera a 18 e usa a migration `00014`.
+- Change `17-organizacao` (RN-15, REQ-50 a REQ-52, T-159 a T-165). Um só role do banco por enquanto: a barreira vale onde a API fixa a Organização na transação; um role só da API fica para quando houver uma segunda Organização em prod.
+
 ## 2026-10-31 — Modelos da régua do wbem (fatia 16)
 - **Dono (31/10, na sessão do aviva-back):** criar os modelos de WhatsApp da apresentação v9 do aviva-back, só os modelos (os disparos ficam no aviva-back, quando cada evento existir). Texto com o link escrito no lugar do botão; o PDF das Mensagens 7, 8 e 11 vai como link.
 - **Change `16-modelos-regua-wbem`** (RN-14, REQ-49, T-157 e T-158): migration `00012_modelos_regua_wbem.sql` com 16 Templates. O link inicial da v9 é um Template novo (`wbem-financiamento-na-clinica`): reescrever o `wbem-link-tomador` quebraria o pedido de hoje do aviva-back, que só manda `link`.

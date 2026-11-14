@@ -39,6 +39,7 @@ func novo(t *testing.T) ambiente {
 	repo := memoria.Novo()
 	h := entradahttp.Servidor{
 		Auth:          keycloak.Novo(realm.URL, "ominicore", &emissor.Cache{}),
+		Organizacoes:  repo,
 		Enviar:        aplicacao.SendMessageUseCase{Repo: repo},
 		Consultar:     aplicacao.ConsultarUseCase{Repo: repo},
 		OptOut:        aplicacao.OptOutUseCase{Repo: repo},
@@ -334,9 +335,10 @@ func TestT65_PedidoSoPorWhatsAppDesligadoVira422(t *testing.T) {
 	realm := emissor.Novo(t)
 	repo := memoria.Novo()
 	a := ambiente{realm: realm, repo: repo, h: entradahttp.Servidor{
-		Auth:   keycloak.Novo(realm.URL, "ominicore", &emissor.Cache{}),
-		Enviar: aplicacao.SendMessageUseCase{Repo: repo, Desligados: map[dominio.Canal]bool{dominio.CanalWhatsApp: true}},
-		Log:    slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Auth:         keycloak.Novo(realm.URL, "ominicore", &emissor.Cache{}),
+		Organizacoes: repo,
+		Enviar:       aplicacao.SendMessageUseCase{Repo: repo, Desligados: map[dominio.Canal]bool{dominio.CanalWhatsApp: true}},
+		Log:          slog.New(slog.NewTextHandler(io.Discard, nil)),
 	}.Handler()}
 	corpo := `{"template_id":"boas-vindas","destinatario":{"telefone":"+5511999998888"},"dados":{"nome":"Ana"},"canais":["whatsapp"]}`
 	rec := a.pedir(a.realm.Valido(t, "sistema-a"), "k-1", corpo)
@@ -363,9 +365,10 @@ func versaoSemTextoVira422(t *testing.T, prov dominio.ProvedorWhatsApp) {
 	tpl := repo.Templates["boas-vindas"]
 	tpl.Conteudos[dominio.CanalWhatsApp] = dominio.ConteudoCanal{ModeloAprovado: "boas_vindas", Idioma: "pt_BR", Parametros: []string{"nome"}}
 	a := ambiente{realm: realm, repo: repo, h: entradahttp.Servidor{
-		Auth:   keycloak.Novo(realm.URL, "ominicore", &emissor.Cache{}),
-		Enviar: aplicacao.SendMessageUseCase{Repo: repo, ProvedorWhatsApp: prov},
-		Log:    slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Auth:         keycloak.Novo(realm.URL, "ominicore", &emissor.Cache{}),
+		Organizacoes: repo,
+		Enviar:       aplicacao.SendMessageUseCase{Repo: repo, ProvedorWhatsApp: prov},
+		Log:          slog.New(slog.NewTextHandler(io.Discard, nil)),
 	}.Handler()}
 	corpo := `{"template_id":"boas-vindas","destinatario":{"telefone":"+5511999998888"},"dados":{"nome":"Ana"},"canais":["whatsapp","sms"]}`
 	rec := a.pedir(a.realm.Valido(t, "sistema-a"), "k-1", corpo)
@@ -401,5 +404,64 @@ func TestT119_TokenDoConsoleRecusadoNoEnvioENoOptOut(t *testing.T) {
 	}
 	if rec := a.pedir(a.realm.Valido(t, "sistema-a"), "abc-2", corpoValido); rec.Code != http.StatusAccepted {
 		t.Fatalf("Sistema de origem comum: status = %d, quero 202", rec.Code)
+	}
+}
+
+func TestT159_ClientSemOrganizacaoERecusado(t *testing.T) {
+	a := novo(t)
+	token := a.realm.Valido(t, "sistema-x")
+	semOrganizacao := func(metodo string, rec *httptest.ResponseRecorder) {
+		t.Helper()
+		if rec.Code != http.StatusForbidden || !strings.Contains(rec.Body.String(), "Sistema de origem sem Organização") {
+			t.Fatalf("%s: status = %d corpo = %s, quero 403 sem Organização", metodo, rec.Code, rec.Body)
+		}
+	}
+	semOrganizacao("pedido", a.pedir(token, "abc-1", corpoValido))
+	chamadas := []*http.Request{
+		httptest.NewRequest(http.MethodGet, "/v1/notificacoes/00000000-0000-4000-8000-000000000001", nil),
+		httptest.NewRequest(http.MethodPost, "/v1/opt-outs", strings.NewReader(`{"canal":"sms","contato":"+5511999998888"}`)),
+		httptest.NewRequest(http.MethodDelete, "/v1/opt-outs", strings.NewReader(`{"canal":"sms","contato":"+5511999998888"}`)),
+	}
+	for _, req := range chamadas {
+		req.Header.Set("Authorization", "Bearer "+token)
+		rec := httptest.NewRecorder()
+		a.h.ServeHTTP(rec, req)
+		semOrganizacao(req.Method+" "+req.URL.Path, rec)
+	}
+	if n, _ := a.repo.Contar(); n != 0 || a.repo.QuantosOptOuts() != 0 || len(a.repo.Tentativas) != 0 || len(a.repo.EventosOptOut) != 0 {
+		t.Fatalf("criou %d notificações, %d tentativas, %d opt-outs e %d eventos", n, len(a.repo.Tentativas), a.repo.QuantosOptOuts(), len(a.repo.EventosOptOut))
+	}
+}
+
+func TestT160_ClientComOrganizacaoSegueComoAntes(t *testing.T) {
+	a := novo(t)
+	rec := a.pedir(a.realm.Valido(t, "wbem"), "abc-1", corpoValido)
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("status = %d: %s", rec.Code, rec.Body)
+	}
+	var corpo map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &corpo); err != nil || len(corpo) != 2 || corpo["id"] == "" || corpo["status"] != "pendente" {
+		t.Fatalf("contrato mudou: %s", rec.Body)
+	}
+	n := a.repo.Notificacoes[corpo["id"].(string)]
+	if n.Organizacao != dominio.OrganizacaoInicial || n.SistemaOrigem != "wbem" {
+		t.Fatalf("notificação na organização %q do sistema %q", n.Organizacao, n.SistemaOrigem)
+	}
+}
+
+func TestT164_ConsultaDeOutraOrganizacaoEInexistente(t *testing.T) {
+	a := novo(t)
+	rec := a.pedir(a.realm.Valido(t, "wbem"), "abc-1", corpoValido)
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("pedido: status = %d: %s", rec.Code, rec.Body)
+	}
+	var corpo struct{ ID string }
+	_ = json.Unmarshal(rec.Body.Bytes(), &corpo)
+	req := httptest.NewRequest(http.MethodGet, "/v1/notificacoes/"+corpo.ID, nil)
+	req.Header.Set("Authorization", "Bearer "+a.realm.Valido(t, "sistema-b"))
+	consulta := httptest.NewRecorder()
+	a.h.ServeHTTP(consulta, req)
+	if consulta.Code != http.StatusNotFound || strings.Contains(consulta.Body.String(), corpo.ID) {
+		t.Fatalf("status = %d corpo = %s, quero 404 sem a Notificação", consulta.Code, consulta.Body)
 	}
 }

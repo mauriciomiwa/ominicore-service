@@ -211,6 +211,8 @@ func rodarAPI(ctx context.Context, cfg config, seg openbao.Segredos, atual *apli
 			Enviar:    aplicacao.SendMessageUseCase{Repo: repo, Estado: atual},
 			Consultar: aplicacao.ConsultarUseCase{Repo: repo},
 			OptOut:    aplicacao.OptOutUseCase{Repo: repo},
+			// Organização do client (REQ-50): cadastro só por migration, cache de 1 min.
+			Organizacoes: &postgres.Organizacoes{Pool: repo.Pool},
 			Config: &aplicacao.ConfigurarUseCase{
 				Cofre: cofre, Registro: repo, Atual: atual, Log: log,
 				Cadastro: zapi.NovoWebhooks(cfg.ZAPIURL), URLPublica: cfg.WebhookURL,

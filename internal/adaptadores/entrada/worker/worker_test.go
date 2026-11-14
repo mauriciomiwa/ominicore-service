@@ -73,9 +73,10 @@ func novoFluxoCom(t *testing.T, prov dominio.ProvedorWhatsApp) *fluxo {
 	f := &fluxo{repo: memoria.Novo(), sg: sendgridfake.Novo(t), tw: twiliofake.Novo(t), meta: metafake.Novo(t), um: ultramsgfake.Novo(t), zf: zapifake.Novo(t), realm: emissor.Novo(t), log: &bufferSeguro{}}
 	log := logs.Novo(f.log, slog.LevelDebug)
 	f.api = entradahttp.Servidor{
-		Auth:   keycloak.Novo(f.realm.URL, "ominicore", &emissor.Cache{}),
-		Enviar: aplicacao.SendMessageUseCase{Repo: f.repo, ProvedorWhatsApp: prov},
-		Log:    log,
+		Auth:         keycloak.Novo(f.realm.URL, "ominicore", &emissor.Cache{}),
+		Organizacoes: f.repo,
+		Enviar:       aplicacao.SendMessageUseCase{Repo: f.repo, ProvedorWhatsApp: prov},
+		Log:          log,
 	}.Handler()
 	var wa portas.MessageSenderPort = whatsapp.Novo(f.meta.URL, whatsapp.Credenciais{Token: metafake.Token, PhoneNumberID: metafake.PhoneNumberID})
 	switch prov {
@@ -359,7 +360,7 @@ func TestT77_TentativaPendenteSemAFormaDoProvedorAtivoSegueAOrdem(t *testing.T) 
 	tpl := f.repo.Templates["boas-vindas"]
 	tpl.Conteudos[dominio.CanalWhatsApp] = dominio.ConteudoCanal{ModeloAprovado: "boas_vindas", Idioma: "pt_BR", Parametros: []string{"nome"}}
 	if _, err := (aplicacao.SendMessageUseCase{Repo: f.repo, ProvedorWhatsApp: dominio.WhatsAppMeta}).Pedir(context.Background(), aplicacao.PedidoNotificacao{
-		SistemaOrigem: "sistema-a", ChaveIdempotencia: "k-77", TemplateID: "boas-vindas",
+		Organizacao: "org-a", SistemaOrigem: "sistema-a", ChaveIdempotencia: "k-77", TemplateID: "boas-vindas",
 		Destinatario: dominio.Destinatario{Telefone: "+5511999998888"}, Dados: map[string]string{"nome": "Ana"},
 		Canais: []dominio.Canal{dominio.CanalWhatsApp, dominio.CanalSMS},
 	}); err != nil {
@@ -436,7 +437,7 @@ func TestT77_TentativaPendenteDeTextoComAMetaAtivaSegueAOrdem(t *testing.T) {
 	tpl := f.repo.Templates["boas-vindas"]
 	tpl.Conteudos[dominio.CanalWhatsApp] = dominio.ConteudoCanal{Corpo: "Olá {{nome}}"}
 	if _, err := (aplicacao.SendMessageUseCase{Repo: f.repo, ProvedorWhatsApp: dominio.WhatsAppZAPI}).Pedir(context.Background(), aplicacao.PedidoNotificacao{
-		SistemaOrigem: "sistema-a", ChaveIdempotencia: "k-77m", TemplateID: "boas-vindas",
+		Organizacao: "org-a", SistemaOrigem: "sistema-a", ChaveIdempotencia: "k-77m", TemplateID: "boas-vindas",
 		Destinatario: dominio.Destinatario{Telefone: "+5511999998888"}, Dados: map[string]string{"nome": "Ana"},
 		Canais: []dominio.Canal{dominio.CanalWhatsApp, dominio.CanalSMS},
 	}); err != nil {
@@ -453,7 +454,7 @@ func TestTrocarUltraMsgPorZAPINaoInvalidaATentativaPendente(t *testing.T) {
 	f := novoFluxoCom(t, dominio.WhatsAppZAPI)
 	// o pedido foi aceito com o UltraMsg; as duas enviam o texto (design da 09)
 	if _, err := (aplicacao.SendMessageUseCase{Repo: f.repo, ProvedorWhatsApp: dominio.WhatsAppUltraMsg}).Pedir(context.Background(), aplicacao.PedidoNotificacao{
-		SistemaOrigem: "sistema-a", ChaveIdempotencia: "k-troca", TemplateID: "boas-vindas",
+		Organizacao: "org-a", SistemaOrigem: "sistema-a", ChaveIdempotencia: "k-troca", TemplateID: "boas-vindas",
 		Destinatario: dominio.Destinatario{Telefone: "+5511999998888"}, Dados: map[string]string{"nome": "Ana"},
 		Canais: []dominio.Canal{dominio.CanalWhatsApp, dominio.CanalSMS},
 	}); err != nil {

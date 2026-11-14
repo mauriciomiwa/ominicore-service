@@ -39,6 +39,7 @@ func novoConfig(t *testing.T, inicial dominio.ConfigWhatsApp) ambienteConfig {
 	log := slog.New(slog.NewTextHandler(a.log, nil))
 	a.h = entradahttp.Servidor{
 		Auth:          keycloak.Novo(a.realm.URL, "ominicore", &emissor.Cache{}),
+		Organizacoes:  a.repo,
 		Enviar:        aplicacao.SendMessageUseCase{Repo: a.repo, Estado: a.atual},
 		Config:        &aplicacao.ConfigurarUseCase{Cofre: a.cofre, Registro: a.repo, Atual: a.atual, Log: log},
 		ConsoleOrigem: origemConsole,

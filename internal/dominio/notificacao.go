@@ -94,6 +94,7 @@ func (d Destinatario) PrimeiroComContato(ordem []Canal, inicio int) (Canal, bool
 // Notificacao é o pedido de um Sistema de origem para avisar um Destinatário.
 type Notificacao struct {
 	ID            string
+	Organizacao   Organizacao
 	SistemaOrigem string
 	TemplateID    string
 	Destinatario  Destinatario

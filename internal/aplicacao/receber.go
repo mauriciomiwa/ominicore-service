@@ -58,7 +58,11 @@ type ConsultarUseCase struct {
 	Repo portas.MessageRepositoryPort
 }
 
-// Consultar devolve ok=false para Notificação inexistente ou de outro dono.
-func (uc ConsultarUseCase) Consultar(ctx context.Context, sistemaOrigem, id string) (portas.Consulta, bool, error) {
-	return uc.Repo.ConsultarNotificacao(ctx, sistemaOrigem, id)
+// Consultar devolve ok=false para Notificação inexistente, de outro dono ou de
+// outra Organização (REQ-52).
+func (uc ConsultarUseCase) Consultar(ctx context.Context, org dominio.Organizacao, sistemaOrigem, id string) (portas.Consulta, bool, error) {
+	if org == "" {
+		return portas.Consulta{}, false, dominio.ErrSemOrganizacao
+	}
+	return uc.Repo.ConsultarNotificacao(ctx, org, sistemaOrigem, id)
 }
