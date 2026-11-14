@@ -9,7 +9,7 @@ decisão ou chute. "Sabatina" = confirmado pelo usuário no kickoff de 2026-09-2
 
 | Camada | Tecnologia | Origem |
 |---|---|---|
-| Linguagem | Go 1.27 (`go 1.27.0` no `go.mod`; local `go1.27.1 darwin/arm64`); módulo `ominicore` (trocar pelo caminho do GitHub quando o repo existir) | `go.mod` |
+| Linguagem | Go 1.27 (`go 1.27.4` no `go.mod`, mínimo sem as CVEs da stdlib de out–nov/2026; o `toolchain` local baixa a versão); módulo `ominicore` (trocar pelo caminho do GitHub quando o repo existir) | `go.mod` |
 | Arquitetura | Hexagonal (ports and adapters): domínio sem dependência de infra | sabatina + diagrama `gemini-code-1790619852596.html` |
 | HTTP | `net/http` da stdlib (roteamento com método e parâmetro, Go 1.22+) | sabatina (P14) |
 | Contrato | OpenAPI 3.1 escrito antes do código (`api/openapi.yaml`) | sabatina (P14) |

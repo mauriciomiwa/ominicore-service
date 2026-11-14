@@ -5,6 +5,10 @@ registro vira suposição de alguém daqui a seis meses.
 
 Entradas antigas: `log/arquivo-AAAA.md` (`tools/arquiva_log.py`).
 
+## 2026-11-14 — Go 1.27.4 e x/net v0.60.0 (govulncheck do CI)
+- O job `go` estava vermelho desde 29/10 (também no `main`): o CI usa a versão do `go.mod` (`go 1.27.0`) e o `govulncheck` acusava 11 vulnerabilidades alcançáveis da stdlib (`net/http`, `crypto/x509`, `crypto/tls`, `mime/multipart`, http2) e do `golang.org/x/net` v0.58.0 (ex.: GO-2026-6859, corrigida no 1.27.4).
+- `go.mod` passa a `go 1.27.4` e `x/net` a v0.60.0 (com `x/crypto`, `x/sync`, `x/sys` e `x/text` puxados pelo `go get`). Testes com race e integração, lint e `govulncheck` verdes. Corrigido no branch da fatia 17 (PR #21), pelo Auto-fix.
+
 ## 2026-11-14 — Sabatina do multi-tenant: Organização (fatias 17 a 19)
 - Revê o kickoff ("não multi-tenant"). **Organização** = empresa ou marca do grupo; termo no glossário (evitar "tenant").
 - Por Organização: Provedor e credenciais de cada Canal, Templates e Operadores. Opt-out e retenção continuam globais.
