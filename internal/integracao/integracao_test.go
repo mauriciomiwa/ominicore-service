@@ -946,33 +946,40 @@ func TestT157_ModelosDaReguaDoWbemPreenchemOTextoDoWhatsApp(t *testing.T) {
 		t.Fatalf("a régua da v9 tem 16 modelos, o contrato tem %d", len(variaveisDaRegua))
 	}
 	for id, vars := range variaveisDaRegua {
-		tpl, err := repo.BuscarTemplate(context.Background(), id)
-		if err != nil {
-			t.Fatalf("%s: %v", id, err)
+		conferirModeloDaRegua(t, repo, id, vars)
+	}
+}
+
+// conferirModeloDaRegua prova um modelo da régua (T-157): só WhatsApp, usa
+// todas as variáveis, segue a forma do texto e serve à Z-API e ao UltraMsg.
+func conferirModeloDaRegua(t *testing.T, repo postgres.Repositorio, id string, vars []string) {
+	t.Helper()
+	tpl, err := repo.BuscarTemplate(context.Background(), id)
+	if err != nil {
+		t.Fatalf("%s: %v", id, err)
+	}
+	if len(tpl.OrdemCanais) != 1 || tpl.OrdemCanais[0] != dominio.CanalWhatsApp || len(tpl.Conteudos) != 1 {
+		t.Fatalf("%s: ordem %v e %d versões, quer só WhatsApp", id, tpl.OrdemCanais, len(tpl.Conteudos))
+	}
+	dados := map[string]string{}
+	for _, v := range vars {
+		dados[v] = "<" + v + ">"
+	}
+	c, err := tpl.Preencher(dominio.CanalWhatsApp, dados)
+	if err != nil {
+		t.Fatalf("%s: %v", id, err)
+	}
+	for _, v := range vars {
+		if !strings.Contains(c.Corpo, "<"+v+">") {
+			t.Errorf("%s: o texto não usa a variável %s", id, v)
 		}
-		if len(tpl.OrdemCanais) != 1 || tpl.OrdemCanais[0] != dominio.CanalWhatsApp || len(tpl.Conteudos) != 1 {
-			t.Fatalf("%s: ordem %v e %d versões, quer só WhatsApp", id, tpl.OrdemCanais, len(tpl.Conteudos))
-		}
-		dados := map[string]string{}
-		for _, v := range vars {
-			dados[v] = "<" + v + ">"
-		}
-		c, err := tpl.Preencher(dominio.CanalWhatsApp, dados)
-		if err != nil {
-			t.Fatalf("%s: %v", id, err)
-		}
-		for _, v := range vars {
-			if !strings.Contains(c.Corpo, "<"+v+">") {
-				t.Errorf("%s: o texto não usa a variável %s", id, v)
-			}
-		}
-		if strings.Contains(c.Corpo, "{{") || strings.Contains(c.Corpo, `\n`) || !strings.HasPrefix(c.Corpo, "*") ||
-			!strings.HasSuffix(c.Corpo, "_A W Bem nunca pede senha, código ou depósito._") {
-			t.Errorf("%s: forma do texto fora do padrão: %q", id, c.Corpo)
-		}
-		if dominio.WhatsAppZAPI.ServirTexto(c) != nil || dominio.WhatsAppUltraMsg.ServirTexto(c) != nil {
-			t.Errorf("%s: o texto não serve à Z-API e ao UltraMsg", id)
-		}
+	}
+	if strings.Contains(c.Corpo, "{{") || strings.Contains(c.Corpo, `\n`) || !strings.HasPrefix(c.Corpo, "*") ||
+		!strings.HasSuffix(c.Corpo, "_A W Bem nunca pede senha, código ou depósito._") {
+		t.Errorf("%s: forma do texto fora do padrão: %q", id, c.Corpo)
+	}
+	if dominio.WhatsAppZAPI.ServirTexto(c) != nil || dominio.WhatsAppUltraMsg.ServirTexto(c) != nil {
+		t.Errorf("%s: o texto não serve à Z-API e ao UltraMsg", id)
 	}
 }
 
