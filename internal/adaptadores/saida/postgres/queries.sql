@@ -21,8 +21,8 @@ JOIN notificacoes n ON n.id = i.notificacao_id
 WHERE i.sistema_origem = $1 AND i.chave = $2;
 
 -- name: InserirNotificacao :exec
-INSERT INTO notificacoes (id, sistema_origem, template_id, destinatario_email, destinatario_telefone, dados, ordem_canais, status)
-VALUES ($1, $2, $3, $4, $5, $6, $7, 'pendente');
+INSERT INTO notificacoes (id, organizacao, sistema_origem, template_id, destinatario_email, destinatario_telefone, dados, ordem_canais, status)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pendente');
 
 -- espera_ms conta a partir do relógio do banco, o mesmo que a fila compara.
 -- name: InserirTentativa :exec
@@ -123,3 +123,12 @@ WHERE anonimizada_em IS NULL AND criada_em < $1 AND status = 'pendente';
 -- name: InserirEventoConfig :exec
 -- Troca da configuração de um Canal pela API, sem segredo (REQ-27).
 INSERT INTO config_eventos (canal, acao, provedor, por) VALUES ($1, $2, $3, $4);
+
+-- name: OrganizacaoDoSistema :one
+-- Organização do client do token (REQ-50); sem linha = sem Organização.
+SELECT organizacao FROM sistemas_origem WHERE client = $1;
+
+-- name: FixarOrganizacao :exec
+-- Fixa a Organização só até o fim da transação (is_local): a política
+-- por_organizacao de `notificacoes` passa a filtrar por ela (REQ-52).
+SELECT set_config('ominicore.organizacao', sqlc.arg(organizacao)::text, true);

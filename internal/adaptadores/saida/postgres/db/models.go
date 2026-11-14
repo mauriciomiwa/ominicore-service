@@ -38,6 +38,7 @@ type Notificaco struct {
 	AtualizadaEm         time.Time
 	DestinatarioTelefone string
 	AnonimizadaEm        *time.Time
+	Organizacao          string
 }
 
 type OptOut struct {
@@ -56,9 +57,20 @@ type OptOutEvento struct {
 	Em          time.Time
 }
 
+type Organizaco struct {
+	ID   string
+	Nome string
+}
+
+type SistemasOrigem struct {
+	Client      string
+	Organizacao string
+}
+
 type Template struct {
 	ID          string
 	OrdemCanais []string
+	Organizacao string
 }
 
 type TemplateConteudo struct {

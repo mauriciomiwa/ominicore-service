@@ -31,9 +31,9 @@ deploy/                   podman compose (local), quadlets e publicar.sh (aviva2
 
 | Componente | Responsabilidade |
 |---|---|
-| `ominicore api` | autentica o Sistema de origem, valida o pedido, grava a Notificação e a 1ª Tentativa na mesma transação; recebe webhooks dos Provedores |
+| `ominicore api` | autentica o Sistema de origem e resolve a sua Organização (sem Organização: 403), valida o pedido, grava a Notificação e a 1ª Tentativa na mesma transação; recebe webhooks dos Provedores |
 | `ominicore worker` | puxa Tentativas prontas, envia pelo Provedor do Canal, decide retry/fallback pelo NotificationRouter |
-| Postgres (`ominicore`) | Notificações, Tentativas (a fila), Templates, Opt-outs, chaves de idempotência |
+| Postgres (`ominicore`) | Organizações e vínculo client → Organização, Notificações (com row-level security por Organização nas leituras da API), Tentativas (a fila), Templates, Opt-outs, chaves de idempotência |
 | Redis | rate limit por Provedor, cache de Template e JWKS — perder o Redis degrada, não perde dado |
 | OpenBao | credenciais SendGrid/Twilio e senha do banco (`kv/ominicore/*`) |
 | Keycloak | emite os tokens dos Sistemas de origem e do próprio OminiCore (login no Bao) |

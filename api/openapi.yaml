@@ -68,7 +68,7 @@ paths:
         "401":
           $ref: "#/components/responses/Problema"
         "403":
-          description: Token do Console do Operador; ele não pede Notificações nem mexe em Opt-out (REQ-36).
+          description: Token do Console do Operador, que não pede Notificações nem mexe em Opt-out (REQ-36), ou client sem Organização ("Sistema de origem sem Organização", REQ-50).
           content:
             application/problem+json:
               schema:
@@ -103,7 +103,7 @@ paths:
         "401":
           $ref: "#/components/responses/Problema"
         "403":
-          description: Token do Console do Operador; ele não pede Notificações nem mexe em Opt-out (REQ-36).
+          description: Token do Console do Operador, que não pede Notificações nem mexe em Opt-out (REQ-36), ou client sem Organização ("Sistema de origem sem Organização", REQ-50).
           content:
             application/problem+json:
               schema:
@@ -137,7 +137,7 @@ paths:
         "401":
           $ref: "#/components/responses/Problema"
         "403":
-          description: Token do Console do Operador; ele não pede Notificações nem mexe em Opt-out (REQ-36).
+          description: Token do Console do Operador, que não pede Notificações nem mexe em Opt-out (REQ-36), ou client sem Organização ("Sistema de origem sem Organização", REQ-50).
           content:
             application/problem+json:
               schema:
@@ -165,7 +165,7 @@ paths:
         "401":
           $ref: "#/components/responses/Problema"
         "403":
-          description: Token do Console do Operador; ele não pede Notificações nem mexe em Opt-out (REQ-36).
+          description: Token do Console do Operador, que não pede Notificações nem mexe em Opt-out (REQ-36), ou client sem Organização ("Sistema de origem sem Organização", REQ-50).
           content:
             application/problem+json:
               schema:

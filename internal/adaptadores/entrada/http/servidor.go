@@ -30,6 +30,9 @@ type Servidor struct {
 	Enviar    aplicacao.SendMessageUseCase
 	Consultar aplicacao.ConsultarUseCase
 	OptOut    aplicacao.OptOutUseCase
+	// Organizacoes diz a Organização do client (REQ-50); nil = nenhum client
+	// tem Organização e as rotas do Sistema de origem respondem 403.
+	Organizacoes portas.OrganizacoesPort
 	// Config liga /v1/config/whatsapp, só para o Operador (RN-11); nil = sem rotas.
 	Config *aplicacao.ConfigurarUseCase
 	// Webhooks registra /webhooks/* (públicos, assinados pelo Provedor); nil = sem rotas.
@@ -67,8 +70,9 @@ func (s Servidor) Handler() http.Handler {
 }
 
 type (
-	chaveOrigem struct{}
-	chaveQuem   struct{}
+	chaveOrigem      struct{}
+	chaveQuem        struct{}
+	chaveOrganizacao struct{}
 )
 
 // autenticar recusa com 401, antes de qualquer efeito, pedido sem token válido.
@@ -105,16 +109,41 @@ func (s Servidor) doConsole(client string) bool {
 	return s.ConsoleClient != "" && client == s.ConsoleClient
 }
 
-// soSistemaDeOrigem recusa com 403, sem efeito, o token do Console nas rotas de
-// Notificação e de Opt-out (REQ-36).
+// soSistemaDeOrigem recusa com 403, sem efeito, nas rotas de Notificação e de
+// Opt-out: o token do Console (REQ-36) e o client sem Organização (REQ-50). A
+// Organização resolvida segue no contexto.
 func (s Servidor) soSistemaDeOrigem(prox http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if client, _ := r.Context().Value(chaveOrigem{}).(string); s.doConsole(client) {
+		client, _ := r.Context().Value(chaveOrigem{}).(string)
+		if s.doConsole(client) {
 			problema(w, http.StatusForbidden, "sem permissão", "o Console do Operador não pede Notificações nem mexe em Opt-out")
 			return
 		}
-		prox.ServeHTTP(w, r)
+		org, ok, err := s.organizacaoDe(r.Context(), client)
+		if err != nil {
+			s.Log.ErrorContext(r.Context(), "organização do sistema de origem falhou", "erro", err.Error())
+			problema(w, http.StatusInternalServerError, "erro interno", "tente de novo")
+			return
+		}
+		if !ok {
+			s.Log.InfoContext(r.Context(), "sistema de origem sem organização", "client", client)
+			problema(w, http.StatusForbidden, "Sistema de origem sem Organização", "o client do token não pertence a nenhuma Organização")
+			return
+		}
+		prox.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), chaveOrganizacao{}, org)))
 	})
+}
+
+func (s Servidor) organizacaoDe(ctx context.Context, client string) (dominio.Organizacao, bool, error) {
+	if s.Organizacoes == nil {
+		return "", false, nil
+	}
+	return s.Organizacoes.DoSistema(ctx, client)
+}
+
+func organizacao(r *http.Request) dominio.Organizacao {
+	org, _ := r.Context().Value(chaveOrganizacao{}).(dominio.Organizacao)
+	return org
 }
 
 type pedidoJSON struct {
@@ -157,6 +186,7 @@ func (s Servidor) pedirNotificacao(w http.ResponseWriter, r *http.Request) {
 		canais[i] = dominio.Canal(c)
 	}
 	reg, err := s.Enviar.Pedir(r.Context(), aplicacao.PedidoNotificacao{
+		Organizacao:       organizacao(r),
 		SistemaOrigem:     r.Context().Value(chaveOrigem{}).(string),
 		ChaveIdempotencia: chave,
 		TemplateID:        p.TemplateID,
@@ -254,7 +284,7 @@ func (s Servidor) consultarNotificacao(w http.ResponseWriter, r *http.Request) {
 		problema(w, http.StatusNotFound, "notificação não encontrada", "")
 		return
 	}
-	consulta, ok, err := s.Consultar.Consultar(r.Context(), origem, id)
+	consulta, ok, err := s.Consultar.Consultar(r.Context(), organizacao(r), origem, id)
 	if err != nil {
 		s.Log.ErrorContext(r.Context(), "consulta de notificação falhou", "erro", err.Error())
 		problema(w, http.StatusInternalServerError, "erro interno", "tente de novo")

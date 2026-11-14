@@ -77,12 +77,29 @@ func banco(t *testing.T) *pgxpool.Pool {
 	if err := postgres.Migrar(ctx, pool, postgres.SchemaPadrao); err != nil {
 		t.Fatal(err)
 	}
+	cadastrarOrganizacoesDeTeste(t, pool)
 	return pool
+}
+
+// orgsDeTeste: os clients dos testes e as suas Organizações (design D5). A
+// migration só cadastra a `wbem`.
+var orgsDeTeste = map[string]dominio.Organizacao{"sistema-a": "org-a", "sistema-b": "org-b", "wbem": dominio.OrganizacaoInicial}
+
+func orgDe(client string) dominio.Organizacao { return orgsDeTeste[client] }
+
+func cadastrarOrganizacoesDeTeste(t *testing.T, pool *pgxpool.Pool) {
+	t.Helper()
+	_, err := pool.Exec(context.Background(), `
+		INSERT INTO organizacoes (id, nome) VALUES ('org-a', 'Organização A'), ('org-b', 'Organização B');
+		INSERT INTO sistemas_origem (client, organizacao) VALUES ('sistema-a', 'org-a'), ('sistema-b', 'org-b')`)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func nova(origem, chave string) portas.NovaNotificacao {
 	return portas.NovaNotificacao{
-		SistemaOrigem: origem, ChaveIdempotencia: chave, TemplateID: "boas-vindas",
+		Organizacao: orgDe(origem), SistemaOrigem: origem, ChaveIdempotencia: chave, TemplateID: "boas-vindas",
 		Destinatario: dominio.Destinatario{Email: "ana@exemplo.com"}, Dados: map[string]string{"nome": "Ana"},
 		OrdemCanais: []dominio.Canal{dominio.CanalEmail},
 	}
@@ -181,6 +198,7 @@ func novaPonta(t *testing.T) ponta {
 	p := ponta{pool: pool, sg: sendgridfake.Novo(t), tw: twiliofake.Novo(t), meta: metafake.Novo(t), realm: emissor.Novo(t)}
 	p.api = entradahttp.Servidor{
 		Auth: keycloak.Novo(p.realm.URL, "ominicore", &emissor.Cache{}), Enviar: aplicacao.SendMessageUseCase{Repo: repo}, Log: log,
+		Organizacoes: &postgres.Organizacoes{Pool: pool},
 	}.Handler()
 	uc := aplicacao.DespacharUseCase{
 		Repo: repo, Log: log,
@@ -245,7 +263,7 @@ func TestT4_PedidoValidoFicaPendenteComTentativaNoEmail(t *testing.T) {
 	pool := banco(t)
 	repo := postgres.Repositorio{Pool: pool}
 	reg, err := aplicacao.SendMessageUseCase{Repo: repo}.Pedir(context.Background(), aplicacao.PedidoNotificacao{
-		SistemaOrigem: "sistema-a", ChaveIdempotencia: "abc-1", TemplateID: "boas-vindas",
+		Organizacao: "org-a", SistemaOrigem: "sistema-a", ChaveIdempotencia: "abc-1", TemplateID: "boas-vindas",
 		Destinatario: dominio.Destinatario{Email: "ana@exemplo.com"}, Dados: map[string]string{"nome": "Ana"},
 	})
 	if err != nil {
@@ -459,6 +477,7 @@ func TestSchemasDeHmlEProdFicamIsolados(t *testing.T) {
 	if err := postgres.Migrar(ctx, hml, "ominicore_hml"); err != nil {
 		t.Fatal(err)
 	}
+	cadastrarOrganizacoesDeTeste(t, hml)
 	if _, err := (postgres.Repositorio{Pool: hml}).RegistrarNotificacao(ctx, nova("sistema-a", "k-hml")); err != nil {
 		t.Fatal(err)
 	}
@@ -570,11 +589,11 @@ func TestT43_ConsultaNoPostgresSemContatoNemMotivo(t *testing.T) {
 	id := p.aceitaWhatsApp(t, "k-43")
 	p.webhookMeta(t, falhaMeta("wamid.fake"))
 	esperarHistorico(t, p.pool, id, func(h []linhaTentativa) bool { return len(h) == 2 && h[1].Status == "enviada" })
-	c, ok, err := postgres.Repositorio{Pool: p.pool}.ConsultarNotificacao(context.Background(), "sistema-a", id)
+	c, ok, err := postgres.Repositorio{Pool: p.pool}.ConsultarNotificacao(context.Background(), "org-a", "sistema-a", id)
 	if err != nil || !ok || len(c.Tentativas) != 2 || c.Tentativas[0].Categoria != dominio.FalhaContatoInvalido || c.CriadaEm.IsZero() {
 		t.Fatalf("consulta = %+v ok=%v err=%v", c, ok, err)
 	}
-	if _, ok, _ := (postgres.Repositorio{Pool: p.pool}).ConsultarNotificacao(context.Background(), "sistema-b", id); ok {
+	if _, ok, _ := (postgres.Repositorio{Pool: p.pool}).ConsultarNotificacao(context.Background(), "org-b", "sistema-b", id); ok {
 		t.Fatal("sistema-b enxergou a Notificação de sistema-a")
 	}
 }
@@ -792,12 +811,12 @@ func TestT56_ConsultaMostraQuandoFoiAnonimizada(t *testing.T) {
 	pool := banco(t)
 	id := finalizada(t, pool, "k-56", "entregue", 31)
 	repo := postgres.Repositorio{Pool: pool}
-	c, _, _ := repo.ConsultarNotificacao(context.Background(), "sistema-a", id)
+	c, _, _ := repo.ConsultarNotificacao(context.Background(), "org-a", "sistema-a", id)
 	if c.AnonimizadaEm != nil {
 		t.Fatal("anonimizada_em antes da rodada")
 	}
 	rodarRetencao(t, pool, 30)
-	c, ok, err := repo.ConsultarNotificacao(context.Background(), "sistema-a", id)
+	c, ok, err := repo.ConsultarNotificacao(context.Background(), "org-a", "sistema-a", id)
 	if err != nil || !ok || c.AnonimizadaEm == nil || len(c.Tentativas) != 1 || c.Status != dominio.NotificacaoEntregue {
 		t.Fatalf("consulta = %+v ok=%v err=%v", c, ok, err)
 	}
@@ -882,14 +901,14 @@ func TestT140_PedidoSemAVariavelOuPorOutroCanalERecusado(t *testing.T) {
 	uc := aplicacao.SendMessageUseCase{Repo: postgres.Repositorio{Pool: pool}, ProvedorWhatsApp: dominio.WhatsAppZAPI}
 	tel := dominio.Destinatario{Telefone: "+5511999998888"}
 	_, err := uc.Pedir(context.Background(), aplicacao.PedidoNotificacao{
-		SistemaOrigem: "wbem", ChaveIdempotencia: "t140-a", TemplateID: "wbem-otp-tomador",
+		Organizacao: dominio.OrganizacaoInicial, SistemaOrigem: "wbem", ChaveIdempotencia: "t140-a", TemplateID: "wbem-otp-tomador",
 		Destinatario: tel, Dados: map[string]string{},
 	})
 	if !errors.Is(err, dominio.ErrVariavelFaltando) {
 		t.Fatalf("sem codigo: err = %v, quer variável faltando", err)
 	}
 	_, err = uc.Pedir(context.Background(), aplicacao.PedidoNotificacao{
-		SistemaOrigem: "wbem", ChaveIdempotencia: "t140-b", TemplateID: "wbem-otp-tomador",
+		Organizacao: dominio.OrganizacaoInicial, SistemaOrigem: "wbem", ChaveIdempotencia: "t140-b", TemplateID: "wbem-otp-tomador",
 		Destinatario: tel, Dados: map[string]string{"codigo": "482915"}, Canais: []dominio.Canal{dominio.CanalSMS},
 	})
 	if !errors.Is(err, dominio.ErrCanalSemVersao) {
@@ -927,33 +946,40 @@ func TestT157_ModelosDaReguaDoWbemPreenchemOTextoDoWhatsApp(t *testing.T) {
 		t.Fatalf("a régua da v9 tem 16 modelos, o contrato tem %d", len(variaveisDaRegua))
 	}
 	for id, vars := range variaveisDaRegua {
-		tpl, err := repo.BuscarTemplate(context.Background(), id)
-		if err != nil {
-			t.Fatalf("%s: %v", id, err)
+		conferirModeloDaRegua(t, repo, id, vars)
+	}
+}
+
+// conferirModeloDaRegua prova um modelo da régua (T-157): só WhatsApp, usa
+// todas as variáveis, segue a forma do texto e serve à Z-API e ao UltraMsg.
+func conferirModeloDaRegua(t *testing.T, repo postgres.Repositorio, id string, vars []string) {
+	t.Helper()
+	tpl, err := repo.BuscarTemplate(context.Background(), id)
+	if err != nil {
+		t.Fatalf("%s: %v", id, err)
+	}
+	if len(tpl.OrdemCanais) != 1 || tpl.OrdemCanais[0] != dominio.CanalWhatsApp || len(tpl.Conteudos) != 1 {
+		t.Fatalf("%s: ordem %v e %d versões, quer só WhatsApp", id, tpl.OrdemCanais, len(tpl.Conteudos))
+	}
+	dados := map[string]string{}
+	for _, v := range vars {
+		dados[v] = "<" + v + ">"
+	}
+	c, err := tpl.Preencher(dominio.CanalWhatsApp, dados)
+	if err != nil {
+		t.Fatalf("%s: %v", id, err)
+	}
+	for _, v := range vars {
+		if !strings.Contains(c.Corpo, "<"+v+">") {
+			t.Errorf("%s: o texto não usa a variável %s", id, v)
 		}
-		if len(tpl.OrdemCanais) != 1 || tpl.OrdemCanais[0] != dominio.CanalWhatsApp || len(tpl.Conteudos) != 1 {
-			t.Fatalf("%s: ordem %v e %d versões, quer só WhatsApp", id, tpl.OrdemCanais, len(tpl.Conteudos))
-		}
-		dados := map[string]string{}
-		for _, v := range vars {
-			dados[v] = "<" + v + ">"
-		}
-		c, err := tpl.Preencher(dominio.CanalWhatsApp, dados)
-		if err != nil {
-			t.Fatalf("%s: %v", id, err)
-		}
-		for _, v := range vars {
-			if !strings.Contains(c.Corpo, "<"+v+">") {
-				t.Errorf("%s: o texto não usa a variável %s", id, v)
-			}
-		}
-		if strings.Contains(c.Corpo, "{{") || strings.Contains(c.Corpo, `\n`) || !strings.HasPrefix(c.Corpo, "*") ||
-			!strings.HasSuffix(c.Corpo, "_A W Bem nunca pede senha, código ou depósito._") {
-			t.Errorf("%s: forma do texto fora do padrão: %q", id, c.Corpo)
-		}
-		if dominio.WhatsAppZAPI.ServirTexto(c) != nil || dominio.WhatsAppUltraMsg.ServirTexto(c) != nil {
-			t.Errorf("%s: o texto não serve à Z-API e ao UltraMsg", id)
-		}
+	}
+	if strings.Contains(c.Corpo, "{{") || strings.Contains(c.Corpo, `\n`) || !strings.HasPrefix(c.Corpo, "*") ||
+		!strings.HasSuffix(c.Corpo, "_A W Bem nunca pede senha, código ou depósito._") {
+		t.Errorf("%s: forma do texto fora do padrão: %q", id, c.Corpo)
+	}
+	if dominio.WhatsAppZAPI.ServirTexto(c) != nil || dominio.WhatsAppUltraMsg.ServirTexto(c) != nil {
+		t.Errorf("%s: o texto não serve à Z-API e ao UltraMsg", id)
 	}
 }
 
@@ -961,7 +987,7 @@ func TestT158_ModeloDaReguaSemVariavelERecusadoEOsDaRN13NaoMudam(t *testing.T) {
 	pool := banco(t)
 	uc := aplicacao.SendMessageUseCase{Repo: postgres.Repositorio{Pool: pool}, ProvedorWhatsApp: dominio.WhatsAppZAPI}
 	_, err := uc.Pedir(context.Background(), aplicacao.PedidoNotificacao{
-		SistemaOrigem: "wbem", ChaveIdempotencia: "t158-a", TemplateID: "wbem-pix-nao-confirmado",
+		Organizacao: dominio.OrganizacaoInicial, SistemaOrigem: "wbem", ChaveIdempotencia: "t158-a", TemplateID: "wbem-pix-nao-confirmado",
 		Destinatario: dominio.Destinatario{Telefone: "+5511999998888"},
 		Dados:        map[string]string{"nome": "Marcos", "clinica": "Odonto Vida", "link": "https://app.wbem.com.br/j/acesso/?t=abc"},
 	})

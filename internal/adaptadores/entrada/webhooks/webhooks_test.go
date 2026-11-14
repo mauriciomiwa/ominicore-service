@@ -67,7 +67,7 @@ func novo(t *testing.T) *ambiente {
 func (a *ambiente) aceita(t *testing.T, canais []dominio.Canal, idProvedor string) {
 	t.Helper()
 	p := aplicacao.PedidoNotificacao{
-		SistemaOrigem: "sistema-a", ChaveIdempotencia: idProvedor, TemplateID: "boas-vindas", Canais: canais,
+		Organizacao: "org-a", SistemaOrigem: "sistema-a", ChaveIdempotencia: idProvedor, TemplateID: "boas-vindas", Canais: canais,
 		Destinatario: dominio.Destinatario{Email: "ana@exemplo.com", Telefone: "+5511999998888"}, Dados: map[string]string{"nome": "Ana"},
 	}
 	if _, err := (aplicacao.SendMessageUseCase{Repo: a.repo}).Pedir(context.Background(), p); err != nil {

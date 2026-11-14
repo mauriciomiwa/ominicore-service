@@ -67,10 +67,11 @@ func TestT98_OperadorDesligaOWhatsAppNoOpenBaoReal(t *testing.T) {
 	atual := aplicacao.NovaConfigWhatsAppAtual(dominio.ConfigWhatsApp{}, func(dominio.ConfigWhatsApp) portas.MessageSenderPort { return nil })
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	h := entradahttp.Servidor{
-		Auth:   keycloak.Novo(realm.URL, "ominicore", &emissor.Cache{}),
-		Enviar: aplicacao.SendMessageUseCase{Repo: repo, Estado: atual},
-		Config: &aplicacao.ConfigurarUseCase{Cofre: cofre, Registro: repo, Atual: atual, Log: log},
-		Log:    log,
+		Auth:         keycloak.Novo(realm.URL, "ominicore", &emissor.Cache{}),
+		Organizacoes: repo,
+		Enviar:       aplicacao.SendMessageUseCase{Repo: repo, Estado: atual},
+		Config:       &aplicacao.ConfigurarUseCase{Cofre: cofre, Registro: repo, Atual: atual, Log: log},
+		Log:          log,
 	}.Handler()
 	operador := realm.Token(t, jwt.MapClaims{
 		"iss": realm.URL, "aud": []string{"ominicore"}, "azp": "ops-a",

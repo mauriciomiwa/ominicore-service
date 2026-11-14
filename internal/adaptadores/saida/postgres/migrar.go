@@ -61,14 +61,42 @@ func Migrar(ctx context.Context, pool *pgxpool.Pool, schema string) error {
 			return fmt.Errorf("criar schema: %w", err)
 		}
 	}
+	return comGoose(pool, func(prov *goose.Provider) error {
+		if _, err := prov.Up(ctx); err != nil {
+			return fmt.Errorf("aplicar migrations: %w", err)
+		}
+		return nil
+	})
+}
+
+// MigrarAte aplica as migrations até a versão dada, inclusive; VoltarPara
+// desfaz as posteriores a ela. Servem aos testes de passagem de versão
+// (T-161, T-162) e ao rollback de uma migration.
+func MigrarAte(ctx context.Context, pool *pgxpool.Pool, versao int64) error {
+	return comGoose(pool, func(prov *goose.Provider) error {
+		if _, err := prov.UpTo(ctx, versao); err != nil {
+			return fmt.Errorf("aplicar migrations até %d: %w", versao, err)
+		}
+		return nil
+	})
+}
+
+// VoltarPara desfaz as migrations posteriores à versão dada.
+func VoltarPara(ctx context.Context, pool *pgxpool.Pool, versao int64) error {
+	return comGoose(pool, func(prov *goose.Provider) error {
+		if _, err := prov.DownTo(ctx, versao); err != nil {
+			return fmt.Errorf("desfazer migrations até %d: %w", versao, err)
+		}
+		return nil
+	})
+}
+
+func comGoose(pool *pgxpool.Pool, fn func(*goose.Provider) error) error {
 	sqlDB := stdlib.OpenDBFromPool(pool)
 	defer func() { _ = sqlDB.Close() }()
 	prov, err := goose.NewProvider(goose.DialectPostgres, sqlDB, migrations.FS)
 	if err != nil {
 		return fmt.Errorf("preparar migrations: %w", err)
 	}
-	if _, err := prov.Up(ctx); err != nil {
-		return fmt.Errorf("aplicar migrations: %w", err)
-	}
-	return nil
+	return fn(prov)
 }

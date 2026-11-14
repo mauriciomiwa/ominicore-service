@@ -68,8 +68,15 @@ _Evitar_: template da Meta, HSM, message template
 
 ## Partes
 
+**Organização**:
+Empresa ou marca do grupo com Provedores, credenciais, Templates e Operadores
+próprios; cada Sistema de origem pertence a uma só. O Opt-out e a retenção
+valem para todas.
+_Evitar_: tenant, inquilino, cliente, empresa
+
 **Sistema de origem**:
-Serviço interno da casa que pede Notificações ao OminiCore.
+Serviço interno da casa que pede Notificações ao OminiCore, em nome da sua
+Organização.
 _Evitar_: cliente, consumidor, tenant
 
 **Operador**:

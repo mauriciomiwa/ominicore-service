@@ -11,6 +11,7 @@ import (
 
 // PedidoNotificacao é o pedido de um Sistema de origem já autenticado (REQ-1).
 type PedidoNotificacao struct {
+	Organizacao       dominio.Organizacao
 	SistemaOrigem     string
 	ChaveIdempotencia string
 	TemplateID        string
@@ -42,6 +43,9 @@ func (uc SendMessageUseCase) estado() (map[dominio.Canal]bool, dominio.ProvedorW
 // primeira Tentativa no primeiro Canal da Ordem de Canais com contato do
 // Destinatário. A ordem é a do pedido ou, sem ela, a do Template.
 func (uc SendMessageUseCase) Pedir(ctx context.Context, p PedidoNotificacao) (portas.Registro, error) {
+	if p.Organizacao == "" {
+		return portas.Registro{}, dominio.ErrSemOrganizacao
+	}
 	tpl, err := uc.Repo.BuscarTemplate(ctx, p.TemplateID)
 	if err != nil {
 		return portas.Registro{}, err
@@ -79,6 +83,7 @@ func (uc SendMessageUseCase) Pedir(ctx context.Context, p PedidoNotificacao) (po
 		return portas.Registro{}, dominio.ErrSemContato
 	}
 	return uc.Repo.RegistrarNotificacao(ctx, portas.NovaNotificacao{
+		Organizacao:       p.Organizacao,
 		SistemaOrigem:     p.SistemaOrigem,
 		ChaveIdempotencia: p.ChaveIdempotencia,
 		TemplateID:        tpl.ID,

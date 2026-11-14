@@ -267,6 +267,17 @@ func (q *Queries) ContarPendentesVencidas(ctx context.Context, criadaEm time.Tim
 	return count, err
 }
 
+const fixarOrganizacao = `-- name: FixarOrganizacao :exec
+SELECT set_config('ominicore.organizacao', $1::text, true)
+`
+
+// Fixa a Organização só até o fim da transação (is_local): a política
+// por_organizacao de `notificacoes` passa a filtrar por ela (REQ-52).
+func (q *Queries) FixarOrganizacao(ctx context.Context, organizacao string) error {
+	_, err := q.db.Exec(ctx, fixarOrganizacao, organizacao)
+	return err
+}
+
 const inserirEventoConfig = `-- name: InserirEventoConfig :exec
 INSERT INTO config_eventos (canal, acao, provedor, por) VALUES ($1, $2, $3, $4)
 `
@@ -311,12 +322,13 @@ func (q *Queries) InserirEventoOptOut(ctx context.Context, arg InserirEventoOptO
 }
 
 const inserirNotificacao = `-- name: InserirNotificacao :exec
-INSERT INTO notificacoes (id, sistema_origem, template_id, destinatario_email, destinatario_telefone, dados, ordem_canais, status)
-VALUES ($1, $2, $3, $4, $5, $6, $7, 'pendente')
+INSERT INTO notificacoes (id, organizacao, sistema_origem, template_id, destinatario_email, destinatario_telefone, dados, ordem_canais, status)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pendente')
 `
 
 type InserirNotificacaoParams struct {
 	ID                   string
+	Organizacao          string
 	SistemaOrigem        string
 	TemplateID           string
 	DestinatarioEmail    string
@@ -328,6 +340,7 @@ type InserirNotificacaoParams struct {
 func (q *Queries) InserirNotificacao(ctx context.Context, arg InserirNotificacaoParams) error {
 	_, err := q.db.Exec(ctx, inserirNotificacao,
 		arg.ID,
+		arg.Organizacao,
 		arg.SistemaOrigem,
 		arg.TemplateID,
 		arg.DestinatarioEmail,
@@ -402,6 +415,18 @@ func (q *Queries) ListarTentativas(ctx context.Context, notificacaoID string) ([
 		return nil, err
 	}
 	return items, nil
+}
+
+const organizacaoDoSistema = `-- name: OrganizacaoDoSistema :one
+SELECT organizacao FROM sistemas_origem WHERE client = $1
+`
+
+// Organização do client do token (REQ-50); sem linha = sem Organização.
+func (q *Queries) OrganizacaoDoSistema(ctx context.Context, client string) (string, error) {
+	row := q.db.QueryRow(ctx, organizacaoDoSistema, client)
+	var organizacao string
+	err := row.Scan(&organizacao)
+	return organizacao, err
 }
 
 const registrarOptOut = `-- name: RegistrarOptOut :execrows

@@ -56,8 +56,7 @@ func (r Repositorio) RegistrarNotificacao(ctx context.Context, n portas.NovaNoti
 		return portas.Registro{}, fmt.Errorf("serializar dados: %w", err)
 	}
 	var reg portas.Registro
-	err = pgx.BeginFunc(ctx, r.Pool, func(tx pgx.Tx) error {
-		q := db.New(tx)
+	err = naOrganizacao(ctx, r.Pool, n.Organizacao, func(q *db.Queries) error {
 		id, err := q.ReivindicarChave(ctx, db.ReivindicarChaveParams{SistemaOrigem: n.SistemaOrigem, Chave: n.ChaveIdempotencia})
 		if errors.Is(err, pgx.ErrNoRows) {
 			existente, err := q.BuscarPorChave(ctx, db.BuscarPorChaveParams{SistemaOrigem: n.SistemaOrigem, Chave: n.ChaveIdempotencia})
@@ -68,7 +67,7 @@ func (r Repositorio) RegistrarNotificacao(ctx context.Context, n portas.NovaNoti
 			return err
 		}
 		if err := q.InserirNotificacao(ctx, db.InserirNotificacaoParams{
-			ID: id, SistemaOrigem: n.SistemaOrigem, TemplateID: n.TemplateID,
+			ID: id, Organizacao: string(n.Organizacao), SistemaOrigem: n.SistemaOrigem, TemplateID: n.TemplateID,
 			DestinatarioEmail: n.Destinatario.Email, DestinatarioTelefone: n.Destinatario.Telefone,
 			Dados: dados, OrdemCanais: textos(n.OrdemCanais),
 		}); err != nil {
@@ -228,19 +227,26 @@ func aplicarAviso(ctx context.Context, tx pgx.Tx, t dominio.Tentativa, a dominio
 	return tx.Commit(ctx)
 }
 
-// ConsultarNotificacao filtra pelo Sistema de origem na própria query (REQ-14).
-func (r Repositorio) ConsultarNotificacao(ctx context.Context, sistemaOrigem, id string) (portas.Consulta, bool, error) {
-	q := db.New(r.Pool)
-	n, err := q.ConsultarNotificacao(ctx, db.ConsultarNotificacaoParams{ID: id, SistemaOrigem: sistemaOrigem})
+// ConsultarNotificacao filtra pelo Sistema de origem na própria query (REQ-14)
+// e pela Organização fixada na transação (REQ-52).
+func (r Repositorio) ConsultarNotificacao(ctx context.Context, org dominio.Organizacao, sistemaOrigem, id string) (portas.Consulta, bool, error) {
+	var (
+		n      db.ConsultarNotificacaoRow
+		linhas []db.ListarTentativasRow
+	)
+	err := naOrganizacao(ctx, r.Pool, org, func(q *db.Queries) error {
+		var err error
+		if n, err = q.ConsultarNotificacao(ctx, db.ConsultarNotificacaoParams{ID: id, SistemaOrigem: sistemaOrigem}); err != nil {
+			return err
+		}
+		linhas, err = q.ListarTentativas(ctx, id)
+		return err
+	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return portas.Consulta{}, false, nil
 	}
 	if err != nil {
 		return portas.Consulta{}, false, fmt.Errorf("consultar notificação: %w", err)
-	}
-	linhas, err := q.ListarTentativas(ctx, id)
-	if err != nil {
-		return portas.Consulta{}, false, fmt.Errorf("listar tentativas: %w", err)
 	}
 	c := portas.Consulta{
 		ID: n.ID, TemplateID: n.TemplateID, Status: dominio.StatusNotificacao(n.Status),

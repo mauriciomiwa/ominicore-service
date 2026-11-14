@@ -43,7 +43,8 @@ func novoWebhooks(t *testing.T, inicial dominio.ConfigWhatsApp) *ambienteWebhook
 	log := slog.New(slog.NewTextHandler(a.log, nil))
 	n := 0
 	a.h = entradahttp.Servidor{
-		Auth: keycloak.Novo(a.realm.URL, "ominicore", &emissor.Cache{}),
+		Auth:         keycloak.Novo(a.realm.URL, "ominicore", &emissor.Cache{}),
+		Organizacoes: a.repo,
 		Config: &aplicacao.ConfigurarUseCase{
 			Cofre: a.cofre, Registro: a.repo, Atual: a.atual, Log: log,
 			Cadastro: zapi.NovoWebhooks(a.zapi.URL), URLPublica: urlPublicaWebhooks,
