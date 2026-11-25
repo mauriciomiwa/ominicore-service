@@ -55,6 +55,12 @@ Mensagem que o Provedor manda ao OminiCore dizendo o que aconteceu com uma
 Tentativa já aceita (entregue, lida, falhou).
 _Evitar_: callback, evento, webhook (é o meio, não o conceito)
 
+**Fila do Provedor**:
+Tentativas que o Provedor já aceitou e ainda não saíram para o Destinatário
+(na Z-API, com a instância desconectada); o Operador a vê e retira um item
+pelo Console.
+_Evitar_: mensagens presas, fila de envio
+
 **Template**:
 Conteúdo cadastrado no OminiCore, com variáveis, em uma versão por Canal, e com
 a Ordem de Canais padrão.
